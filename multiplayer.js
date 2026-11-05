@@ -1,0 +1,118 @@
+// Only virtual character state leaves this browser. Snowmen remain local.
+const firebaseConfig = /* FIREBASE_CONFIG */;
+const MAX_VISITORS = 4, STALE_MS = 45000;
+const remotePlayers = new Map(), roomMembers = new Map();
+const activityNames={idle:'쉬는 중',walk:'걷는 중',rolling:'눈덩이 굴리는 중',warm:'손 녹이는 중',sled:'썰매 타는 중',celebrate:'눈사람과 인사하는 중'};
+function token(){const bytes=new Uint8Array(12);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}
+function readRoom(){const match=location.hash.match(/^#room=([a-zA-Z0-9_-]{16,48})$/);return match?match[1]:token();}
+let roomId=readRoom(),sessionKey=token(),networkDB=null,networkAuth=null,selfRef=null,disconnectJob=null;
+let networkStarting=false,networkConnected=false,networkJoined=false,roomFull=false,networkGeneration=0,serverOffset=0;
+let lastNetworkSend=0,lastNetworkBody='',lastNetworkMovement=false,networkSequence=0,joinedAt=0,networkStops=[];
+history.replaceState(null,'',location.pathname+location.search+'#room='+roomId);
+function inviteURL(){return location.href.split('#')[0]+'#room='+roomId;}
+function fireApproach(){const spots=[[-4.8,1.65],[-7.85,-1.4],[-2.1,-1.5],[-5,-4.2]];return spots.find(([x,z])=>Array.from(remotePlayers.values()).every(peer=>Math.hypot(peer.data.x-x,peer.data.z-z)>1))||spots[0];}
+function roundState(v){return Math.round(v*1000)/1000;}
+function updateNetworkStatus(message){
+ const count=networkJoined?remotePlayers.size+1:1;
+ $('village-state').textContent=message||(networkJoined?(count>1?count+'명이 함께':'친구를 기다려요'):roomFull?'마을이 가득해요':'혼자 산책 중');
+ $('connection-state').textContent=networkJoined?'연결됨':networkStarting?'연결 중':'연결 대기';
+ $('status').dataset.connected=String(networkJoined);
+ const members=Array.from(remotePlayers.values()).map(p=>p.data.n+' · '+activityNames[p.data.m]);
+ const roster=[nickname+' · 나',...members].join(' / ');
+ if($('online-players').textContent!==roster)$('online-players').textContent=roster;
+ $('new-room').hidden=!roomFull;
+}
+function validState(data){return data&&data.v===1&&typeof data.u==='string'&&typeof data.n==='string'&&data.n.length>0&&data.n.length<=12&&Number.isInteger(data.k)&&data.k>=0&&data.k<=2&&['x','y','z','a','p','b','t','j','s'].every(k=>Number.isFinite(data[k]))&&Math.abs(data.x)<=26&&Math.abs(data.z)<=26&&data.y>=-1&&data.y<=10&&Math.abs(data.a)<=3.142&&Math.abs(data.p)<=1.6&&data.b>=0&&data.b<=.7&&Object.hasOwn(activityNames,data.m);}
+function disposeActor(root){root.traverse(o=>{if(!o.isMesh)return;if(!Object.values(geom).includes(o.geometry))o.geometry.dispose();});scene.remove(root);}
+function removePeer(id){const peer=remotePlayers.get(id);if(!peer)return;disposeActor(peer.actor.root);disposeActor(peer.sled);scene.remove(peer.shadow,peer.ball);peer.label.material.map.dispose();peer.label.material.dispose();remotePlayers.delete(id);}
+function clearPeers(){for(const id of Array.from(remotePlayers.keys()))removePeer(id);}
+function makePeer(id,data){
+ const actor=avatar(data.k);actor.root.position.set(data.x,data.y,data.z);actor.root.rotation.set(data.p,data.a,0);scene.add(actor.root);
+ const label=nameSprite(data.n);label.scale.set(2.15,.403,1);label.position.y=2.8;actor.root.add(label);
+ const peerBall=mesh(geom.ball,0xf9fbf6,scene,0,0,0,.22);peerBall.visible=false;
+ const peerSled=makeSled();peerSled.visible=false;scene.add(peerSled);
+ const peer={id,actor,label,ball:peerBall,sled:peerSled,shadow:shadow(scene,data.x,data.z,.55,.14),data,phase:0,celebration:0,target:new THREE.Vector3(data.x,data.y,data.z)};
+ remotePlayers.set(id,peer);return peer;
+}
+function reconcileRoom(){
+ if(!networkConnected||!networkJoined||roomFull)return;
+ const now=Date.now()+serverOffset;
+ const active=Array.from(roomMembers.entries()).filter(([,d])=>validState(d)&&now-d.t<STALE_MS).sort((a,b)=>a[1].j-b[1].j||a[0].localeCompare(b[0]));
+ const selfIndex=active.findIndex(([id])=>id===sessionKey);
+ if(selfIndex>=MAX_VISITORS){roomFull=true;networkJoined=false;if(selfRef)window.WinterFirebase.remove(selfRef).catch(()=>{});clearPeers();updateNetworkStatus('마을이 가득해요');toast('이 마을에는 네 명까지 함께할 수 있어요');return;}
+ const visible=active.filter(([id])=>id!==sessionKey).slice(0,MAX_VISITORS-1),ids=new Set(visible.map(([id])=>id));
+ for(const id of remotePlayers.keys())if(!ids.has(id))removePeer(id);
+ for(const[id,data]of visible){let peer=remotePlayers.get(id);if(peer&&peer.actor.kind!==data.k){removePeer(id);peer=null;}if(!peer)peer=makePeer(id,data);if(peer.data.m!==data.m)peer.celebration=0;if(peer.data.n!==data.n){peer.actor.root.remove(peer.label);peer.label.material.map.dispose();peer.label.material.dispose();peer.label=nameSprite(data.n);peer.label.scale.set(2.15,.403,1);peer.label.position.y=2.8;peer.actor.root.add(peer.label);}peer.data=data;peer.target.set(data.x,data.y,data.z);}
+ updateNetworkStatus();
+}
+function stateBody(){
+ const walking=lastNetworkMovement&&!document.hidden;
+ return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x),y:roundState(player.position.y),z:roundState(player.position.z),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='idle'&&walking?'walk':mode,b:mode==='rolling'?roundState(ballRadius):0,j:joinedAt};
+}
+function publishState(force=false){
+ if(!networkJoined||!networkConnected||!selfRef||!networkAuth?.currentUser)return;
+ const now=performance.now();if(!force&&now-lastNetworkSend<200)return;
+ const body=stateBody(),signature=JSON.stringify(body);if(!force&&signature===lastNetworkBody&&now-lastNetworkSend<6000)return;
+ lastNetworkBody=signature;lastNetworkSend=now;
+ window.WinterFirebase.set(selfRef,{...body,s:++networkSequence,t:window.WinterFirebase.serverTimestamp()}).catch(error=>{networkJoined=false;clearPeers();updateNetworkStatus('접속을 확인해 주세요');console.warn('겨울 마을 연결:',error.code||'network');toast('친구 연결을 잠시 쉬고 있어요. 초대 버튼에서 다시 연결해요');});
+}
+async function registerPresence(generation){
+ if(generation!==networkGeneration||!networkConnected||roomFull)return;
+ const F=window.WinterFirebase,players=F.ref(networkDB,'rooms/'+roomId+'/players');
+ try{
+  const current=await F.get(players);if(generation!==networkGeneration)return;
+  const active=Object.entries(current.val()||{}).filter(([id,d])=>id!==sessionKey&&validState(d)&&Date.now()+serverOffset-d.t<STALE_MS);
+  if(active.length>=MAX_VISITORS){roomFull=true;networkJoined=false;updateNetworkStatus('마을이 가득해요');toast('이 마을에는 네 명까지 함께할 수 있어요');return;}
+  if(!joinedAt)joinedAt=Date.now()+serverOffset;
+  if(mode==='idle'&&!path.length&&Math.hypot(player.position.x,player.position.z-7)<2&&active.some(([,d])=>Math.hypot(d.x-player.position.x,d.z-player.position.z)<1)){
+   const spawn=[[-1.5,7],[1.5,7],[0,5.2],[0,8.8]].find(([x,z])=>active.every(([,d])=>Math.hypot(d.x-x,d.z-z)>1));if(spawn)player.position.set(spawn[0],0,spawn[1]);
+  }
+  disconnectJob=F.onDisconnect(selfRef);await disconnectJob.remove();if(generation!==networkGeneration)return;
+  networkJoined=true;publishState(true);reconcileRoom();
+ }catch(error){if(generation!==networkGeneration)return;networkJoined=false;updateNetworkStatus('친구 연결 대기');console.warn('겨울 마을 입장:',error.code||'network');toast('친구 연결을 준비하지 못했어요. 잠시 후 초대 버튼을 눌러주세요');}
+}
+async function startNetwork(){
+ if(!entered||networkStarting||networkJoined||roomFull)return;
+ networkStarting=true;const generation=++networkGeneration;updateNetworkStatus('친구와 연결 중…');
+ try{
+  const F=window.WinterFirebase;if(!F)throw new Error('sdk-not-ready');
+  if(!networkAuth){const app=F.initializeApp(firebaseConfig);networkAuth=F.getAuth(app);await F.setPersistence(networkAuth,F.browserSessionPersistence);networkDB=F.getDatabase(app);}
+  if(!networkAuth.currentUser)await F.signInAnonymously(networkAuth);
+  if(generation!==networkGeneration)return;
+  for(const stop of networkStops)stop();networkStops=[];roomMembers.clear();
+  selfRef=F.ref(networkDB,'rooms/'+roomId+'/players/'+sessionKey);
+  const players=F.ref(networkDB,'rooms/'+roomId+'/players');
+  const change=snapshot=>{if(generation!==networkGeneration)return;const data=snapshot.val();if(validState(data))roomMembers.set(snapshot.key,data);else roomMembers.delete(snapshot.key);reconcileRoom();};
+  const failed=error=>{if(generation!==networkGeneration)return;networkJoined=false;clearPeers();updateNetworkStatus('친구 연결 대기');console.warn('겨울 마을 동기화:',error.code||'network');};
+  networkStops.push(F.onChildAdded(players,change,failed),F.onChildChanged(players,change,failed),F.onChildRemoved(players,snapshot=>{roomMembers.delete(snapshot.key);reconcileRoom();},failed));
+  networkStops.push(F.onValue(F.ref(networkDB,'.info/serverTimeOffset'),snapshot=>{serverOffset=Number(snapshot.val())||0;}));
+  networkStops.push(F.onValue(F.ref(networkDB,'.info/connected'),snapshot=>{if(generation!==networkGeneration)return;networkConnected=snapshot.val()===true;if(networkConnected)registerPresence(generation);else{networkJoined=false;clearPeers();updateNetworkStatus('다시 연결 중…');}}));
+ }catch(error){updateNetworkStatus('혼자 산책 중');console.warn('겨울 마을 연결 준비:',error.code||error.message);toast('인터넷 연결을 확인해 주세요. 혼자 산책은 계속할 수 있어요');}
+ finally{networkStarting=false;}
+}
+async function newRoom(){
+ ++networkGeneration;for(const stop of networkStops)stop();networkStops=[];if(selfRef)await window.WinterFirebase.remove(selfRef).catch(()=>{});if(disconnectJob)await disconnectJob.cancel().catch(()=>{});
+ roomMembers.clear();clearPeers();networkJoined=false;networkConnected=false;networkStarting=false;roomFull=false;selfRef=null;joinedAt=0;roomId=token();history.replaceState(null,'',location.pathname+location.search+'#room='+roomId);$('invite-link').value=inviteURL();await startNetwork();toast('새 마을의 초대 주소를 만들었어요');
+}
+function updatePeers(dt){
+ for(const peer of remotePlayers.values()){
+  const data=peer.data;if(Date.now()+serverOffset-data.t>STALE_MS){removePeer(peer.id);updateNetworkStatus();continue;}
+  const root=peer.actor.root,distance=root.position.distanceTo(peer.target),blend=1-Math.exp(-dt*12);if(distance>6)root.position.copy(peer.target);else root.position.lerp(peer.target,blend);
+  root.rotation.y+=Math.atan2(Math.sin(data.a-root.rotation.y),Math.cos(data.a-root.rotation.y))*blend;root.rotation.x=lerp(root.rotation.x,data.p,blend);
+  peer.phase+=dt;peer.celebration+=dt;const moving=data.m==='walk'||data.m==='sled'||(data.m==='rolling'&&distance>.025);
+  animatePose(dt,moving,peer.actor,data.m==='walk'?'idle':data.m,peer.phase,peer.celebration);
+  peer.shadow.position.set(root.position.x,groundHeight(root.position.x,root.position.z)+.025,root.position.z);peer.shadow.visible=data.m!=='sled';
+  peer.ball.visible=data.m==='rolling';if(peer.ball.visible){const r=clamp(data.b,.22,.65),x=root.position.x+Math.sin(root.rotation.y)*(r+.6),z=root.position.z+Math.cos(root.rotation.y)*(r+.6);peer.ball.position.set(x,groundHeight(x,z)+r,z);peer.ball.scale.setScalar(r);if(moving)peer.ball.rotation.x+=dt*2;}
+  peer.sled.visible=data.m==='sled';if(peer.sled.visible){peer.sled.position.copy(root.position);peer.sled.position.y-=.405;peer.sled.rotation.set(root.rotation.x,root.rotation.y,Math.sin(peer.phase*7)*.025);}
+ }
+}
+function networkTick(dt,moving){lastNetworkMovement=moving;updatePeers(dt);publishState();}
+$('invite').addEventListener('click',()=>{if(!entered){toast('마을에 들어온 뒤 친구를 초대해요');return;}$('invite-link').value=inviteURL();$('invite-modal').hidden=false;$('copy-invite').focus();if(!networkJoined&&!roomFull)startNetwork();});
+function closeInvite(){$('invite-modal').hidden=true;$('invite').focus();}
+$('close-invite').addEventListener('click',closeInvite);$('invite-modal').addEventListener('click',e=>{if(e.target===$('invite-modal'))closeInvite();});
+$('copy-invite').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(inviteURL());toast('초대 주소를 복사했어요. 친구에게 보내주세요');$('copy-invite').textContent='복사했어요 ✓';setTimeout(()=>$('copy-invite').textContent='초대 주소 복사',2000);}catch{$('invite-link').focus();$('invite-link').select();toast('주소를 길게 눌러 복사해 주세요');}});
+$('new-room').addEventListener('click',newRoom);
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('invite-modal').hidden)closeInvite();});
+addEventListener('online',()=>{if(entered&&!networkJoined&&!roomFull)startNetwork();});
+addEventListener('pagehide',()=>{if(selfRef)window.WinterFirebase.remove(selfRef).catch(()=>{});});
+setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);

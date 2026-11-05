@@ -1,0 +1,21 @@
+{
+  "name": "snowy-winter-village",
+  "version": "1.0.0",
+  "description": "Three.js로 만든 친구와 함께하는 작은 겨울 마을",
+  "scripts": {
+    "build": "node build-multiplayer.cjs",
+    "test": "node check.cjs && node check-multiplayer.cjs",
+    "test:live": "node check-live.cjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "@firebase/app": "0.16.5",
+    "@firebase/auth": "1.13.9",
+    "@firebase/database": "1.1.5",
+    "esbuild": "0.28.2"
+  },
+  "private": true
+}

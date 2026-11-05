@@ -1,0 +1,20 @@
+const fs=require('fs'),path=require('path'),vm=require('vm'),esbuild=require('esbuild');
+(async()=>{
+  const sdk=await esbuild.build({entryPoints:[path.join(__dirname,'firebase-sdk.mjs')],bundle:true,write:false,minify:true,format:'iife',platform:'browser',target:['es2020'],legalComments:'inline'});
+  const lib=fs.readFileSync(path.join(__dirname,'three.min.js'),'utf8');
+  const font=fs.readFileSync(path.join(__dirname,'jua-subset.woff2')).toString('base64');
+  const license=fs.readFileSync(path.join(__dirname,'FONT-LICENSE.txt'),'utf8');
+  let source=fs.readFileSync(path.join(__dirname,'multiplayer.html'),'utf8');
+  source=source.replace('<!-- THREE_LIBRARY -->',()=>'<script>\n'+lib.replace(/<\/script/gi,'<\\/script')+'\n</script>\n<script>\n'+sdk.outputFiles[0].text.replace(/<\/script/gi,'<\\/script')+'\n</script>');
+  source=source.replace('/* MULTIPLAYER_CODE */',()=>fs.readFileSync(path.join(__dirname,'multiplayer.js'),'utf8'));
+  source=source.replace('/* FIREBASE_CONFIG */',()=>JSON.stringify(JSON.parse(fs.readFileSync(path.join(__dirname,'firebase-config.json'),'utf8'))));
+  source=source.replace('<style>',()=>'<style>\n@font-face{font-family:"Winter Jua";src:url(data:font/ttf;base64,'+font+') format("truetype");font-style:normal;font-weight:400 900;font-display:swap}\n').replace('font-family:"NanumSquareRound"','font-family:"Winter Jua","NanumSquareRound"').replace('</head>',()=>'<!--\n'+license+'\n-->\n</head>');
+  for(const [,js]of source.matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(js);
+  fs.mkdirSync(path.join(__dirname,'dist'),{recursive:true});
+  fs.writeFileSync(path.join(__dirname,'dist','index.html'),source);
+  fs.mkdirSync(path.join(__dirname,'docs'),{recursive:true});
+  fs.writeFileSync(path.join(__dirname,'docs','index.html'),source);
+  fs.writeFileSync(path.join(__dirname,'docs','.nojekyll'),'');
+  fs.writeFileSync(path.join(__dirname,'눈 내리는 겨울 마을 - 친구와 함께.html'),source);
+  console.log('Built multiplayer HTML: '+Buffer.byteLength(source)+' bytes');
+})();
