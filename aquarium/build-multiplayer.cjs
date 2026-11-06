@@ -9,7 +9,7 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),esbuild=require('es
   source=source.replace('/* AQUARIUM_CODE */',()=>fs.readFileSync(path.join(__dirname,'aquarium.js'),'utf8'));
   source=source.replace('/* PHOTO_ACTION_CODE */',()=>fs.readFileSync(path.join(__dirname,'photo-action.js'),'utf8'));
   source=source.replace('/* MULTIPLAYER_CODE */',()=>fs.readFileSync(path.join(__dirname,'multiplayer.js'),'utf8'));
-  source=source.replace('/* WORLD_TRAVEL_CODE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.js'),'utf8').replace('/* WORLD_CONFIG */',JSON.stringify({current:'aquarium',winterPath:'/my-little-village/',aquariumPath:'/my-little-village/aquarium/',libraryPath:'/my-little-village/library/',publicOrigin:'https://seonyoungyoo16.github.io'})));
+  source=source.replace('/* WORLD_TRAVEL_CODE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.js'),'utf8').replace('/* WORLD_CONFIG */',JSON.stringify({current:'aquarium',winterPath:'/snowy-winter-village/',aquariumPath:'/snowy-winter-village/aquarium/',libraryPath:'/snowy-winter-village/library/',publicOrigin:'https://seonyoungyoo16.github.io'})));
   source=source.replace('/* WORLD_TRAVEL_STYLE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.css'),'utf8'));
   source=source.replace('<!-- WORLD_TRAVEL_UI -->',()=>fs.readFileSync(path.join(__dirname,'world-travel.html'),'utf8'));
   source=source.replace('/* FIREBASE_CONFIG */',()=>JSON.stringify(JSON.parse(fs.readFileSync(path.join(__dirname,'firebase-config.json'),'utf8'))));

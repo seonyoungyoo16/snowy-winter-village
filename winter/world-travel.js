@@ -12,7 +12,7 @@ function readRoom(){const raw=new URLSearchParams(location.hash.slice(1)).get('r
 function otherWorldRoom(){return worldRoomId(partyId(roomId),OTHER_WORLD);}
 function worldURL(world){
  const hosted=/^https?:$/.test(location.protocol)&&/^\/(my-little-village|snowy-winter-village|little-blue-aquarium|little-lantern-library)(\/|$)/.test(location.pathname);
- const paths={winter:WORLD_CONFIG.winterPath,aquarium:WORLD_CONFIG.aquariumPath,library:WORLD_CONFIG.libraryPath||'/my-little-village/library/'};
+ const paths={winter:WORLD_CONFIG.winterPath,aquarium:WORLD_CONFIG.aquariumPath,library:WORLD_CONFIG.libraryPath||'/snowy-winter-village/library/'};
  const url=new URL(paths[world],hosted?location.origin:WORLD_CONFIG.publicOrigin);url.hash='room='+worldRoomId(partyId(roomId),world)+'&travel=1';return url.href;
 }
 function activeOtherWorldMembers(world=OTHER_WORLD){

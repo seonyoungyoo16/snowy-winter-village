@@ -5,4 +5,4 @@ for(const[world,destination]of Object.entries(worlds)){
  const output=path.join(__dirname,'docs',destination);fs.mkdirSync(output,{recursive:true});fs.copyFileSync(path.join(__dirname,world,'docs/index.html'),path.join(output,'index.html'));
 }
 fs.writeFileSync(path.join(__dirname,'docs/.nojekyll'),'');
-console.log('Built all three worlds for /my-little-village/.');
+console.log('Built all three worlds for /snowy-winter-village/.');

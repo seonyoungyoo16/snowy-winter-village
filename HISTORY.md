@@ -11,3 +11,5 @@
 세 커밋이 현재 저장소의 조상인지 확인했습니다. 원본 저장소의 전체 ref를 포함한 Git bundle 복구 사본도 로컬에 만들고 검증했습니다. 원본 세 저장소에는 main 외 다른 원격 브랜치·태그, 이슈·PR·릴리스가 없는 것을 확인했습니다.
 
 배포 경로를 `/my-little-village/`, `/my-little-village/aquarium/`, `/my-little-village/library/`로 모았습니다. 기존 Firebase 방 식별자, 브라우저 저장 키와 데이터베이스 보안 규칙은 바꾸지 않았습니다.
+
+사용자가 기존 공유 주소 유지를 선택해 최종 소스 저장소도 snowy-winter-village로 통일했습니다. 별도의 배포 전용 저장소는 사용하지 않습니다. 임시 my-little-village 저장소의 통합 커밋도 이력에 포함되어 있습니다.
