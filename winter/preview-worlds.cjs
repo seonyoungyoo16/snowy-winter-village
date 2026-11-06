@@ -1,0 +1,3 @@
+const http=require('http'),fs=require('fs'),path=require('path');
+const roots={'/snowy-winter-village/':__dirname,'/little-blue-aquarium/':path.join(__dirname,'../little-blue-aquarium')};
+http.createServer((req,res)=>{if(req.url==='/favicon.ico'){res.writeHead(204);res.end();return;}const route=new URL(req.url,'http://127.0.0.1').pathname,root=roots[route];if(!root){res.writeHead(404);res.end('Not found');return;}res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});fs.createReadStream(path.join(root,'dist/index.html')).pipe(res);}).listen(4188,'127.0.0.1',()=>console.log('Local: http://127.0.0.1:4188/snowy-winter-village/'));

@@ -1,0 +1,12 @@
+const fs=require('fs'),path=require('path'),vm=require('vm');
+const source=fs.readFileSync(path.join(__dirname,'game.html'),'utf8');
+const lib=fs.readFileSync(path.join(__dirname,'three.min.js'),'utf8');
+const scripts=[...source.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+for(const [,js]of scripts)new vm.Script(js);
+new vm.Script(lib);
+const font=fs.readFileSync(path.join(__dirname,'jua-subset.woff2')).toString('base64');
+const fontLicense=fs.readFileSync(path.join(__dirname,'FONT-LICENSE.txt'),'utf8');
+const output=source.replace('<!-- THREE_LIBRARY -->',()=>'<script>\n'+lib.replace(/<\/script/gi,'<\\/script')+'\n</script>').replace('<style>',()=>'<style>\n@font-face{font-family:"Winter Jua";src:url(data:font/ttf;base64,'+font+') format("truetype");font-style:normal;font-weight:400 900;font-display:swap}\n').replace('font-family:"NanumSquareRound"','font-family:"Winter Jua","NanumSquareRound"').replace('</head>',()=>'<!--\n'+fontLicense+'\n-->\n</head>');
+for(const [,js]of output.matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(js);
+fs.writeFileSync(path.join(__dirname,'눈 내리는 겨울 마을.html'),output);
+console.log('Built single HTML: '+Buffer.byteLength(output)+' bytes');

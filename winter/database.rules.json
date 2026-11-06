@@ -1,0 +1,62 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$room": {
+        "players": {
+          ".read": "auth != null && $room.matches(/^[a-zA-Z0-9_-]{16,48}$/)",
+          "$session": {
+            ".write": "auth != null && $room.matches(/^[a-zA-Z0-9_-]{16,48}$/) && $session.matches(/^[a-zA-Z0-9_-]{16,48}$/) && ((!data.exists() && (!newData.exists() || newData.child('u').val() === auth.uid)) || data.child('u').val() === auth.uid)",
+            ".validate": "newData.hasChildren(['v','u','n','k','x','y','z','a','p','m','b','t','s','j'])",
+            "v": {
+              ".validate": "newData.val() === 1"
+            },
+            "u": {
+              ".validate": "newData.isString() && newData.val() === auth.uid && (!data.exists() || newData.val() === data.val())"
+            },
+            "n": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 12"
+            },
+            "k": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2 && newData.val() % 1 === 0"
+            },
+            "x": {
+              ".validate": "newData.isNumber() && newData.val() >= -26 && newData.val() <= 26"
+            },
+            "y": {
+              ".validate": "newData.isNumber() && newData.val() >= -1 && newData.val() <= 10"
+            },
+            "z": {
+              ".validate": "newData.isNumber() && newData.val() >= -26 && newData.val() <= 26"
+            },
+            "a": {
+              ".validate": "newData.isNumber() && newData.val() >= -3.142 && newData.val() <= 3.142"
+            },
+            "p": {
+              ".validate": "newData.isNumber() && newData.val() >= -1.6 && newData.val() <= 1.6"
+            },
+            "m": {
+              ".validate": "newData.val() === 'idle' || newData.val() === 'walk' || newData.val() === 'rolling' || newData.val() === 'warm' || newData.val() === 'sled' || newData.val() === 'celebrate'"
+            },
+            "b": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 0.7"
+            },
+            "t": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 1000 && newData.val() >= now - 60000"
+            },
+            "s": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2000000000 && newData.val() % 1 === 0"
+            },
+            "j": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000 && (!data.exists() || newData.val() === data.val())"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      }
+    }
+  }
+}
