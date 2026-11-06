@@ -1,0 +1,22 @@
+{
+  "name": "little-lantern-library",
+  "version": "1.0.0",
+  "description": "친구와 함께하는 작은 3D 책숲 도서관",
+  "scripts": {
+    "build": "node build-multiplayer.cjs",
+    "test": "node check.cjs && node check-notifications.cjs && node check-world-travel.cjs",
+    "test:live": "node check-live.cjs",
+    "preview": "node preview.cjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "@firebase/app": "0.16.5",
+    "@firebase/auth": "1.13.9",
+    "@firebase/database": "1.1.5",
+    "esbuild": "0.28.2"
+  },
+  "private": true
+}
