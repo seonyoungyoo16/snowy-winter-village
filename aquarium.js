@@ -66,8 +66,9 @@ let selected=0,character=avatar(0);scene.add(character.root);const player=charac
 function chooseCharacter(kind){if(!Number.isInteger(kind)||kind<0||kind>2)return;selected=kind;const old=character;character=avatar(kind);old.root.clear();old.root.add(character.body);character.root=old.root;document.querySelectorAll('[data-character]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.character)===kind)));}
 function nameSprite(text){const c=document.createElement('canvas');c.width=512;c.height=96;const ctx=c.getContext('2d');ctx.fillStyle='rgba(10,48,65,.85)';ctx.beginPath();ctx.roundRect(8,10,496,74,37);ctx.fill();ctx.fillStyle='#e1f9ef';ctx.font='500 31px "Malgun Gothic",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,256,49,460);const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false}));sprite.scale.set(2.15,.403,1);sprite.position.y=2.75;return sprite;}
 const targetRing=mesh(new THREE.RingGeometry(.24,.3,32),mat(0xd8efc7,true,.75),scene,0,.048,0);targetRing.rotation.x=-Math.PI/2;targetRing.visible=false;let ringTimer=0;
-// The stable wire modes rolling/warm/celebrate mean feed/rest/wave here.
-let entered=false,nickname='바다 손님',mode='idle',path=[],ballRadius=0,celebrateTime=0,elapsed=0,oldTime=performance.now(),toastTimer,uiKey='',cameraYaw=0,cameraYawTarget=0,camZoom=1,feedTime=0,feedBeat=-1,storageOkay=true;
+/* PHOTO_ACTION_CODE */
+// Stable wire actions map to feeding, resting, waving, and photography.
+let entered=false,nickname='바다 손님',mode='idle',path=[],ballRadius=0,celebrateTime=0,photoTime=0,elapsed=0,oldTime=performance.now(),toastTimer,uiKey='',cameraYaw=0,cameraYawTarget=0,camZoom=1,feedTime=0,feedBeat=-1,storageOkay=true;
 let storage;try{storage=JSON.parse(localStorage.getItem(KEY)||'null');}catch{storageOkay=false;}if(storage&&typeof storage==='object'){nickname=typeof storage.nickname==='string'?storage.nickname.slice(0,12):nickname;chooseCharacter(clamp(Math.trunc(Number(storage.character)||0),0,2));$('nickname').value=nickname;}
 function toast(text){$('toast').textContent=text;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3100);}
 function save(){try{localStorage.setItem(KEY,JSON.stringify({version:1,nickname,character:selected}));storageOkay=true;}catch{storageOkay=false;toast('이 브라우저에서는 이름을 저장할 수 없어요');}}
@@ -77,15 +78,23 @@ function pathTo(tx,tz){const radius=Math.hypot(tx,tz);if(radius>20.4){tx*=20.4/r
 }
 const places={ocean:{x:0,z:-2.6,yaw:0},reef:{x:-9,z:2.45,yaw:.32},jelly:{x:8.2,z:3.3,yaw:-.18}};
 function distance(p){return Math.hypot(player.position.x-p.x,player.position.z-p.z);}
-function stopActivity(){mode='idle';feedTime=0;character.body.position.y=0;player.position.y=0;uiKey='';}
+function stopActivity(){const photographed=mode==='photo';mode='idle';feedTime=0;photoTime=0;hidePhotoCamera(character);character.body.position.y=0;player.position.y=0;uiKey='';if(photographed)publishState(true);}
 function navigate(x,z){if(!entered)return;if(mode==='celebrate')return;if(mode!=='idle')stopActivity();path=pathTo(x,z);if(!path.length&&Math.hypot(player.position.x-x,player.position.z-z)>1){toast('조금 더 가까운 바닥을 눌러주세요');return;}const end=path[path.length-1]||player.position;targetRing.position.set(end.x,.05,end.z);targetRing.visible=true;ringTimer=1.5;}
 function travel(place){const p=places[place];if(!p)return;cameraYawTarget=p.yaw;navigate(p.x,p.z);document.querySelectorAll('[data-place]').forEach(b=>b.classList.toggle('active',b.dataset.place===place));}
 function availableSeat(){return seats.filter(s=>Array.from(remotePlayers.values()).every(peer=>Math.hypot(peer.data.x-s.x,peer.data.z-s.z)>.9)).sort((a,b)=>distance(a)-distance(b))[0];}
 function startRest(){const s=availableSeat();if(!s){toast('쉼터 자리가 잠깐 가득해요');return;}mode='warm';path=[];player.position.set(s.x,.05,s.z);player.rotation.y=s.a;cameraYawTarget=0;toast('둥실둥실, 잠깐 마음을 쉬어요');uiKey='';}
 function startFeed(){mode='rolling';path=[];feedTime=0;feedBeat=-1;player.rotation.y=Math.atan2(tanks.reef.x-player.position.x,tanks.reef.z-player.position.z);toast('작은 물고기들이 모여들어요');uiKey='';}
-function wave(){if(!entered||mode==='celebrate')return;stopActivity();mode='celebrate';celebrateTime=0;path=[];uiKey='';toast('안녕! 반가워요 ✧');}
-function action(){if(!entered)return;if(mode==='warm'||mode==='rolling'){stopActivity();updateUI();return;}if(mode==='celebrate')return;if(distance(places.reef)<2.1)startFeed();else if(distance(places.jelly)<3.4)startRest();else if(distance(places.ocean)<2.8){wave();}else travel('reef');updateUI();}
-function updateUI(){const reef=distance(places.reef)<2.1,jelly=distance(places.jelly)<3.4,ocean=distance(places.ocean)<2.8,k=[mode,reef,jelly,ocean].join('_');if(k===uiKey)return;uiKey=k;$('main-action').disabled=mode==='celebrate';$('wave-action').disabled=mode==='celebrate';$('wave-action').hidden=mode==='warm'||mode==='rolling';$('cancel-action').hidden=mode!=='warm'&&mode!=='rolling';$('cancel-action').textContent=mode==='rolling'?'먹이 그만 주기':'다시 산책';$('travel').hidden=false;$('main-text').textContent=mode==='rolling'?'물고기와 만나는 중':mode==='warm'?'천천히 일어나기':mode==='celebrate'?'안녕, 반가워!':reef?'물고기 먹이 주기':jelly?'앉아서 해파리 멍':ocean?'바다 친구에게 인사':'물고기 보러 가기';$('hint').textContent=mode==='rolling'?'손끝을 따라 작은 물고기들이 모여요':mode==='warm'?'물결에 맞춰, 천천히 숨을 쉬어봐요':mode==='celebrate'?'친구에게도 손 흔드는 모습이 보여요':reef?'산호 사이에 작은 친구들이 기다려요':jelly?'해파리 불빛 아래, 잠깐 쉬어갈까요?':ocean?'느긋한 바다거북과 가오리를 찾아보세요':'가고 싶은 바닥을 톡 눌러보세요';}
+function wave(){if(!entered||mode==='celebrate'||mode==='photo')return;stopActivity();mode='celebrate';celebrateTime=0;path=[];uiKey='';toast('안녕! 반가워요 ✧');}
+function action(){if(!entered)return;if(mode==='warm'||mode==='rolling'){stopActivity();updateUI();return;}if(mode==='celebrate'||mode==='photo')return;if(distance(places.reef)<2.1)startFeed();else if(distance(places.jelly)<3.4)startRest();else if(distance(places.ocean)<2.8){startPhoto();}else travel('reef');updateUI();}
+function updateUI(){
+ const reef=distance(places.reef)<2.1,jelly=distance(places.jelly)<3.4,ocean=distance(places.ocean)<2.8,photographing=mode==='photo',reviewing=photographing&&photoTime>=2.8,k=[mode,reef,jelly,ocean,reviewing].join('_');if(k===uiKey)return;uiKey=k;
+ $('main-action').disabled=mode==='celebrate'||photographing;$('wave-action').disabled=mode==='celebrate'||photographing;
+ $('wave-action').hidden=mode==='warm'||mode==='rolling'||photographing;$('cancel-action').hidden=mode!=='warm'&&mode!=='rolling'&&!photographing;
+ $('cancel-action').textContent=photographing?'그만 찍기':mode==='rolling'?'먹이 그만 주기':'다시 산책';$('travel').hidden=false;
+ $('main-text').textContent=photographing?(reviewing?'사진 확인 중…':'사진 찍는 중…'):mode==='rolling'?'물고기와 만나는 중':mode==='warm'?'천천히 일어나기':mode==='celebrate'?'안녕, 반가워!':reef?'물고기 먹이 주기':jelly?'앉아서 해파리 멍':ocean?'수조 사진 찍기':'물고기 보러 가기';
+ $('hint').textContent=photographing?(reviewing?'카메라에 담긴 바다를 들여다봐요':'바다거북이 지나가는 순간을 기다려요'):mode==='rolling'?'손끝을 따라 작은 물고기들이 모여요':mode==='warm'?'물결에 맞춰, 천천히 숨을 쉬어봐요':mode==='celebrate'?'친구에게도 손 흔드는 모습이 보여요':reef?'산호 사이에 작은 친구들이 기다려요':jelly?'해파리 불빛 아래, 잠깐 쉬어갈까요?':ocean?'작은 카메라에 바다를 담아볼까요?':'가고 싶은 바닥을 톡 눌러보세요';
+ $('action-icon').innerHTML=ocean||photographing?'<rect x="3" y="7" width="18" height="13" rx="3"/><path d="m8 7 1-3h6l1 3"/><circle cx="12" cy="13" r="4"/>':'<path d="M5 13c4-7 9-7 14-1-5 6-10 6-14-1L2 8v8z"/><circle cx="15" cy="11" r=".7"/>';
+}
 // Food follows a small 3D arc from a visitor's hands into the reef tank.
 const food=[];for(let i=0;i<40;i++){const m=sphere(scene,mat(0xf1d998,true),0,-10,0,.04);m.visible=false;food.push({mesh:m,t:2,start:new THREE.Vector3(),end:new THREE.Vector3()});}let foodIndex=0;
 function tossFood(pos,yaw){for(let i=0;i<5;i++){const f=food[foodIndex++%food.length];f.t=-i*.07;f.start.set(pos.x+Math.sin(yaw)*.4,1.25,pos.z+Math.cos(yaw)*.4);const dx=tanks.reef.x-pos.x,dz=tanks.reef.z-pos.z,len=Math.hypot(dx,dz);f.end.set(tanks.reef.x-dx/len*2+(rand()-.5)*.7,1.85,tanks.reef.z-dz/len*2+(rand()-.5)*.7);f.mesh.visible=true;}}
@@ -96,7 +105,18 @@ function animateWater(dt){const speed=reduced?.35:1,visitors=feedingVisitors();f
  for(const f of food){if(f.t>=1.3){f.mesh.visible=false;continue;}f.t+=dt;if(f.t<0){f.mesh.visible=false;continue;}f.mesh.visible=true;const u=clamp(f.t/1.1,0,1);f.mesh.position.lerpVectors(f.start,f.end,u);f.mesh.position.y+=Math.sin(u*Math.PI)*1.15;f.mesh.scale.setScalar(.04*(1-clamp((f.t-1)/.3,0,1)));}
  if(!reduced){causticTex.offset.x=Math.sin(elapsed*.06)*.03;causticTex.offset.y=elapsed*.003;caustics.material.opacity=.105+Math.sin(elapsed*.4)*.018;}
 }
-function animatePose(dt,moving,actor=character,state=mode,phase=elapsed,celebration=celebrateTime){const b=actor.body,arms=actor.arms,legs=actor.legs,t=phase;let bob=moving?Math.sin(t*9)*.055:Math.sin(t*1.7)*.015,by=0,pitch=0;if(state==='warm'){by=.02;pitch=.04;bob=Math.sin(t*1.5)*.008;arms[0].rotation.set(-.35,0,-.12);arms[1].rotation.set(-.35,0,.12);legs.forEach(l=>l.rotation.x=-1.35);}else if(state==='rolling'){pitch=.07;arms[0].rotation.set(-.65,0,-.2);arms[1].rotation.set(-.9-Math.sin(t*3.3)*.52,0,.3);legs.forEach(l=>l.rotation.x=0);}else if(state==='celebrate'){arms[0].rotation.set(-.1,0,-.12);arms[1].rotation.set(-.2,0,2.5+Math.sin(t*8)*.25);legs.forEach(l=>l.rotation.x=0);bob=Math.sin(t*3)*.025;}else{arms.forEach((a,i)=>a.rotation.set(moving?Math.sin(t*9+i*Math.PI+Math.PI)*.45:Math.sin(t*1.7+i)*.025,0,i===0?-.15:.15));legs.forEach((l,i)=>l.rotation.x=moving?Math.sin(t*9+i*Math.PI)*.55:0);}b.position.y=lerp(b.position.y,by+bob,1-Math.exp(-dt*12));b.rotation.x=lerp(b.rotation.x,pitch,1-Math.exp(-dt*10));actor.head.rotation.z=state==='warm'?Math.sin(t*.6)*.025:Math.sin(t*1.1)*.02;}
+function animatePose(dt,moving,actor=character,state=mode,phase=elapsed,celebration=celebrateTime,shotTime=photoTime){
+ const b=actor.body,arms=actor.arms,legs=actor.legs,t=phase;let bob=moving?Math.sin(t*9)*.055:Math.sin(t*1.7)*.015,by=0,pitch=0;
+ if(state==='photo'){const pose=animatePhotoPose(actor,shotTime,dt);by=pose.height;pitch=pose.pitch;bob=Math.sin(t*1.7)*.008;}
+ else{
+  hidePhotoCamera(actor);actor.head.rotation.x=0;
+  if(state==='warm'){by=.02;pitch=.04;bob=Math.sin(t*1.5)*.008;arms[0].rotation.set(-.35,0,-.12);arms[1].rotation.set(-.35,0,.12);legs.forEach(l=>l.rotation.x=-1.35);}
+  else if(state==='rolling'){pitch=.07;arms[0].rotation.set(-.65,0,-.2);arms[1].rotation.set(-.9-Math.sin(t*3.3)*.52,0,.3);legs.forEach(l=>l.rotation.x=0);}
+  else if(state==='celebrate'){arms[0].rotation.set(-.1,0,-.12);arms[1].rotation.set(-.2,0,2.5+Math.sin(t*8)*.25);legs.forEach(l=>l.rotation.x=0);bob=Math.sin(t*3)*.025;}
+  else{arms.forEach((a,i)=>a.rotation.set(moving?Math.sin(t*9+i*Math.PI+Math.PI)*.45:Math.sin(t*1.7+i)*.025,0,i===0?-.15:.15));legs.forEach((l,i)=>l.rotation.x=moving?Math.sin(t*9+i*Math.PI)*.55:0);}
+ }
+ b.position.y=lerp(b.position.y,by+bob,1-Math.exp(-dt*12));b.rotation.x=lerp(b.rotation.x,pitch,1-Math.exp(-dt*10));actor.head.rotation.z=state==='warm'?Math.sin(t*.6)*.025:Math.sin(t*1.1)*.02;
+}
 function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden;}
 function closeHelp(){$('help-modal').hidden=true;$('help').focus();}
 $('help').addEventListener('click',()=>{$('help-modal').hidden=false;keys.clear();$('close-help').focus();});$('close-help').addEventListener('click',closeHelp);$('return-village').addEventListener('click',closeHelp);$('help-modal').addEventListener('click',e=>{if(e.target===$('help-modal'))closeHelp();});
@@ -112,7 +132,8 @@ function updateCamera(dt){const portrait=innerWidth/innerHeight<.8;cameraYaw=ler
 function label(id,x,y,z){projected.set(x,y,z).project(camera);const el=$(id),px=(projected.x+1)*innerWidth/2,py=(-projected.y+1)*innerHeight/2,onscreen=projected.z<1&&projected.z>-1&&px>70&&px<innerWidth-70&&py>165&&py<innerHeight-190;el.style.left=px+'px';el.style.top=py+'px';el.style.opacity=entered&&onscreen?'1':'0';}
 function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;return;}const dt=Math.min((now-oldTime)/1000,.05);oldTime=now;elapsed+=dt;let moving=false;
  if(entered&&!helpOpen()){
-  if(mode==='celebrate'){celebrateTime+=dt;if(celebrateTime>2.3){mode='idle';uiKey='';}}
+  if(mode==='photo'){photoTime+=dt;if(photoTime>=PHOTO_DURATION){stopActivity();toast('예쁜 순간을 담았어요');}}
+  else if(mode==='celebrate'){celebrateTime+=dt;if(celebrateTime>2.3){mode='idle';uiKey='';}}
   else if(mode==='rolling'){feedTime+=dt;const beat=Math.floor(feedTime/1.9);if(beat!==feedBeat){feedBeat=beat;tossFood(player.position,player.rotation.y);}if(feedTime>9){stopActivity();toast('잘 먹었어! 고마운 마음이 전해져요');}}
   else if(mode==='idle'){
    let vx=0,vz=0;const speed=3.55;if(keys.has('w')||keys.has('arrowup'))vz--;if(keys.has('s')||keys.has('arrowdown'))vz++;if(keys.has('a')||keys.has('arrowleft'))vx--;if(keys.has('d')||keys.has('arrowright'))vx++;

@@ -15,7 +15,8 @@ const payload=(user,name)=>({v:1,u:user.localId,n:name,k:0,x:0,y:0,z:7,a:0,p:0,m
   assert.equal((await request(pa,b.idToken,'PUT',{...bodyA,u:b.localId,n:'다른 사람'})).status,401);assert.equal((await request(pa,b.idToken,'DELETE')).status,401);console.log('PASS: another user cannot overwrite or delete a character.');
   assert.equal((await request(pa,a.idToken,'PUT',{...bodyA,x:999})).status,401);assert.equal((await request(pa,a.idToken,'PUT',{...bodyA,extra:'blocked'})).status,401);console.log('PASS: out-of-bounds positions and unexpected fields are rejected.');
   for(const m of['walk','rolling','warm','sled','celebrate','idle']){assert.equal((await request(pa,a.idToken,'PUT',{...bodyA,m,b:m==='rolling'?.5:0,s:2})).status,200);}
-  assert.equal((await request('rooms',a.idToken)).status,401);console.log('PASS: all game actions sync; room-directory browsing is denied.');
+  for(const progress of[0,.2,.4,.7])assert.equal((await request(pa,a.idToken,'PUT',{...bodyA,m:'sled',b:progress,s:3})).status,200);
+  assert.equal((await request('rooms',a.idToken)).status,401);console.log('PASS: all game actions and bounded photo progress sync; room-directory browsing is denied.');
  }finally{
   if(a)await request('rooms/'+room+'/players/'+sessionA,a.idToken,'DELETE');if(b)await request('rooms/'+room+'/players/'+sessionB,b.idToken,'DELETE');
   for(const user of[a,b])if(user)await fetch('https://identitytoolkit.googleapis.com/v1/accounts:delete?key='+config.apiKey,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({idToken:user.idToken})});

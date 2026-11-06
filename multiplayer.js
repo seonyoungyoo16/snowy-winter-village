@@ -24,7 +24,7 @@ function createArrivalTracker(now=()=>Date.now(),quietMs=30000){
 const firebaseConfig = /* FIREBASE_CONFIG */;
 const MAX_VISITORS = 4, STALE_MS = 45000;
 const remotePlayers = new Map(), roomMembers = new Map();
-const activityNames={idle:'바다 구경 중',walk:'산책 중',rolling:'먹이 주는 중',warm:'해파리 멍',sled:'바다 구경 중',celebrate:'손 흔드는 중'};
+const activityNames={idle:'바다 구경 중',walk:'산책 중',rolling:'먹이 주는 중',warm:'해파리 멍',sled:'사진 찍는 중',celebrate:'손 흔드는 중'};
 function token(){const bytes=new Uint8Array(12);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}
 function aquariumRoom(){return 'aq_'+token();}
 let roomId=readRoom(),sessionKey=token(),networkDB=null,networkAuth=null,selfRef=null,disconnectJob=null;
@@ -84,7 +84,7 @@ function updateNetworkStatus(message){
 }
 function validState(data){return data&&data.v===1&&typeof data.u==='string'&&typeof data.n==='string'&&data.n.length>0&&data.n.length<=12&&Number.isInteger(data.k)&&data.k>=0&&data.k<=2&&['x','y','z','a','p','b','t','j','s'].every(k=>Number.isFinite(data[k]))&&Math.abs(data.x)<=26&&Math.abs(data.z)<=26&&data.y>=-1&&data.y<=10&&Math.abs(data.a)<=3.142&&Math.abs(data.p)<=1.6&&data.b>=0&&data.b<=.7&&Object.hasOwn(activityNames,data.m);}
 function disposeActor(root){root.traverse(o=>{if(!o.isMesh)return;if(!Object.values(geom).includes(o.geometry))o.geometry.dispose();});scene.remove(root);}
-function removePeer(id){const peer=remotePlayers.get(id);if(!peer)return;disposeActor(peer.actor.root);scene.remove(peer.shadow);peer.label.material.map.dispose();peer.label.material.dispose();remotePlayers.delete(id);}
+function removePeer(id){const peer=remotePlayers.get(id);if(!peer)return;releasePhotoCamera(peer.actor);disposeActor(peer.actor.root);scene.remove(peer.shadow);peer.label.material.map.dispose();peer.label.material.dispose();remotePlayers.delete(id);}
 function clearPeers(){for(const id of Array.from(remotePlayers.keys()))removePeer(id);}
 function makePeer(id,data){
  const actor=avatar(data.k);actor.root.position.set(data.x,data.y,data.z);actor.root.rotation.set(data.p,data.a,0);scene.add(actor.root);
@@ -106,7 +106,7 @@ function reconcileRoom(){
 }
 function stateBody(){
  const walking=lastNetworkMovement&&!document.hidden;
- return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x),y:roundState(player.position.y),z:roundState(player.position.z),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='idle'&&walking?'walk':mode,b:mode==='rolling'?roundState(ballRadius):0,j:joinedAt};
+ return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x),y:roundState(player.position.y),z:roundState(player.position.z),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='photo'?'sled':mode==='idle'&&walking?'walk':mode,b:mode==='photo'?roundState(photoWireProgress(photoTime)):mode==='rolling'?roundState(ballRadius):0,j:joinedAt};
 }
 function publishState(force=false){
  if(!networkJoined||!networkConnected||!selfRef||!networkAuth?.currentUser)return;
@@ -160,8 +160,9 @@ function updatePeers(dt){
   const data=peer.data;if(Date.now()+serverOffset-data.t>STALE_MS){removePeer(peer.id);updateNetworkStatus();continue;}
   const root=peer.actor.root,distance=root.position.distanceTo(peer.target),blend=1-Math.exp(-dt*12);if(distance>6)root.position.copy(peer.target);else root.position.lerp(peer.target,blend);
   root.rotation.y+=Math.atan2(Math.sin(data.a-root.rotation.y),Math.cos(data.a-root.rotation.y))*blend;root.rotation.x=lerp(root.rotation.x,data.p,blend);
-  peer.phase+=dt;peer.celebration+=dt;const moving=data.m==='walk'||data.m==='sled'||(data.m==='rolling'&&distance>.025);
-  animatePose(dt,moving,peer.actor,data.m==='walk'?'idle':data.m,peer.phase,peer.celebration);
+  peer.phase+=dt;peer.celebration+=dt;const moving=data.m==='walk'||(data.m==='rolling'&&distance>.025),photographing=data.m==='sled';
+  if(!photographing)peer.photoTime=null;
+  animatePose(dt,moving,peer.actor,photographing?'photo':data.m==='walk'?'idle':data.m,peer.phase,peer.celebration,photographing?remotePhotoTime(peer,dt):0);
   peer.shadow.position.set(root.position.x,.03,root.position.z);
   if(data.m==='rolling'){const beat=Math.floor(peer.celebration/1.9);if(beat!==peer.feedBeat){peer.feedBeat=beat;tossFood(root.position,root.rotation.y);}}
  }
