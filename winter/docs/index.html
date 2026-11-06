@@ -3768,7 +3768,7 @@ function createArrivalTracker(now=()=>Date.now(),quietMs=30000){
  };
 }
 // Shared by all three standalone worlds; each keeps separate coordinates and actions.
-const WORLD_CONFIG={"current":"winter","winterPath":"/snowy-winter-village/","aquariumPath":"/little-blue-aquarium/","libraryPath":"/little-lantern-library/","publicOrigin":"https://seonyoungyoo16.github.io"};
+const WORLD_CONFIG={"current":"winter","winterPath":"/my-little-village/","aquariumPath":"/my-little-village/aquarium/","libraryPath":"/my-little-village/library/","publicOrigin":"https://seonyoungyoo16.github.io"};
 const CURRENT_WORLD=WORLD_CONFIG.current,OTHER_WORLD=CURRENT_WORLD==='winter'?'aquarium':'winter',EXTRA_WORLD=CURRENT_WORLD==='library'?'aquarium':'library';
 const WORLD_NAMES={winter:'겨울 마을',aquarium:'수족관',library:'도서관'},WORLD_DIRECTIONS={winter:'겨울 마을로',aquarium:'수족관으로',library:'도서관으로'},WORLD_ICONS={winter:'❄',aquarium:'◌',library:'▤'},TRAVEL_KEY='little-worlds-travel-v1';
 const incomingWorldTravel=new URLSearchParams(location.hash.slice(1)).get('travel')==='1';
@@ -3780,8 +3780,8 @@ function worldRoomId(party,world){return(world==='aquarium'?'aq_':world==='libra
 function readRoom(){const raw=new URLSearchParams(location.hash.slice(1)).get('room')||'',party=partyId(raw);return worldRoomId(/^[a-f0-9]{24}$/.test(party)?party:token(),CURRENT_WORLD);}
 function otherWorldRoom(){return worldRoomId(partyId(roomId),OTHER_WORLD);}
 function worldURL(world){
- const hosted=/^https?:$/.test(location.protocol)&&/^\/(snowy-winter-village|little-blue-aquarium|little-lantern-library)(\/|$)/.test(location.pathname);
- const paths={winter:WORLD_CONFIG.winterPath,aquarium:WORLD_CONFIG.aquariumPath,library:WORLD_CONFIG.libraryPath||'/little-lantern-library/'};
+ const hosted=/^https?:$/.test(location.protocol)&&/^\/(my-little-village|snowy-winter-village|little-blue-aquarium|little-lantern-library)(\/|$)/.test(location.pathname);
+ const paths={winter:WORLD_CONFIG.winterPath,aquarium:WORLD_CONFIG.aquariumPath,library:WORLD_CONFIG.libraryPath||'/my-little-village/library/'};
  const url=new URL(paths[world],hosted?location.origin:WORLD_CONFIG.publicOrigin);url.hash='room='+worldRoomId(partyId(roomId),world)+'&travel=1';return url.href;
 }
 function activeOtherWorldMembers(world=OTHER_WORLD){

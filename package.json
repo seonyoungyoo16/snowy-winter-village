@@ -1,0 +1,15 @@
+{
+  "name": "my-little-village",
+  "version": "1.0.0",
+  "private": true,
+  "description": "친구와 함께하는 겨울 마을, 물결 수족관, 책숲 도서관",
+  "license": "MIT",
+  "type": "commonjs",
+  "workspaces": ["winter", "aquarium", "library"],
+  "scripts": {
+    "build": "node build-all.cjs",
+    "test": "node check-all.cjs",
+    "test:live": "node library/check-live.cjs",
+    "preview": "node preview.cjs"
+  }
+}
