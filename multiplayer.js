@@ -75,13 +75,14 @@ function updateNetworkStatus(message){
  $('village-state').textContent=message||(networkJoined?(count>1?count+'명이 함께':'친구를 기다려요'):roomFull?'도서관이 가득해요':'혼자 산책 중');
  $('connection-state').textContent=networkJoined?'연결됨':networkStarting?'연결 중':'연결 대기';
  $('status').dataset.connected=String(networkJoined);
- const members=Array.from(remotePlayers.values()).map(p=>p.data.n+' · '+activityNames[p.data.m]);
+ const members=Array.from(remotePlayers.values()).map(p=>p.data.n+' · '+visitorActivity(p.data));
  const roster=[nickname+' · 나',...members].join(' / ');
  if($('online-players').textContent!==roster)$('online-players').textContent=roster;
  $('friend-roster').textContent=roster;
  $('new-room').hidden=!roomFull;
  updateWorldTravelUI();
 }
+function visitorActivity(data){return data.m==='celebrate'&&data.b>=.55?CAT_ACTIONS[catActionKind(data.b)].status:activityNames[data.m];}
 function validState(data){return data&&data.v===1&&typeof data.u==='string'&&typeof data.n==='string'&&data.n.length>0&&data.n.length<=12&&Number.isInteger(data.k)&&data.k>=0&&data.k<=2&&['x','y','z','a','p','b','t','j','s'].every(k=>Number.isFinite(data[k]))&&Math.abs(data.x)<=26&&Math.abs(data.z)<=26&&data.y>=-1&&data.y<=10&&Math.abs(data.a)<=3.142&&Math.abs(data.p)<=1.6&&data.b>=0&&data.b<=.7&&Object.hasOwn(activityNames,data.m);}
 function disposeActor(root){root.traverse(o=>{if(!o.isMesh)return;if(!Object.values(geom).includes(o.geometry))o.geometry.dispose();});scene.remove(root);}
 function removePeer(id){const peer=remotePlayers.get(id);if(!peer)return;disposeActor(peer.actor.root);scene.remove(peer.shadow);peer.label.material.map.dispose();peer.label.material.dispose();remotePlayers.delete(id);}
@@ -106,7 +107,7 @@ function reconcileRoom(){
 }
 function stateBody(){
  const walking=lastNetworkMovement&&!document.hidden;
- return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x),y:roundState(player.position.y),z:roundState(player.position.z),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='idle'&&(walking||pendingReadingSeat)?'walk':({reading:'rolling',rest:'warm',writing:'sled',wave:'celebrate'}[mode]||'idle'),b:pendingReadingSeat?roundState(.6+pendingReadingSeat.index*.02):mode==='writing'?roundState(writingWireProgress(selectedBook,writingTime)):mode==='reading'?roundState(readingWireState(selectedBook,readingPages[selectedBook],readingTurnTime,readingTurnDirection)):0,j:joinedAt};
+ return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x),y:roundState(player.position.y),z:roundState(player.position.z),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='idle'&&(walking||pendingReadingSeat||pendingCatAction)?'walk':({cat:'celebrate',reading:'rolling',rest:'warm',writing:'sled',wave:'celebrate'}[mode]||'idle'),b:mode==='cat'?roundState(catActionWire(catActionType,catActionTime)):pendingCatAction?roundState(.67+pendingCatAction.kind*.01):pendingReadingSeat?roundState(.6+pendingReadingSeat.index*.02):mode==='writing'?roundState(writingWireProgress(selectedBook,writingTime)):mode==='reading'?roundState(readingWireState(selectedBook,readingPages[selectedBook],readingTurnTime,readingTurnDirection)):0,j:joinedAt};
 }
 function publishState(force=false){
  if(!networkJoined||!networkConnected||!selfRef||!networkAuth?.currentUser)return;
@@ -161,8 +162,8 @@ function updatePeers(dt){
   const root=peer.actor.root,distance=root.position.distanceTo(peer.target),blend=1-Math.exp(-dt*12);if(distance>6)root.position.copy(peer.target);else root.position.lerp(peer.target,blend);
   root.rotation.y+=Math.atan2(Math.sin(data.a-root.rotation.y),Math.cos(data.a-root.rotation.y))*blend;root.rotation.x=lerp(root.rotation.x,data.p,blend);
   peer.phase+=dt;const reading=data.m==='rolling',writing=data.m==='sled',moving=data.m==='walk';if(!writing)peer.writingTime=null;
-  const turn=reading?remoteReadingTurn(peer,dt):{time:READING_TURN_DURATION,direction:1};if(!reading){peer.readingKey=null;peer.readingTime=null;}
-  animatePose(dt,moving,peer.actor,reading?'reading':writing?'writing':data.m==='warm'?'rest':data.m==='celebrate'?'wave':'idle',peer.phase,writing?remoteWritingTime(peer,dt):turn.time,bookIndexFromWire(data.b),turn.direction);
+  const catAction=data.m==='celebrate'&&data.b>=.55,catData=catAction?catActionFromWire(data.b):null;const turn=reading?remoteReadingTurn(peer,dt):{time:READING_TURN_DURATION,direction:1};if(!reading){peer.readingKey=null;peer.readingTime=null;}
+  animatePose(dt,moving,peer.actor,catAction?'cat':reading?'reading':writing?'writing':data.m==='warm'?'rest':data.m==='celebrate'?'wave':'idle',peer.phase,catAction?catData.time:writing?remoteWritingTime(peer,dt):turn.time,bookIndexFromWire(data.b),turn.direction,catAction?catData.kind:0);
   peer.shadow.position.set(root.position.x,.03,root.position.z);
  }
 }

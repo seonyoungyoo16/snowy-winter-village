@@ -2,7 +2,7 @@
 const colliders=[];
 function block(x,z,r){colliders.push({x,z,r});}
 function blockBox(x,z,w,d){colliders.push({x,z,w,d});}
-function blocked(x,z,pad=.43){if(Math.abs(x)>19.5||z>16.7||z< -16.7)return true;return colliders.some(c=>c.r!==undefined?(c.x-x)**2+(c.z-z)**2<(c.r+pad)**2:Math.abs(c.x-x)<c.w/2+pad&&Math.abs(c.z-z)<c.d/2+pad);}
+function blocked(x,z,pad=.43,catPass=false){if(Math.abs(x)>19.5||z>16.7||z< -16.7)return true;return colliders.some(c=>!(catPass&&c.catProp)&&(c.r!==undefined?(c.x-x)**2+(c.z-z)**2<(c.r+pad)**2:Math.abs(c.x-x)<c.w/2+pad&&Math.abs(c.z-z)<c.d/2+pad));}
 let seed=31415;function rand(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
 const WOOD=0x8b6657,TRIM=0xc4a17a,CREAM=0xe6d7b4;
 box(world,0x5c4750,0,-.48,0,42,.85,38);box(world,0xb48c70,0,-.035,0,41.6,.07,37.6);
@@ -53,7 +53,7 @@ const loungeRug=mesh(geom.disc,0xbda68a,details,10.1,.025,-14.8,6.6,1.8,1);loung
 box(details,0xa28267,9,1,1,4.1,.2,3.4);for(const x of[7.35,10.65])for(const z of[-.25,2.25])box(details,WOOD,x,.48,z,.18,.96,.18);blockBox(9,1,4.1,3.4);
 littleBook(details,8,1.17,.3,0x9aac99,.1);littleBook(details,8.2,1.35,.4,0xa99ab6,-.1);box(details,0xc5b79a,10,1.16,.2,.8,.12,.56);tableLamp(10.3,-.1,1.1);
 box(details,WOOD,13.2,1.7,1.2,2.5,2.3,.18);box(details,0xc8b794,13.2,1.7,1.31,2.23,2.03,.08);for(const x of[12.3,14.1])box(details,WOOD,x,.55,1.2,.12,1.1,.15);blockBox(13.2,1.2,2.5,.4);
-leafPlant(-17,9.5,1.2);leafPlant(15,10.8,1.2);leafPlant(-5,13.7,.95);
+leafPlant(-18,5,1.2);leafPlant(15,10.8,1.2);leafPlant(-5,13.7,.95);
 for(const x of[-5,5]){mesh(geom.cyl,0x8a6b5d,details,x,2.6,14,.16,5.2,.16);sphere(details,mat(0xe9d2a6,true),x,4.65,14,.3);}
 const arch=new THREE.CatmullRomCurve3(Array.from({length:21},(_,i)=>{const a=i/20*Math.PI;return new THREE.Vector3(-5*Math.cos(a),5.15+Math.sin(a)*1.2,14);}));mesh(new THREE.TubeGeometry(arch,40,.08,6,false),TRIM,details);
 mergeModel(details);
