@@ -1,5 +1,6 @@
 const dustCount=reduced?30:(mobile?65:110),dustArray=new Float32Array(dustCount*3),dustSeed=[];for(let i=0;i<dustCount;i++)dustSeed.push({x:(rand()-.5)*31,y:.8+rand()*5,z:(rand()-.5)*25});const dustGeo=new THREE.BufferGeometry();dustGeo.setAttribute('position',new THREE.BufferAttribute(dustArray,3));const dust=new THREE.Points(dustGeo,new THREE.PointsMaterial({color:0xf4dfae,size:.035,transparent:true,opacity:.38,depthWrite:false}));scene.add(dust);
 function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;return;}const dt=Math.min((now-oldTime)/1000,.05);oldTime=now;elapsed+=dt;let moving=false;
+ if(mode==='catWake'){catActionTime=Math.max(0,(Date.now()+serverOffset)/1000-catWakeStarted);if(catActionTime>=CAT_WAKE_DURATION){stopActivity();updateUI();}}
  if(entered&&!helpOpen()){
   if(mode==='cat'){catActionTime+=dt;if(catActionTime>=CAT_ACTIONS[catActionType].duration){stopActivity();updateUI();}}
   else if(mode==='reading')readingTurnTime=Math.min(READING_TURN_DURATION,readingTurnTime+dt);
@@ -14,7 +15,7 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
   }
   }
  }
- networkTick(dt,moving);updateResidentCat(dt);animatePose(dt,moving,character,mode,elapsed,mode==='cat'?catActionTime:mode==='reading'?readingTurnTime:writingTime);playerShadow.position.set(player.position.x,.035,player.position.z);
+ networkTick(dt,moving);updateResidentCat(dt);animatePose(dt,moving,character,mode,elapsed,mode==='cat'||mode==='catWake'?catActionTime:mode==='reading'?readingTurnTime:writingTime);playerShadow.position.set(player.position.x,.035,player.position.z);
  for(let i=0;i<dustCount;i++){const s=dustSeed[i];dustArray[i*3]=s.x+Math.sin(elapsed*.12+i)*.3;dustArray[i*3+1]=s.y+Math.sin(elapsed*.2+i*2)*.12;dustArray[i*3+2]=s.z+Math.cos(elapsed*.1+i)*.2;}dustGeo.attributes.position.needsUpdate=true;
  if(ringTimer>0){ringTimer-=dt;targetRing.scale.setScalar(1+Math.sin(elapsed*4)*.08);targetRing.material.opacity=clamp(ringTimer,0,.7);if(ringTimer<=0)targetRing.visible=false;}
  updateCamera(dt);if(frameCount++%5===0){label('label-books',-12,4.5,-7.3);label('label-window',10,3.2,-11);label('label-desk',9,2.8,1);updateCatBubble();if(entered)updateUI();}renderer.render(scene,camera);

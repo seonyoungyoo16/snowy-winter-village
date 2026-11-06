@@ -82,7 +82,7 @@ function updateNetworkStatus(message){
  $('new-room').hidden=!roomFull;
  updateWorldTravelUI();
 }
-function visitorActivity(data){return data.m==='celebrate'&&data.b>=.55?CAT_ACTIONS[catActionKind(data.b)].status:activityNames[data.m];}
+function visitorActivity(data){return isCatWake(data)?'잠든 귤이를 깨운 중':isCatInteraction(data)?CAT_ACTIONS[catActionKind(data.b)].status:activityNames[data.m];}
 function validState(data){return data&&data.v===1&&typeof data.u==='string'&&typeof data.n==='string'&&data.n.length>0&&data.n.length<=12&&Number.isInteger(data.k)&&data.k>=0&&data.k<=2&&['x','y','z','a','p','b','t','j','s'].every(k=>Number.isFinite(data[k]))&&Math.abs(data.x)<=26&&Math.abs(data.z)<=26&&data.y>=-1&&data.y<=10&&Math.abs(data.a)<=3.142&&Math.abs(data.p)<=1.6&&data.b>=0&&data.b<=.7&&Object.hasOwn(activityNames,data.m);}
 function disposeActor(root){root.traverse(o=>{if(!o.isMesh)return;if(!Object.values(geom).includes(o.geometry))o.geometry.dispose();});scene.remove(root);}
 function removePeer(id){const peer=remotePlayers.get(id);if(!peer)return;disposeActor(peer.actor.root);scene.remove(peer.shadow);peer.label.material.map.dispose();peer.label.material.dispose();remotePlayers.delete(id);}
@@ -107,7 +107,7 @@ function reconcileRoom(){
 }
 function stateBody(){
  const walking=lastNetworkMovement&&!document.hidden;
- return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x),y:roundState(player.position.y),z:roundState(player.position.z),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='idle'&&(walking||pendingReadingSeat||pendingCatAction)?'walk':({cat:'celebrate',reading:'rolling',rest:'warm',writing:'sled',wave:'celebrate'}[mode]||'idle'),b:mode==='cat'?roundState(catActionWire(catActionType,catActionTime)):pendingCatAction?roundState(.67+pendingCatAction.kind*.01):pendingReadingSeat?roundState(.6+pendingReadingSeat.index*.02):mode==='writing'?roundState(writingWireProgress(selectedBook,writingTime)):mode==='reading'?roundState(readingWireState(selectedBook,readingPages[selectedBook],readingTurnTime,readingTurnDirection)):0,j:joinedAt};
+ return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x),y:roundState(player.position.y),z:roundState(player.position.z),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='idle'&&(walking||pendingReadingSeat||pendingCatAction)?'walk':({cat:'celebrate',catWake:'celebrate',reading:'rolling',rest:'warm',writing:'sled',wave:'celebrate'}[mode]||'idle'),b:mode==='catWake'?roundState(catWakeWire(catActionTime)):mode==='cat'?roundState(catActionWire(catActionType,catActionTime)):pendingCatAction&&pendingCatAction.kind!==null?roundState(.67+pendingCatAction.kind*.01):pendingReadingSeat?roundState(.6+pendingReadingSeat.index*.02):mode==='writing'?roundState(writingWireProgress(selectedBook,writingTime)):mode==='reading'?roundState(readingWireState(selectedBook,readingPages[selectedBook],readingTurnTime,readingTurnDirection)):0,j:joinedAt};
 }
 function publishState(force=false){
  if(!networkJoined||!networkConnected||!selfRef||!networkAuth?.currentUser)return;
@@ -142,7 +142,7 @@ async function startNetwork(){
   for(const stop of networkStops)stop();networkStops=[];roomMembers.clear();resetWorldTravel();
   selfRef=F.ref(networkDB,'rooms/'+roomId+'/players/'+sessionKey);
   const players=F.ref(networkDB,'rooms/'+roomId+'/players');
-  const change=snapshot=>{if(generation!==networkGeneration)return;const data=snapshot.val();if(validState(data))roomMembers.set(snapshot.key,data);else roomMembers.delete(snapshot.key);reconcileRoom();};
+  const change=snapshot=>{if(generation!==networkGeneration)return;const data=snapshot.val();if(validState(data)){roomMembers.set(snapshot.key,data);if(snapshot.key!==sessionKey&&isCatWake(data))rememberCatWake(data);}else roomMembers.delete(snapshot.key);reconcileRoom();};
   const failed=error=>{if(generation!==networkGeneration)return;networkJoined=false;clearPeers();updateNetworkStatus('친구 연결 대기');console.warn('책숲 도서관 동기화:',error.code||'network');};
   networkStops.push(subscribeOtherWorld(F,generation),subscribeAdditionalWorld(F,generation));
   networkStops.push(F.onChildAdded(players,change,failed),F.onChildChanged(players,change,failed),F.onChildRemoved(players,snapshot=>{roomMembers.delete(snapshot.key);reconcileRoom();},failed));
@@ -162,8 +162,8 @@ function updatePeers(dt){
   const root=peer.actor.root,distance=root.position.distanceTo(peer.target),blend=1-Math.exp(-dt*12);if(distance>6)root.position.copy(peer.target);else root.position.lerp(peer.target,blend);
   root.rotation.y+=Math.atan2(Math.sin(data.a-root.rotation.y),Math.cos(data.a-root.rotation.y))*blend;root.rotation.x=lerp(root.rotation.x,data.p,blend);
   peer.phase+=dt;const reading=data.m==='rolling',writing=data.m==='sled',moving=data.m==='walk';if(!writing)peer.writingTime=null;
-  const catAction=data.m==='celebrate'&&data.b>=.55,catData=catAction?catActionFromWire(data.b):null;const turn=reading?remoteReadingTurn(peer,dt):{time:READING_TURN_DURATION,direction:1};if(!reading){peer.readingKey=null;peer.readingTime=null;}
-  animatePose(dt,moving,peer.actor,catAction?'cat':reading?'reading':writing?'writing':data.m==='warm'?'rest':data.m==='celebrate'?'wave':'idle',peer.phase,catAction?catData.time:writing?remoteWritingTime(peer,dt):turn.time,bookIndexFromWire(data.b),turn.direction,catAction?catData.kind:0);
+  const waking=isCatWake(data),catAction=isCatInteraction(data),catData=catAction?catActionFromWire(data.b):null;const turn=reading?remoteReadingTurn(peer,dt):{time:READING_TURN_DURATION,direction:1};if(!reading){peer.readingKey=null;peer.readingTime=null;}
+  animatePose(dt,moving,peer.actor,waking?'catWake':catAction?'cat':reading?'reading':writing?'writing':data.m==='warm'?'rest':data.m==='celebrate'?'wave':'idle',peer.phase,waking?catWakeTime(data.b):catAction?catData.time:writing?remoteWritingTime(peer,dt):turn.time,bookIndexFromWire(data.b),turn.direction,catAction?catData.kind:0);
   peer.shadow.position.set(root.position.x,.03,root.position.z);
  }
 }

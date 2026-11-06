@@ -18,7 +18,7 @@ const payload=(user,name)=>({v:1,u:user.localId,n:name,k:0,x:0,y:0,z:7,a:0,p:0,m
   for(const progress of[0,.19,.2,.39,.4,.59])assert.equal((await request(pa,a.idToken,'PUT',{...bodyA,m:'sled',b:progress,s:3})).status,200);
   for(const reading of[.012,.12,.147,.212,.32,.347,.412,.52,.547])assert.equal((await request(pa,a.idToken,'PUT',{...bodyA,m:'rolling',y:.2,b:reading,s:4})).status,200);
   for(const reservation of[.6,.62,.64,.66])assert.equal((await request(pa,a.idToken,'PUT',{...bodyA,m:'walk',b:reservation,s:4})).status,200);
-  for(const progress of[.55,.57,.59,.6,.62,.64,.65,.67,.69])assert.equal((await request(pa,a.idToken,'PUT',{...bodyA,m:'celebrate',b:progress,s:5})).status,200);
+  for(const progress of[.55,.57,.59,.6,.62,.64,.65,.67,.69,.695,.698,.7])assert.equal((await request(pa,a.idToken,'PUT',{...bodyA,m:'celebrate',b:progress,s:5})).status,200);
   for(const approach of[.67,.68,.69])assert.equal((await request(pa,a.idToken,'PUT',{...bodyA,m:'walk',b:approach,s:6})).status,200);
   assert.equal((await request('rooms',a.idToken)).status,401);console.log('PASS: library actions, three book selections and bookmark progress sync; room-directory browsing is denied.');
  }finally{
