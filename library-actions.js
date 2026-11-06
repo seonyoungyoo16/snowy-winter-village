@@ -29,6 +29,7 @@ function animateBookPose(actor,state,index,time,phase){
  actor.head.rotation.x=state==='writing'?.24:.21+Math.sin(phase*.6)*.025;
  actor.arms[0].rotation.set(-1.66,0,.3);actor.arms[1].rotation.set(-1.66,0,-.3);actor.legs.forEach(leg=>leg.rotation.x=0);
  if(state==='reading'){
+  actor.legs.forEach((leg,i)=>leg.rotation.x=-1.28+Math.sin(phase*1.7+i*.5)*.025);
   actor.arms[0].rotation.x=-1.42;actor.arms[1].rotation.x=-1.42;
   if(actor.heldStamp)actor.heldStamp.root.visible=false;
   const turn=clamp((phase%7-5.3)/1.15,0,1);book.turn.rotation.z=turn*Math.PI;actor.arms[1].rotation.x+=Math.sin(turn*Math.PI)*.32;

@@ -1,4 +1,4 @@
-// Only virtual visitor state leaves this browser. The aq_ room prefix separates aquarium coordinates within the same party.
+// Only virtual visitor state leaves this browser; lb_ keeps this world's coordinates separate.
 function createArrivalTracker(now=()=>Date.now(),quietMs=30000){
  const members=new Map(),departures=new Map(),announced=new Map();let ready=false;
  return{
@@ -106,7 +106,7 @@ function reconcileRoom(){
 }
 function stateBody(){
  const walking=lastNetworkMovement&&!document.hidden;
- return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x),y:roundState(player.position.y),z:roundState(player.position.z),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='idle'&&walking?'walk':({reading:'rolling',rest:'warm',writing:'sled',wave:'celebrate'}[mode]||'idle'),b:mode==='writing'?roundState(writingWireProgress(selectedBook,writingTime)):mode==='reading'?selectedBook*.2:0,j:joinedAt};
+ return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x),y:roundState(player.position.y),z:roundState(player.position.z),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='idle'&&(walking||pendingReadingSeat)?'walk':({reading:'rolling',rest:'warm',writing:'sled',wave:'celebrate'}[mode]||'idle'),b:pendingReadingSeat?roundState(.6+pendingReadingSeat.index*.02):mode==='writing'?roundState(writingWireProgress(selectedBook,writingTime)):mode==='reading'?selectedBook*.2:0,j:joinedAt};
 }
 function publishState(force=false){
  if(!networkJoined||!networkConnected||!selfRef||!networkAuth?.currentUser)return;

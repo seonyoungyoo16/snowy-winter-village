@@ -30,8 +30,9 @@ function littleBook(p,x,y,z,c,angle=0){const b=new THREE.Group();box(b,c,0,0,0,.
 for(let i=0;i<4;i++)littleBook(details,-1.5+i*.9,1.14,-2+Math.sin(i)*.5,bookColors[i],i*.5);
 function tableLamp(x,z,y=1.1){mesh(geom.cyl,0x8d785e,details,x,y+.02,z,.28,.06,.28);mesh(geom.cyl,0x8d785e,details,x,y+.39,z,.035,.72,.035);mesh(new THREE.CylinderGeometry(.3,.5,.44,16),0xc8bca0,details,x,y+.86,z);sphere(details,mat(0xffe0a2,true),x,y+.7,z,.13);}
 tableLamp(0,-2);
+const readingSeats=[{x:-4,z:-2,a:Math.PI/2},{x:4,z:-2,a:-Math.PI/2},{x:0,z:2.1,a:Math.PI},{x:0,z:-6.1,a:0}].map((s,index)=>({...s,index,approach:{x:s.x-Math.sin(s.a)*1.05,z:s.z-Math.cos(s.a)*1.05}}));
 function stool(x,z){mesh(geom.cyl,0x9c7863,details,x,.27,z,.08,.54,.08);mesh(geom.cyl,0xaca28d,details,x,.54,z,.52,.16,.52);block(x,z,.2);}
-for(const[x,z]of[[-4,-2],[4,-2],[0,2.1],[0,-6.1]])stool(x,z);
+readingSeats.forEach(s=>stool(s.x,s.z));
 const windowSeats=[{x:8,z:-10.5,a:-.2},{x:11,z:-10.5,a:.1},{x:14,z:-10.1,a:.3},{x:5.2,z:-10,a:-.35}];
 function armchair(s){const p=new THREE.Group();box(p,0x7b6659,0,.22,0,1.25,.38,1.1);sphere(p,0x9da98e,0,.62,0,.76,.2,.68);box(p,0x94a28d,0,1.13,-.48,1.48,1,.3);for(const side of[-1,1])box(p,0x9baa93,side*.7,.93,0,.22,.54,1.1);mergeModel(p);p.position.set(s.x,0,s.z);p.rotation.y=s.a;world.add(p);}
 windowSeats.forEach(armchair);tableLamp(9.5,-12,0);tableLamp(15.4,-10.8,0);leafPlant(16,-14.8,1.5);leafPlant(3.6,-15.6,1.4);

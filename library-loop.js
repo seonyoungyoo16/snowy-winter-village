@@ -4,9 +4,12 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
   if(mode==='writing'){writingTime+=dt;if(writingTime>=WRITING_DURATION)finishBookmark();}
   else if(mode==='wave'){waveTime+=dt;if(waveTime>2.3){mode='idle';uiKey='';}}
   else if(mode==='idle'){
+   updateReadingWalk();
+   if(mode==='idle'){
    let vx=0,vz=0;const speed=3.5;if(keys.has('w')||keys.has('arrowup'))vz--;if(keys.has('s')||keys.has('arrowdown'))vz++;if(keys.has('a')||keys.has('arrowleft'))vx--;if(keys.has('d')||keys.has('arrowright'))vx++;
-   if(vx||vz){path=[];const v=new THREE.Vector3(vx,0,vz).normalize().applyAxisAngle(new THREE.Vector3(0,1,0),cameraYaw),nx=player.position.x+v.x*speed*dt,nz=player.position.z+v.z*speed*dt;if(!blocked(nx,nz)){player.position.x=nx;player.position.z=nz;moving=true;}else{if(!blocked(nx,player.position.z)){player.position.x=nx;moving=true;}if(!blocked(player.position.x,nz)){player.position.z=nz;moving=true;}}if(moving){const desired=Math.atan2(v.x,v.z);player.rotation.y+=Math.atan2(Math.sin(desired-player.rotation.y),Math.cos(desired-player.rotation.y))*(1-Math.exp(-dt*12));}}
+   if(vx||vz){if(pendingReadingSeat)stopActivity();path=[];const v=new THREE.Vector3(vx,0,vz).normalize().applyAxisAngle(new THREE.Vector3(0,1,0),cameraYaw),nx=player.position.x+v.x*speed*dt,nz=player.position.z+v.z*speed*dt;if(!blocked(nx,nz)){player.position.x=nx;player.position.z=nz;moving=true;}else{if(!blocked(nx,player.position.z)){player.position.x=nx;moving=true;}if(!blocked(player.position.x,nz)){player.position.z=nz;moving=true;}}if(moving){const desired=Math.atan2(v.x,v.z);player.rotation.y+=Math.atan2(Math.sin(desired-player.rotation.y),Math.cos(desired-player.rotation.y))*(1-Math.exp(-dt*12));}}
    else if(path.length){const p=path[0],dx=p.x-player.position.x,dz=p.z-player.position.z,d=Math.hypot(dx,dz),step=Math.min(speed*dt,d);if(d<.07)path.shift();else{player.position.x+=dx/d*step;player.position.z+=dz/d*step;const desired=Math.atan2(dx,dz);player.rotation.y+=Math.atan2(Math.sin(desired-player.rotation.y),Math.cos(desired-player.rotation.y))*(1-Math.exp(-dt*13));moving=true;}}
+  }
   }
  }
  networkTick(dt,moving);animatePose(dt,moving);playerShadow.position.set(player.position.x,.035,player.position.z);
