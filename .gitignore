@@ -3,3 +3,6 @@ dist/
 .local-runs/
 *.log
 *.tgz
+.wrangler/
+.dev.vars
+wrangler.local.jsonc

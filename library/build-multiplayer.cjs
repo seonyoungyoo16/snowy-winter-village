@@ -9,6 +9,8 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),esbuild=require('es
   source=source.replace('/* LIBRARY_CODE */',()=>fs.readFileSync(path.join(__dirname,'library.js'),'utf8'));
   for(const part of ['SCENE','ACTIONS','GAME','CAT','LOOP'])source=source.replace('/* LIBRARY_'+part+'_CODE */',()=>fs.readFileSync(path.join(__dirname,'library-'+part.toLowerCase()+'.js'),'utf8'));
   source=source.replace('/* MULTIPLAYER_CODE */',()=>fs.readFileSync(path.join(__dirname,'multiplayer.js'),'utf8'));
+  source=source.replace('/* ARRIVAL_CLIENT_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/arrival-client.js'),'utf8').replace('/* ARRIVAL_SERVICE_CONFIG */',JSON.stringify(JSON.parse(fs.readFileSync(path.join(__dirname,'../shared/arrival-config.json'),'utf8')))));
+  source=source.replace('/* RESIDENT_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/resident-guide.js'),'utf8'));
   source=source.replace('/* WORLD_TRAVEL_CODE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.js'),'utf8').replace('/* WORLD_CONFIG */',JSON.stringify({current:'library',winterPath:'/snowy-winter-village/',aquariumPath:'/snowy-winter-village/aquarium/',libraryPath:'/snowy-winter-village/library/',publicOrigin:'https://seonyoungyoo16.github.io'})));
   source=source.replace('/* WORLD_TRAVEL_STYLE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.css'),'utf8'));
   source=source.replace('<!-- WORLD_TRAVEL_UI -->',()=>fs.readFileSync(path.join(__dirname,'world-travel.html'),'utf8'));

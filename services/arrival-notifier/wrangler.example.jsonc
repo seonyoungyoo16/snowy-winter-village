@@ -1,0 +1,16 @@
+{
+  "name": "my-little-village-arrivals",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-07",
+  "workers_dev": true,
+  "observability": {"enabled": false},
+  "d1_databases": [{"binding": "DB", "database_name": "my-little-village-notifications", "database_id": "SET_BY_SETUP"}],
+  "vars": {
+    "SITE_ORIGIN": "https://seonyoungyoo16.github.io",
+    "SITE_BASE": "https://seonyoungyoo16.github.io/snowy-winter-village/",
+    "PARTY_ID": "0946f302b9cf8449c6970809",
+    "PROJECT_API_KEY": "SET_BY_SETUP",
+    "DATABASE_URL": "https://snowyroom-8a8a5-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "SETUP_EXPIRES": "0"
+  }
+}

@@ -114,7 +114,7 @@ function publishState(force=false){
  const now=performance.now();if(!force&&now-lastNetworkSend<200)return;
  const body=stateBody(),signature=JSON.stringify(body);if(!force&&signature===lastNetworkBody&&now-lastNetworkSend<6000)return;
  lastNetworkBody=signature;lastNetworkSend=now;
- window.WinterFirebase.set(selfRef,{...body,s:++networkSequence,t:window.WinterFirebase.serverTimestamp()}).catch(error=>{networkJoined=false;clearPeers();updateNetworkStatus('접속을 확인해 주세요');console.warn('책숲 도서관 연결:',error.code||'network');toast('친구 연결을 잠시 쉬고 있어요. 초대 버튼에서 다시 연결해요');});
+ return window.WinterFirebase.set(selfRef,{...body,s:++networkSequence,t:window.WinterFirebase.serverTimestamp()}).catch(error=>{networkJoined=false;clearPeers();updateNetworkStatus('접속을 확인해 주세요');console.warn('책숲 도서관 연결:',error.code||'network');toast('친구 연결을 잠시 쉬고 있어요. 초대 버튼에서 다시 연결해요');});
 }
 async function registerPresence(generation){
  if(generation!==networkGeneration||!networkConnected||roomFull)return;
@@ -128,7 +128,7 @@ async function registerPresence(generation){
    const spawn=[[-1.5,7],[1.5,7],[0,5.2],[0,8.8]].find(([x,z])=>active.every(([,d])=>Math.hypot(d.x-x,d.z-z)>1));if(spawn)player.position.set(spawn[0],0,spawn[1]);
   }
   disconnectJob=F.onDisconnect(selfRef);await disconnectJob.remove();if(generation!==networkGeneration)return;
-  arrivalTracker.seed(active);networkJoined=true;publishState(true);reconcileRoom();
+  arrivalTracker.seed(active);networkJoined=true;const saved=publishState(true);reconcileRoom();if(saved?.then)saved.then(()=>reportOwnArrival(generation)).catch(()=>{});
  }catch(error){if(generation!==networkGeneration)return;networkJoined=false;updateNetworkStatus('친구 연결 대기');console.warn('책숲 도서관 입장:',error.code||'network');toast('친구 연결을 준비하지 못했어요. 잠시 후 초대 버튼을 눌러주세요');}
 }
 async function startNetwork(){
@@ -183,4 +183,6 @@ addEventListener('online',()=>{if(entered&&!networkJoined&&!roomFull)startNetwor
 addEventListener('pagehide',()=>{if(selfRef)window.WinterFirebase.remove(selfRef).catch(()=>{});});
 setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 
+/* RESIDENT_CODE */
+/* ARRIVAL_CLIENT_CODE */
 setupWorldTravel();

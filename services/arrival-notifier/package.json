@@ -1,0 +1,8 @@
+{
+  "name": "village-arrival-notifier",
+  "private": true,
+  "type": "module",
+  "scripts": {"test": "node --test worker.test.mjs", "setup": "node setup.cjs"},
+  "devDependencies": {"wrangler": "4.158.0"},
+  "engines": {"node": ">=24"}
+}

@@ -1,0 +1,44 @@
+# 텔레그램 접속 알림
+
+친구의 브라우저 → Cloudflare Worker → 내 텔레그램 개인 대화로 알립니다. 주인의 PC와 게임 탭을 꺼도 동작합니다. 게임은 기존 GitHub Pages 주소에서 열립니다. NPC 도토리는 알림 서버 없이도 표시됩니다.
+
+현재 활성화 여부는 루트 `shared/arrival-config.json`의 `endpoint`로 확인합니다. 빈 주소는 연결 대기 상태입니다. 코드 검사 통과는 실제 휴대폰 수신 완료를 뜻하지 않습니다.
+
+## 최초 연결
+
+1. 텔레그램에서 공식 **[@BotFather](https://t.me/BotFather)**를 열고 `/newbot`을 보냅니다. 표시 이름과 `bot`으로 끝나는 고유 사용자 이름을 정합니다. 발급받은 토큰은 채팅·GitHub에 올리지 않습니다.
+2. 무료 [Cloudflare 계정](https://dash.cloudflare.com/)으로 로그인합니다. 유료 Workers 구독이나 Firebase Blaze 업그레이드는 필요하지 않습니다.
+3. 이 폴더에서 `npm ci`를 실행합니다. Node.js 24 이상이 필요합니다.
+4. `npx wrangler login --use-keyring --scopes account:read user:read workers:write d1:write`로 공식 CLI 연결을 승인합니다. Windows에서 키링 의존성 설치를 요청하면 공식 안내에 따릅니다. 계정 조회, Workers 배포, D1 저장소 권한을 사용합니다.
+5. `npm run setup`을 실행하고 출력되는 `http://127.0.0.1:.../setup/...` 주소를 엽니다. 이 PC에서만 열리는 일회용 창입니다. 계정을 선택하고 봇 토큰을 **그 창의 비밀번호 입력란**에 붙여 넣어 연결합니다.
+6. 창의 **내 텔레그램 봇 열기**를 눌러 내 휴대폰 텔레그램에서 **시작**합니다. 처음 연결한 개인 대화 하나만 수신자로 저장합니다. 연결 링크는 30분 동안 유효하므로 공유하지 않습니다.
+7. 창에서 연결 완료를 확인한 뒤 루트에서 `npm test`를 실행하고, 갱신된 `shared/arrival-config.json`과 빌드 HTML을 기존 저장소에 배포합니다. 실제 주소에서 접속해 휴대폰 수신을 확인합니다. 연결을 마치면 로컬 설정 창과 명령을 종료해도 됩니다.
+
+Worker 이름은 `my-little-village-arrivals`, D1 이름은 `my-little-village-notifications`입니다. 처음 Workers를 쓰는 계정에서 workers.dev 하위 도메인 설정을 요구하면 Cloudflare 대시보드에서 무료 하위 도메인을 먼저 정합니다. 다른 서비스에 쓰는 봇은 덮어쓰지 않습니다.
+
+## 동작과 보관 정보
+
+- 실제 Firebase 입장 기록을 기록한 다음 방문자가 요청합니다. 서버는 Firebase 로그인 토큰과 해당 방·세션의 최근 접속 상태를 확인하고 그 기록의 닉네임과 공간만 메시지로 보냅니다. Firebase 관리자 키는 필요 없습니다.
+- 기존 공유 친구 그룹 한 곳의 겨울·수족관·도서관만 알립니다. 공간 이동·재접속은 Firebase 사용자 기준 5분 동안 중복 알림을 보내지 않습니다. 브라우저나 기기를 바꾸면 다른 익명 사용자로 취급될 수 있습니다. 주인도 일반 방문자로 들어가면 알림 대상입니다.
+- PC를 끄는 행위와 무관하게 동작하지만, 방문자가 오프라인이거나 요청을 차단하면 알림이 누락될 수 있습니다. 요청 실패는 방문자 브라우저에서 최대 세 번 재시도합니다. 멀티플레이 입장을 막지 않습니다.
+- D1에는 수신 대화 ID, 연결 여부, 최근 알림의 해시 식별자와 시간만 보관합니다. 접속자 닉네임·토큰·방문 이력 원문은 저장하지 않습니다. 중복 방지 행은 다음 정상 알림 시 24시간 지난 항목을 지웁니다.
+- 봇 토큰·웹훅 검증값·일회용 연결값은 **Worker secrets**로 보관합니다. 설정 도구는 CLI 표준입력으로 전달하고 토큰을 설정 파일에 쓰지 않습니다. 공개 게임에는 서버 주소와 친구 그룹 ID만 포함됩니다. 로컬 설정 파일과 Wrangler 상태는 gitignore 대상입니다.
+- Telegram 봇을 차단하면 휴대폰 수신을 중단할 수 있습니다. 알림 요청도 중단하려면 공개 설정의 endpoint를 비운 뒤 다시 빌드·배포합니다. 서버와 저장소 삭제는 Cloudflare 대시보드에서 별도로 진행합니다.
+
+## 무료 한도
+
+2026-11-07 공식 문서 확인 기준입니다. 무료 한도는 변경될 수 있으며 서비스 대시보드의 실제 사용량을 확인합니다.
+
+| 서비스 | 무료 범위 | 이 기능에서 하는 일 |
+| --- | --- | --- |
+| [Cloudflare Workers](https://developers.cloudflare.com/workers/platform/limits/) | 하루 100,000 요청, 요청당 CPU 10ms | 입장 확인과 Telegram 전송 |
+| [Cloudflare D1](https://developers.cloudflare.com/d1/platform/pricing/) | 하루 500만 행 읽기·10만 행 쓰기, 전체 5GB | 중복 알림 방지·수신 대화 저장 |
+| [Telegram Bot](https://core.telegram.org/bots) | 봇 플랫폼 무료 | 휴대폰 알림 수신 |
+
+Workers 한도는 사전 요청·상태 확인도 포함하므로 100,000명이 접속할 수 있다는 뜻은 아닙니다. D1 한도 역시 SQL이 실제 읽거나 쓰는 행 기준입니다. [Telegram 전송 제한](https://core.telegram.org/bots/faq)에 맞춰 한 대화로 약 1.1초 간격을 예약하며 한꺼번에 많이 접속하면 재시도합니다. 무료 한도 초과나 서비스 장애 시 알림이 실패할 수 있고, 자동 결제 업그레이드는 설정하지 않습니다.
+
+## 확인 명령
+
+`npm test`는 실제 SQLite 스키마로 중복·동시 접속·검증 실패·전송 실패 재시도·일회용 개인 대화 연결·CORS를 검사합니다. 외부 Firebase/Telegram 호출은 대역이므로 실제 폰 수신 검사는 별도입니다.
+
+`npx wrangler deploy --dry-run --config wrangler.example.jsonc`는 묶음이 Workers에서 배포 가능한지 확인하며 외부 서버를 만들지 않습니다. 실제 배포는 로컬 설정 창에서 합니다. 알림 서버의 `/health`는 연결 여부만 반환하고 수신자나 비밀값을 반환하지 않습니다.
