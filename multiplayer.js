@@ -144,7 +144,7 @@ async function startNetwork(){
   const players=F.ref(networkDB,'rooms/'+roomId+'/players');
   const change=snapshot=>{if(generation!==networkGeneration)return;const data=snapshot.val();if(validState(data))roomMembers.set(snapshot.key,data);else roomMembers.delete(snapshot.key);reconcileRoom();};
   const failed=error=>{if(generation!==networkGeneration)return;networkJoined=false;clearPeers();updateNetworkStatus('친구 연결 대기');console.warn('겨울 마을 동기화:',error.code||'network');};
-  networkStops.push(subscribeOtherWorld(F,generation));
+  networkStops.push(subscribeOtherWorld(F,generation),subscribeAdditionalWorld(F,generation));
   networkStops.push(F.onChildAdded(players,change,failed),F.onChildChanged(players,change,failed),F.onChildRemoved(players,snapshot=>{roomMembers.delete(snapshot.key);reconcileRoom();},failed));
   networkStops.push(F.onValue(F.ref(networkDB,'.info/serverTimeOffset'),snapshot=>{serverOffset=Number(snapshot.val())||0;}));
   networkStops.push(F.onValue(F.ref(networkDB,'.info/connected'),snapshot=>{if(generation!==networkGeneration)return;networkConnected=snapshot.val()===true;if(networkConnected)registerPresence(generation);else{networkJoined=false;arrivalTracker.pause();clearPeers();resetWorldTravel();updateNetworkStatus('다시 연결 중…');}}));
