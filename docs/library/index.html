@@ -3858,13 +3858,14 @@ function updateUI(){
 function animatePose(dt,moving,actor=character,state=mode,phase=elapsed,actionTime=mode==='cat'?catActionTime:mode==='reading'?readingTurnTime:writingTime,bookIndex=selectedBook,turnDirection=readingTurnDirection,catType=catActionType){
  const arms=actor.arms,legs=actor.legs;let y=moving?Math.sin(phase*9)*.05:Math.sin(phase*1.6)*.012,pitch=0;
  if(state!=='cat')hideCatProps(actor);
- if(state==='cat'){animateCatVisitor(actor,catType,actionTime,phase);pitch=.25;y=Math.sin(phase*1.5)*.008;}
+ if(state==='cat'){animateCatVisitor(actor,catType,actionTime,phase);const ready=catType!==0||Math.abs(Math.atan2(Math.sin(residentCat.root.rotation.y-actor.root.rotation.y-Math.PI/2),Math.cos(residentCat.root.rotation.y-actor.root.rotation.y-Math.PI/2)))<.12;pitch=ready?CAT_ACTIONS[catType].pitch:0;y=(ready?CAT_ACTIONS[catType].crouch:0)+Math.sin(phase*1.5)*.008;}
  else if(state==='catWake'){hideBookProps(actor);pitch=-.10;arms[0].rotation.set(-.65,0,-.35);arms[1].rotation.set(-.65,0,.35);legs.forEach(l=>l.rotation.x=0);actor.head.rotation.x=-.1;}
  else if(state==='reading'||state==='writing'){animateBookPose(actor,state,bookIndex,actionTime,phase,turnDirection);pitch=.06;y=Math.sin(phase*1.5)*.009;}
  else{hideBookProps(actor);if(state==='rest'){y=.12+Math.sin(phase*1.4)*.01;pitch=.025;arms[0].rotation.set(-.25,0,-.12);arms[1].rotation.set(-.25,0,.12);legs.forEach(l=>l.rotation.x=-1.3);actor.head.rotation.x=-.06;}
  else if(state==='wave'){arms[0].rotation.set(-.1,0,-.12);arms[1].rotation.set(-.2,0,2.4+Math.sin(phase*7)*.2);legs.forEach(l=>l.rotation.x=0);}
  else{arms.forEach((a,i)=>a.rotation.set(moving?Math.sin(phase*9+i*Math.PI+Math.PI)*.44:Math.sin(phase*1.7+i)*.025,0,i===0?-.15:.15));legs.forEach((l,i)=>l.rotation.x=moving?Math.sin(phase*9+i*Math.PI)*.55:0);}}
  actor.body.position.y=lerp(actor.body.position.y,y,1-Math.exp(-dt*12));actor.body.rotation.x=lerp(actor.body.rotation.x,pitch,1-Math.exp(-dt*10));actor.head.rotation.z=Math.sin(phase*.8)*.018;
+ if(state==='cat'){actor.legs.forEach(leg=>leg.position.y=.47-actor.body.position.y);fitCatVisitorHand(actor,catType,actionTime);}
 }
 function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||!$('memory-modal').hidden||!$('cat-modal').hidden;}
 function closeHelp(){$('help-modal').hidden=true;$('help').focus();}
@@ -3897,7 +3898,7 @@ function updateCamera(dt){
 function label(id,x,y,z){projected.set(x,y,z).project(camera);const el=$(id),px=(projected.x+1)*innerWidth/2,py=(-projected.y+1)*innerHeight/2,onscreen=projected.z<1&&projected.z>-1&&px>70&&px<innerWidth-70&&py>165&&py<innerHeight-190;el.style.left=px+'px';el.style.top=py+'px';el.style.opacity=entered&&onscreen&&mode!=='rest'?'1':'0';}
 
 // One resident cat: a shared clock drives its routine; visitor actions use existing presence fields.
-const CAT_ACTIONS=[{name:'쓰다듬기',status:'귤이를 쓰다듬는 중',duration:4.2,distance:2.2},{name:'장난감 놀이',status:'귤이와 노는 중',duration:6,distance:2.9},{name:'간식 주기',status:'귤이에게 간식 주는 중',duration:4.8,distance:2.5}];
+const CAT_ACTIONS=[{name:'쓰다듬기',status:'귤이를 쓰다듬는 중',duration:4.2,distance:1.14,pitch:.22,crouch:-.12},{name:'장난감 놀이',status:'귤이와 노는 중',duration:6,distance:1.55,pitch:.12,crouch:0},{name:'간식 주기',status:'귤이에게 간식 주는 중',duration:4.8,distance:1.28,pitch:.04,crouch:-.20}];
 const CAT_FIND_DISTANCE=3.2,CAT_WAKE_DURATION=5.2;
 const CAT_SPOTS={bed:{x:-12.5,z:11.5},scratch:{x:-17.4,z:8.6},window:{x:2.3,z:-10.5},play:{x:-11.8,z:8.5},food:{x:-15.3,z:7.3},litter:{x:-16.4,z:12}};
 const catActionKind=b=>clamp(Math.floor((b-.55+.00001)/.05),0,2);
@@ -3907,7 +3908,7 @@ const isCatWake=data=>data.m==='celebrate'&&data.b>=.695;
 const isCatInteraction=data=>data.m==='celebrate'&&data.b>=.55&&data.b<.695;
 const catWakeWire=time=>.695+clamp(time/CAT_WAKE_DURATION,0,1)*.005;
 const catWakeTime=b=>clamp((b-.695)/.005,0,1)*CAT_WAKE_DURATION;
-function hideCatProps(actor){if(actor.catProps)actor.catProps.root.visible=false;}
+function hideCatProps(actor){if(actor.catProps)actor.catProps.root.visible=false;actor.arms.forEach(arm=>arm.scale.set(1,1,1));actor.legs.forEach(leg=>leg.position.y=.47);}
 function ensureCatProps(actor){
  if(actor.catProps)return actor.catProps;const root=new THREE.Group(),wand=new THREE.Group(),treat=new THREE.Group();root.add(wand,treat);const stick=mesh(geom.cyl,0xb68b68,wand,0,.24,0,.025,.68,.025);stick.rotation.x=-.8;const string=mesh(geom.cyl,0xd7cbb0,wand,0,.35,.48,.009,.55,.009);string.rotation.x=.4;sphere(wand,0xc8a4b3,0,.07,.59,.1,.18,.045);sphere(wand,0x9bad9a,.08,.08,.6,.07,.15,.035);sphere(treat,0xc89355,0,0,0,.09,.055,.14);mergeModel(wand);mergeModel(treat);root.visible=false;actor.body.add(root);actor.catProps={root,wand,treat};return actor.catProps;
 }
@@ -3915,6 +3916,17 @@ function animateCatVisitor(actor,kind,time,phase){
  hideBookProps(actor);actor.head.rotation.x=.32;actor.legs.forEach(leg=>leg.rotation.x=0);actor.arms[0].rotation.set(-.2,0,-.12);actor.arms[1].rotation.set(-1.05+Math.sin(time*6)*.12,0,.08);hideCatProps(actor);
  if(kind===1){const p=ensureCatProps(actor);p.root.visible=true;p.wand.visible=true;p.treat.visible=false;p.wand.position.set(.37,.9,.37);p.wand.rotation.set(Math.sin(time*4)*.25,Math.sin(time*3)*.3,-.25);actor.arms[1].rotation.x=-1.6+Math.sin(time*4)*.2;actor.head.rotation.x=.12;}
  if(kind===2){const p=ensureCatProps(actor);p.root.visible=true;p.wand.visible=false;p.treat.visible=true;p.treat.position.set(.18,.72,.58);actor.arms[1].rotation.set(-1.13,0,.25);}
+}
+const catContactRay=new THREE.Raycaster(),catContactFrom=new THREE.Vector3(),catContactTo=new THREE.Vector3(),catContactDirection=new THREE.Vector3(),catContactLocal=new THREE.Vector3(),catHandDown=new THREE.Vector3(0,-1,0),catSnackForward=new THREE.Vector3(0,0,1);
+function fitCatVisitorHand(actor,kind,time){
+ const arm=actor.arms[1],c=residentCat;actor.root.updateWorldMatrix(true,true);c.root.updateWorldMatrix(true,true);arm.getWorldPosition(catContactFrom);
+ if(kind===1)actor.catProps.wand.localToWorld(catContactTo.set(0,-.03,0));
+ else c.head.localToWorld(catContactTo.set(0,kind===0?.025+Math.sin(time*5)*.035:-.12,kind===0?0:.318));
+ catContactDirection.subVectors(catContactTo,catContactFrom).normalize();
+ if(kind===0){catContactRay.set(catContactFrom,catContactDirection);const hit=catContactRay.intersectObject(c.head,true)[0];if(!hit)return;catContactTo.copy(hit.point);}
+ const reach=catContactFrom.distanceTo(catContactTo),stretch=clamp(kind===1?reach/.39:(reach-(kind===2?.15:.008))/.50,.8,1.25);
+ catContactLocal.copy(catContactTo);actor.body.worldToLocal(catContactLocal);catContactLocal.sub(arm.position).normalize();arm.quaternion.setFromUnitVectors(catHandDown,catContactLocal);arm.scale.set(1,stretch,1);
+ if(kind===2){catContactTo.copy(catContactFrom).addScaledVector(catContactDirection,.50*stretch+.04);actor.body.worldToLocal(catContactTo);actor.catProps.treat.position.copy(catContactTo);actor.catProps.treat.quaternion.setFromUnitVectors(catSnackForward,catContactLocal);}
 }
 function makeResidentCat(){
  const root=new THREE.Group(),body=new THREE.Group(),torso=new THREE.Group(),head=new THREE.Group(),eyes=[],ears=[],paws=[],tails=[];root.name='resident-orange-cat';root.add(body);body.add(torso);sphere(torso,0xeaab65,0,.37,-.07,.29,.24,.40);sphere(torso,0xffe4b7,0,.30,.24,.21,.16,.12);
@@ -3958,7 +3970,8 @@ function animateResidentCat(kind,phase,clock){
  const c=residentCat;c.body.position.y=0;c.body.rotation.set(0,0,0);c.body.scale.set(1,1,1);c.head.position.set(0,.67,.35);c.head.rotation.set(0,0,Math.sin(clock)*.035);c.tongue.visible=false;c.angryBrows.visible=kind==='angry';c.ears.forEach(e=>e.root.rotation.z=-e.side*(kind==='angry'?.95:.22));c.torso.position.y=0;c.sleepTail.visible=false;c.sleepPaws.visible=false;c.tails[0].visible=true;c.tails[0].scale.set(1,1,1);for(const p of c.paws){p.root.visible=true;p.root.position.copy(p.home);p.root.rotation.set(0,0,0);}c.tails.forEach((t,i)=>t.rotation.set(-.55+i*.38,Math.sin(clock*2+i)*.13,0));const bx=(c.root.position.x-bed.x)/1.14,bz=(c.root.position.z-bed.z)/.78,bedHeight=.42*clamp((1-Math.hypot(bx,bz))/.18,0,1),trayHeight=Math.abs(c.root.position.x-litter.x)<.78&&Math.abs(c.root.position.z-litter.z)<.64?.32:0;let lift=.03+Math.max(bedHeight,trayHeight);
  if(kind==='walk'||kind==='run'){const speed=kind==='run'?15:8;c.paws.forEach((p,i)=>p.root.rotation.x=Math.sin(clock*speed+(i%3?Math.PI:0))*(kind==='run'?.7:.42));lift+=Math.abs(Math.sin(clock*speed))*(kind==='run'?.10:.025);c.body.rotation.x=kind==='run'?.09:0;}
  if(kind==='groom'){c.body.rotation.x=-.1;c.head.rotation.set(.25,Math.sin(clock*2)*.2,-.2);c.paws[1].root.rotation.x=-1.7+Math.sin(clock*8)*.12;c.tongue.visible=Math.sin(clock*9)>.2;}
- if(kind==='eat'||kind==='treat'){c.head.position.set(0,.42,.47);c.head.rotation.x=.62+Math.sin(clock*8)*.06;c.tongue.visible=Math.sin(clock*8)>.7;c.body.rotation.x=.08;}
+ if(kind==='eat'){c.head.position.set(0,.42,.47);c.head.rotation.x=.62+Math.sin(clock*8)*.06;c.tongue.visible=Math.sin(clock*8)>.7;c.body.rotation.x=.08;}
+ if(kind==='treat'){c.head.position.set(0,.58,.4);c.head.rotation.x=.13+Math.sin(clock*8)*.03;c.tongue.visible=Math.sin(clock*8)>.4;}
  if(kind==='sleep'){c.body.position.y=Math.sin(clock*1.4)*.004;c.torso.position.y=-.09;c.head.position.set(0,.46,.43);c.head.rotation.set(.08,0,.06);c.paws.forEach(p=>p.root.visible=false);c.tails[0].visible=false;c.sleepTail.visible=true;c.sleepPaws.visible=true;}
  if(kind==='potty'){c.body.position.y=-.06;c.body.rotation.x=-.04;c.paws.filter(p=>!p.front).forEach(p=>p.root.rotation.x=-.7);c.tails.forEach(t=>t.rotation.x=-.35);if(phase>.55){c.head.rotation.x=.4;c.paws[1].root.rotation.x=-.8+Math.sin(clock*12)*.5;}}
  if(kind==='pet'){c.head.rotation.z=Math.sin(clock*3)*.14;c.tails[0].rotation.x=-.25;}
@@ -3972,7 +3985,7 @@ function updateResidentCat(dt,clock=(Date.now()+serverOffset)/1000){
  const now=(Date.now()+serverOffset)/1000;for(const peer of remotePlayers.values())rememberCatWake(peer.data);
  const angry=now<c.angryUntil;
  if(angry){target={...c.angryAnchor,a:c.angryAngle};kind='angry';phase=clamp(1-(c.angryUntil-now)/CAT_WAKE_DURATION,0,1);c.returnPath=null;c.reacting=true;if(mode==='cat'||pendingCatAction?.kind!=null){stopActivity();toast('잠이 깬 귤이가 심술났어요. 잠깐 혼자 쉬게 해줘요');}}
- else if(leader){const reach=CAT_ACTIONS[leader.kind].distance;target={x:leader.x+Math.sin(leader.a)*reach,z:leader.z+Math.cos(leader.a)*reach,a:leader.a+Math.PI};kind=['pet','toy','treat'][leader.kind];phase=clamp(leader.time/CAT_ACTIONS[leader.kind].duration,0,1);c.returnPath=null;c.reacting=true;if(mode==='cat'&&leader.id!==sessionKey){stopActivity();toast('귤이가 친구에게 먼저 다가갔어요');}}
+ else if(leader){const reach=CAT_ACTIONS[leader.kind].distance;target={x:leader.x+Math.sin(leader.a)*reach,z:leader.z+Math.cos(leader.a)*reach,a:leader.a+(leader.kind===0?Math.PI/2:Math.PI)};kind=['pet','toy','treat'][leader.kind];phase=clamp(leader.time/CAT_ACTIONS[leader.kind].duration,0,1);c.returnPath=null;c.reacting=true;if(mode==='cat'&&leader.id!==sessionKey){stopActivity();toast('귤이가 친구에게 먼저 다가갔어요');}}
  else if(c.reacting){c.reacting=false;c.returnPath=[];c.returnPlan=0;}
  if(!angry)c.angryAnchor=null;
  if(!c.ready){c.root.position.set(target.x,0,target.z);c.root.rotation.y=target.a;c.ready=true;c.root.visible=true;}
@@ -3991,7 +4004,7 @@ function findResidentCat(){if(!entered||!residentCat.ready)return;closeCatMenu()
 function chooseCatAction(kind){if(!Number.isInteger(kind)||kind<0||kind>2||catInteractors().length||catNeedsSpace())return;closeCatMenu();stopActivity();pendingCatAction={kind,replan:0,failures:0};uiKey='';updateCatApproach(0);updateUI();}
 function updateCatApproach(dt){
  if(!pendingCatAction)return;const finding=pendingCatAction.kind===null;if(!finding&&(catInteractors().length||catNeedsSpace())){stopActivity();toast('귤이가 잠깐 쉬고 싶대요. 조금 뒤에 다시 만나요');return;}
- const p=residentCat.root.position,d=Math.hypot(player.position.x-p.x,player.position.z-p.z),gap=finding?CAT_FIND_DISTANCE:CAT_ACTIONS[pendingCatAction.kind].distance,clear=[.2,.4,.6,.8].every(t=>!blocked(lerp(player.position.x,p.x,t),lerp(player.position.z,p.z,t),.12,true));if(Math.abs(d-gap)<.22&&clear){const kind=pendingCatAction.kind;pendingCatAction=null;path=[];player.rotation.y=Math.atan2(p.x-player.position.x,p.z-player.position.z);cameraYawTarget=player.rotation.y+1.8;if(finding){mode='idle';openCatMenu(false);}else{catActionType=kind;catActionTime=0;mode='cat';}uiKey='';updateUI();publishState(true);return;}
+ const p=residentCat.root.position,d=Math.hypot(player.position.x-p.x,player.position.z-p.z),gap=finding?CAT_FIND_DISTANCE:CAT_ACTIONS[pendingCatAction.kind].distance,clear=[.2,.4,.6,.8].every(t=>!blocked(lerp(player.position.x,p.x,t),lerp(player.position.z,p.z,t),.12,true));if((finding?Math.abs(d-gap)<.22:d>=gap-.015&&d<=gap+.055)&&clear){const kind=pendingCatAction.kind;pendingCatAction=null;path=[];player.rotation.y=Math.atan2(p.x-player.position.x,p.z-player.position.z);cameraYawTarget=player.rotation.y+1.8;if(finding){mode='idle';openCatMenu(false);}else{catActionType=kind;catActionTime=0;mode='cat';}uiKey='';updateUI();publishState(true);return;}
  pendingCatAction.replan-=dt;if(pendingCatAction.replan>0)return;pendingCatAction.replan=.35;const angle=Math.atan2(player.position.x-p.x,player.position.z-p.z),spots=Array.from({length:16},(_,i)=>{const a=angle+i/16*TAU;return{x:p.x+Math.sin(a)*gap,z:p.z+Math.cos(a)*gap};}).filter(s=>!blocked(s.x,s.z)&&[.2,.4,.6,.8].every(t=>!blocked(lerp(s.x,p.x,t),lerp(s.z,p.z,t),.12,true))).sort((a,b)=>distance(a)-distance(b));for(const spot of spots){const route=pathTo(spot.x,spot.z);if(route.length){pendingCatAction.failures=0;path=route;return;}}path=[];if(++pendingCatAction.failures>=8){stopActivity();toast('귤이에게 가는 길이 좁아요. 조금 뒤에 다시 찾아봐요');}
 }
 function updateCatBubble(){const p=residentCat.root.position;projected.set(p.x,p.y+1.35,p.z).project(camera);const x=(projected.x+1)*innerWidth/2,y=(-projected.y+1)*innerHeight/2,visible=entered&&residentCat.ready&&!['pet','toy','treat'].includes(residentCat.kind)&&projected.z<1&&projected.z>-1&&x>35&&x<innerWidth-35&&y>195&&y<innerHeight-220;$('cat-bubble').hidden=!visible;$('cat-bubble').textContent=residentCat.kind==='angry'?'하악!':'귤이';$('cat-bubble').style.left=x+'px';$('cat-bubble').style.top=y+'px';$('cat-locator').hidden=!entered||mode!=='idle'||!!pendingCatAction;}
@@ -4011,11 +4024,11 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
    if(mode==='idle'){
    let vx=0,vz=0;const speed=3.5;if(keys.has('w')||keys.has('arrowup'))vz--;if(keys.has('s')||keys.has('arrowdown'))vz++;if(keys.has('a')||keys.has('arrowleft'))vx--;if(keys.has('d')||keys.has('arrowright'))vx++;
    if(vx||vz){if(pendingReadingSeat||pendingCatAction)stopActivity();path=[];const v=new THREE.Vector3(vx,0,vz).normalize().applyAxisAngle(new THREE.Vector3(0,1,0),cameraYaw),nx=player.position.x+v.x*speed*dt,nz=player.position.z+v.z*speed*dt;if(!blocked(nx,nz)){player.position.x=nx;player.position.z=nz;moving=true;}else{if(!blocked(nx,player.position.z)){player.position.x=nx;moving=true;}if(!blocked(player.position.x,nz)){player.position.z=nz;moving=true;}}if(moving){const desired=Math.atan2(v.x,v.z);player.rotation.y+=Math.atan2(Math.sin(desired-player.rotation.y),Math.cos(desired-player.rotation.y))*(1-Math.exp(-dt*12));}}
-   else if(path.length){const p=path[0],dx=p.x-player.position.x,dz=p.z-player.position.z,d=Math.hypot(dx,dz),step=Math.min(speed*dt,d);if(d<.07)path.shift();else{player.position.x+=dx/d*step;player.position.z+=dz/d*step;const desired=Math.atan2(dx,dz);player.rotation.y+=Math.atan2(Math.sin(desired-player.rotation.y),Math.cos(desired-player.rotation.y))*(1-Math.exp(-dt*13));moving=true;}}
+   else if(path.length){const p=path[0],dx=p.x-player.position.x,dz=p.z-player.position.z,d=Math.hypot(dx,dz),step=Math.min(speed*dt,d);if(d<(pendingCatAction&&pendingCatAction.kind!==null ? .015 : .07))path.shift();else{player.position.x+=dx/d*step;player.position.z+=dz/d*step;const desired=Math.atan2(dx,dz);player.rotation.y+=Math.atan2(Math.sin(desired-player.rotation.y),Math.cos(desired-player.rotation.y))*(1-Math.exp(-dt*13));moving=true;}}
   }
   }
  }
- networkTick(dt,moving);updateResidentCat(dt);animatePose(dt,moving,character,mode,elapsed,mode==='cat'||mode==='catWake'?catActionTime:mode==='reading'?readingTurnTime:writingTime);playerShadow.position.set(player.position.x,.035,player.position.z);
+ updateResidentCat(dt);networkTick(dt,moving);animatePose(dt,moving,character,mode,elapsed,mode==='cat'||mode==='catWake'?catActionTime:mode==='reading'?readingTurnTime:writingTime);playerShadow.position.set(player.position.x,.035,player.position.z);
  for(let i=0;i<dustCount;i++){const s=dustSeed[i];dustArray[i*3]=s.x+Math.sin(elapsed*.12+i)*.3;dustArray[i*3+1]=s.y+Math.sin(elapsed*.2+i*2)*.12;dustArray[i*3+2]=s.z+Math.cos(elapsed*.1+i)*.2;}dustGeo.attributes.position.needsUpdate=true;
  if(ringTimer>0){ringTimer-=dt;targetRing.scale.setScalar(1+Math.sin(elapsed*4)*.08);targetRing.material.opacity=clamp(ringTimer,0,.7);if(ringTimer<=0)targetRing.visible=false;}
  updateCamera(dt);if(frameCount++%5===0){label('label-books',-12,4.5,-7.3);label('label-window',10,3.2,-11);label('label-desk',9,2.8,1);updateCatBubble();if(entered)updateUI();}renderer.render(scene,camera);

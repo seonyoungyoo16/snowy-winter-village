@@ -53,13 +53,14 @@ function updateUI(){
 function animatePose(dt,moving,actor=character,state=mode,phase=elapsed,actionTime=mode==='cat'?catActionTime:mode==='reading'?readingTurnTime:writingTime,bookIndex=selectedBook,turnDirection=readingTurnDirection,catType=catActionType){
  const arms=actor.arms,legs=actor.legs;let y=moving?Math.sin(phase*9)*.05:Math.sin(phase*1.6)*.012,pitch=0;
  if(state!=='cat')hideCatProps(actor);
- if(state==='cat'){animateCatVisitor(actor,catType,actionTime,phase);pitch=.25;y=Math.sin(phase*1.5)*.008;}
+ if(state==='cat'){animateCatVisitor(actor,catType,actionTime,phase);const ready=catType!==0||Math.abs(Math.atan2(Math.sin(residentCat.root.rotation.y-actor.root.rotation.y-Math.PI/2),Math.cos(residentCat.root.rotation.y-actor.root.rotation.y-Math.PI/2)))<.12;pitch=ready?CAT_ACTIONS[catType].pitch:0;y=(ready?CAT_ACTIONS[catType].crouch:0)+Math.sin(phase*1.5)*.008;}
  else if(state==='catWake'){hideBookProps(actor);pitch=-.10;arms[0].rotation.set(-.65,0,-.35);arms[1].rotation.set(-.65,0,.35);legs.forEach(l=>l.rotation.x=0);actor.head.rotation.x=-.1;}
  else if(state==='reading'||state==='writing'){animateBookPose(actor,state,bookIndex,actionTime,phase,turnDirection);pitch=.06;y=Math.sin(phase*1.5)*.009;}
  else{hideBookProps(actor);if(state==='rest'){y=.12+Math.sin(phase*1.4)*.01;pitch=.025;arms[0].rotation.set(-.25,0,-.12);arms[1].rotation.set(-.25,0,.12);legs.forEach(l=>l.rotation.x=-1.3);actor.head.rotation.x=-.06;}
  else if(state==='wave'){arms[0].rotation.set(-.1,0,-.12);arms[1].rotation.set(-.2,0,2.4+Math.sin(phase*7)*.2);legs.forEach(l=>l.rotation.x=0);}
  else{arms.forEach((a,i)=>a.rotation.set(moving?Math.sin(phase*9+i*Math.PI+Math.PI)*.44:Math.sin(phase*1.7+i)*.025,0,i===0?-.15:.15));legs.forEach((l,i)=>l.rotation.x=moving?Math.sin(phase*9+i*Math.PI)*.55:0);}}
  actor.body.position.y=lerp(actor.body.position.y,y,1-Math.exp(-dt*12));actor.body.rotation.x=lerp(actor.body.rotation.x,pitch,1-Math.exp(-dt*10));actor.head.rotation.z=Math.sin(phase*.8)*.018;
+ if(state==='cat'){actor.legs.forEach(leg=>leg.position.y=.47-actor.body.position.y);fitCatVisitorHand(actor,catType,actionTime);}
 }
 function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||!$('memory-modal').hidden||!$('cat-modal').hidden;}
 function closeHelp(){$('help-modal').hidden=true;$('help').focus();}
