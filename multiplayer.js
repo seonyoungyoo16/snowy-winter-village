@@ -1,4 +1,4 @@
-// Only virtual visitor state leaves this browser. The aq_ room prefix isolates aquarium invitations.
+// Only virtual visitor state leaves this browser. The aq_ room prefix separates aquarium coordinates within the same party.
 function createArrivalTracker(now=()=>Date.now(),quietMs=30000){
  const members=new Map(),departures=new Map(),announced=new Map();let ready=false;
  return{
@@ -20,13 +20,13 @@ function createArrivalTracker(now=()=>Date.now(),quietMs=30000){
   }
  };
 }
+/* WORLD_TRAVEL_CODE */
 const firebaseConfig = /* FIREBASE_CONFIG */;
 const MAX_VISITORS = 4, STALE_MS = 45000;
 const remotePlayers = new Map(), roomMembers = new Map();
 const activityNames={idle:'바다 구경 중',walk:'산책 중',rolling:'먹이 주는 중',warm:'해파리 멍',sled:'바다 구경 중',celebrate:'손 흔드는 중'};
 function token(){const bytes=new Uint8Array(12);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}
 function aquariumRoom(){return 'aq_'+token();}
-function readRoom(){const match=location.hash.match(/^#room=(aq_[a-f0-9]{24})$/);return match?match[1]:aquariumRoom();}
 let roomId=readRoom(),sessionKey=token(),networkDB=null,networkAuth=null,selfRef=null,disconnectJob=null;
 let networkStarting=false,networkConnected=false,networkJoined=false,roomFull=false,networkGeneration=0,serverOffset=0;
 let lastNetworkSend=0,lastNetworkBody='',lastNetworkMovement=false,networkSequence=0,joinedAt=0,networkStops=[];
@@ -80,6 +80,7 @@ function updateNetworkStatus(message){
  if($('online-players').textContent!==roster)$('online-players').textContent=roster;
  $('friend-roster').textContent=roster;
  $('new-room').hidden=!roomFull;
+ updateWorldTravelUI();
 }
 function validState(data){return data&&data.v===1&&typeof data.u==='string'&&typeof data.n==='string'&&data.n.length>0&&data.n.length<=12&&Number.isInteger(data.k)&&data.k>=0&&data.k<=2&&['x','y','z','a','p','b','t','j','s'].every(k=>Number.isFinite(data[k]))&&Math.abs(data.x)<=26&&Math.abs(data.z)<=26&&data.y>=-1&&data.y<=10&&Math.abs(data.a)<=3.142&&Math.abs(data.p)<=1.6&&data.b>=0&&data.b<=.7&&Object.hasOwn(activityNames,data.m);}
 function disposeActor(root){root.traverse(o=>{if(!o.isMesh)return;if(!Object.values(geom).includes(o.geometry))o.geometry.dispose();});scene.remove(root);}
@@ -137,19 +138,20 @@ async function startNetwork(){
   if(!networkAuth){const app=F.initializeApp(firebaseConfig);networkAuth=F.getAuth(app);await F.setPersistence(networkAuth,F.browserSessionPersistence);networkDB=F.getDatabase(app);}
   if(!networkAuth.currentUser)await F.signInAnonymously(networkAuth);
   if(generation!==networkGeneration)return;
-  for(const stop of networkStops)stop();networkStops=[];roomMembers.clear();
+  for(const stop of networkStops)stop();networkStops=[];roomMembers.clear();resetWorldTravel();
   selfRef=F.ref(networkDB,'rooms/'+roomId+'/players/'+sessionKey);
   const players=F.ref(networkDB,'rooms/'+roomId+'/players');
   const change=snapshot=>{if(generation!==networkGeneration)return;const data=snapshot.val();if(validState(data))roomMembers.set(snapshot.key,data);else roomMembers.delete(snapshot.key);reconcileRoom();};
   const failed=error=>{if(generation!==networkGeneration)return;networkJoined=false;clearPeers();updateNetworkStatus('친구 연결 대기');console.warn('물결 수족관 동기화:',error.code||'network');};
+  networkStops.push(subscribeOtherWorld(F,generation));
   networkStops.push(F.onChildAdded(players,change,failed),F.onChildChanged(players,change,failed),F.onChildRemoved(players,snapshot=>{roomMembers.delete(snapshot.key);reconcileRoom();},failed));
   networkStops.push(F.onValue(F.ref(networkDB,'.info/serverTimeOffset'),snapshot=>{serverOffset=Number(snapshot.val())||0;}));
-  networkStops.push(F.onValue(F.ref(networkDB,'.info/connected'),snapshot=>{if(generation!==networkGeneration)return;networkConnected=snapshot.val()===true;if(networkConnected)registerPresence(generation);else{networkJoined=false;arrivalTracker.pause();clearPeers();updateNetworkStatus('다시 연결 중…');}}));
+  networkStops.push(F.onValue(F.ref(networkDB,'.info/connected'),snapshot=>{if(generation!==networkGeneration)return;networkConnected=snapshot.val()===true;if(networkConnected)registerPresence(generation);else{networkJoined=false;arrivalTracker.pause();clearPeers();resetWorldTravel();updateNetworkStatus('다시 연결 중…');}}));
  }catch(error){updateNetworkStatus('혼자 산책 중');console.warn('물결 수족관 연결 준비:',error.code||error.message);toast('인터넷 연결을 확인해 주세요. 혼자 산책은 계속할 수 있어요');}
  finally{networkStarting=false;}
 }
 async function newRoom(){
- arrivalTracker.reset();
+ arrivalTracker.reset();resetWorldTravel();
  ++networkGeneration;for(const stop of networkStops)stop();networkStops=[];if(selfRef)await window.WinterFirebase.remove(selfRef).catch(()=>{});if(disconnectJob)await disconnectJob.cancel().catch(()=>{});
  roomMembers.clear();clearPeers();networkJoined=false;networkConnected=false;networkStarting=false;roomFull=false;selfRef=null;joinedAt=0;roomId=aquariumRoom();history.replaceState(null,'',location.pathname+location.search+'#room='+roomId);$('invite-link').value=inviteURL();await startNetwork();toast('새 수족관의 초대 주소를 만들었어요');
 }
@@ -179,3 +181,5 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('invite-modal').hidden)cl
 addEventListener('online',()=>{if(entered&&!networkJoined&&!roomFull)startNetwork();});
 addEventListener('pagehide',()=>{if(selfRef)window.WinterFirebase.remove(selfRef).catch(()=>{});});
 setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
+
+setupWorldTravel();

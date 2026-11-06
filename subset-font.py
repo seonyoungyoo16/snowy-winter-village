@@ -9,7 +9,7 @@ root = Path(__file__).parent
 full = root / '.local-runs/Jua-Regular.ttf'
 if not full.exists():
     urlretrieve('https://raw.githubusercontent.com/google/fonts/main/ofl/jua/Jua-Regular.ttf', full)
-text = ''.join((root / file).read_text(encoding='utf-8') for file in ['multiplayer.html', 'aquarium.js', 'multiplayer.js'])
+text = ''.join((root / file).read_text(encoding='utf-8') for file in ['multiplayer.html', 'aquarium.js', 'multiplayer.js', 'world-travel.js'])
 chars = {ord(c) for c in text} | set(range(32, 256))
 font = TTFont(full)
 options = subset.Options()

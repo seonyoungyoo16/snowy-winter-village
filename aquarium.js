@@ -125,5 +125,5 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();$('error').hidden=false;$('error-text').textContent='수족관이 잠깐 쉬고 있어요. 페이지를 다시 열어주세요.';});
 /* MULTIPLAYER_CODE */
-updateCamera(.016);animateWater(.016);renderer.render(scene,camera);$('enter').disabled=false;$('enter').textContent='작은 바다로 들어가기 →';requestAnimationFrame(tick);
+updateCamera(.016);animateWater(.016);renderer.render(scene,camera);$('enter').disabled=false;$('enter').textContent='작은 바다로 들어가기 →';requestAnimationFrame(tick);resumeWorldTravel();
 })();
