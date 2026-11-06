@@ -1,7 +1,8 @@
 const dustCount=reduced?30:(mobile?65:110),dustArray=new Float32Array(dustCount*3),dustSeed=[];for(let i=0;i<dustCount;i++)dustSeed.push({x:(rand()-.5)*31,y:.8+rand()*5,z:(rand()-.5)*25});const dustGeo=new THREE.BufferGeometry();dustGeo.setAttribute('position',new THREE.BufferAttribute(dustArray,3));const dust=new THREE.Points(dustGeo,new THREE.PointsMaterial({color:0xf4dfae,size:.035,transparent:true,opacity:.38,depthWrite:false}));scene.add(dust);
 function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;return;}const dt=Math.min((now-oldTime)/1000,.05);oldTime=now;elapsed+=dt;let moving=false;
  if(entered&&!helpOpen()){
-  if(mode==='writing'){writingTime+=dt;if(writingTime>=WRITING_DURATION)finishBookmark();}
+  if(mode==='reading')readingTurnTime=Math.min(READING_TURN_DURATION,readingTurnTime+dt);
+  else if(mode==='writing'){writingTime+=dt;if(writingTime>=WRITING_DURATION)finishBookmark();}
   else if(mode==='wave'){waveTime+=dt;if(waveTime>2.3){mode='idle';uiKey='';}}
   else if(mode==='idle'){
    updateReadingWalk();

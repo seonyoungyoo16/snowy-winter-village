@@ -106,7 +106,7 @@ function reconcileRoom(){
 }
 function stateBody(){
  const walking=lastNetworkMovement&&!document.hidden;
- return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x),y:roundState(player.position.y),z:roundState(player.position.z),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='idle'&&(walking||pendingReadingSeat)?'walk':({reading:'rolling',rest:'warm',writing:'sled',wave:'celebrate'}[mode]||'idle'),b:pendingReadingSeat?roundState(.6+pendingReadingSeat.index*.02):mode==='writing'?roundState(writingWireProgress(selectedBook,writingTime)):mode==='reading'?selectedBook*.2:0,j:joinedAt};
+ return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x),y:roundState(player.position.y),z:roundState(player.position.z),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='idle'&&(walking||pendingReadingSeat)?'walk':({reading:'rolling',rest:'warm',writing:'sled',wave:'celebrate'}[mode]||'idle'),b:pendingReadingSeat?roundState(.6+pendingReadingSeat.index*.02):mode==='writing'?roundState(writingWireProgress(selectedBook,writingTime)):mode==='reading'?roundState(readingWireState(selectedBook,readingPages[selectedBook],readingTurnTime,readingTurnDirection)):0,j:joinedAt};
 }
 function publishState(force=false){
  if(!networkJoined||!networkConnected||!selfRef||!networkAuth?.currentUser)return;
@@ -161,7 +161,8 @@ function updatePeers(dt){
   const root=peer.actor.root,distance=root.position.distanceTo(peer.target),blend=1-Math.exp(-dt*12);if(distance>6)root.position.copy(peer.target);else root.position.lerp(peer.target,blend);
   root.rotation.y+=Math.atan2(Math.sin(data.a-root.rotation.y),Math.cos(data.a-root.rotation.y))*blend;root.rotation.x=lerp(root.rotation.x,data.p,blend);
   peer.phase+=dt;const reading=data.m==='rolling',writing=data.m==='sled',moving=data.m==='walk';if(!writing)peer.writingTime=null;
-  animatePose(dt,moving,peer.actor,reading?'reading':writing?'writing':data.m==='warm'?'rest':data.m==='celebrate'?'wave':'idle',peer.phase,writing?remoteWritingTime(peer,dt):0,bookIndexFromWire(data.b));
+  const turn=reading?remoteReadingTurn(peer,dt):{time:READING_TURN_DURATION,direction:1};if(!reading){peer.readingKey=null;peer.readingTime=null;}
+  animatePose(dt,moving,peer.actor,reading?'reading':writing?'writing':data.m==='warm'?'rest':data.m==='celebrate'?'wave':'idle',peer.phase,writing?remoteWritingTime(peer,dt):turn.time,bookIndexFromWire(data.b),turn.direction);
   peer.shadow.position.set(root.position.x,.03,root.position.z);
  }
 }
