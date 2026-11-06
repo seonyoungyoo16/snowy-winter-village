@@ -1,0 +1,29 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync(__dirname+'/world-travel.js','utf8'),network=fs.readFileSync(__dirname+'/multiplayer.js','utf8');
+const tracker=network.slice(network.indexOf('function createArrivalTracker('),network.indexOf('/* WORLD_TRAVEL_CODE */'));
+const party='0946f302b9cf8449c6970809',storageKey='little-worlds-travel-v1';
+function harness(world,hash,sharedStorage=new Map()){
+ const nodes=new Map(),events=[];const node=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',hidden:false,value:'',addEventListener(){},requestSubmit(){events.push('submit');}});return nodes.get(id);};
+ const c={URL,URLSearchParams,Date,Math,JSON,Map,Set,Object,Number,Promise,$:node,token:()=> '0123456789abcdef01234567',entered:true,nickname:'왕복 토끼',selected:2,serverOffset:0,STALE_MS:45000,networkAuth:{currentUser:{uid:'self'}},validState:d=>d&&typeof d.n==='string'&&Number.isFinite(d.t),networkJoined:true,networkGeneration:1,networkDB:{},networkStops:[()=>events.push('unsubscribed')],selfRef:'old-presence',keys:new Set(['w']),save:()=>events.push('saved'),toast:msg=>events.push(msg),chooseCharacter:k=>{c.selected=k;events.push('avatar');},setTimeout(){},setInterval(){},sessionStorage:{getItem:key=>sharedStorage.get(key)||null,setItem:(key,value)=>sharedStorage.set(key,value),removeItem:key=>sharedStorage.delete(key)},location:{hash,protocol:'http:',pathname:world==='winter'?'/snowy-winter-village/':'/little-blue-aquarium/',origin:'http://127.0.0.1:4188',replace:url=>{events.push('navigated');c.destination=url;}}};
+ c.window={WinterFirebase:{remove:async()=>{assert.equal(c.networkJoined,false);events.push('removed');}}};vm.createContext(c);
+ vm.runInContext(tracker+source.replace('/* WORLD_CONFIG */',JSON.stringify({current:world,winterPath:'/snowy-winter-village/',aquariumPath:'/little-blue-aquarium/',publicOrigin:'https://seonyoungyoo16.github.io'}))+`;roomId=readRoom();globalThis.h={partyId,worldRoomId,readRoom,worldURL,otherWorldRoom,travelToOtherWorld,resumeWorldTravel,subscribeOtherWorld,activeOtherWorldMembers,updateWorldTravelUI,otherWorldMembers};`,c);
+ return{c,h:c.h,nodes,events,storage:sharedStorage};
+}
+(async()=>{
+ for(const world of ['winter','aquarium'])for(const prefix of ['', 'aq_']){const a=harness(world,'#room='+prefix+party);assert.equal(a.h.partyId(a.c.roomId),party);assert.equal(a.h.otherWorldRoom(),world==='winter'?'aq_'+party:party);}
+ console.log('PASS: all existing winter/aquarium invitation links retain one party ID while coordinates stay in separate world rooms.');
+ const a=harness('winter','#room='+party);await a.h.travelToOtherWorld();assert.equal(a.c.destination,'http://127.0.0.1:4188/little-blue-aquarium/#room=aq_'+party+'&travel=1');assert.deepEqual(a.events,['saved','unsubscribed','removed','navigated']);assert.equal(a.c.keys.size,0);
+ const b=harness('aquarium',new URL(a.c.destination).hash,a.storage);b.h.resumeWorldTravel();assert.equal(b.nodes.get('nickname').value,'왕복 토끼');assert.equal(b.c.selected,2);assert(b.events.includes('submit'));assert(!b.storage.has(storageKey));await b.h.travelToOtherWorld();
+ assert.equal(b.c.destination,'http://127.0.0.1:4188/snowy-winter-village/#room='+party+'&travel=1');const back=harness('winter',new URL(b.c.destination).hash,b.storage);back.h.resumeWorldTravel();assert.equal(back.nodes.get('nickname').value,'왕복 토끼');assert.equal(back.c.selected,2);assert(back.events.includes('submit'));
+ console.log('PASS: winter → aquarium → winter keeps party, nickname and avatar, auto-enters, and removes old presence before navigation.');
+ for(const change of [{party:'aaaaaaaaaaaaaaaaaaaaaaaa'},{until:Date.now()-1000},{profile:{nickname:'x',character:9}}]){const store=new Map([[storageKey,JSON.stringify({to:'aquarium',party,until:Date.now()+60000,profile:{nickname:'valid',character:1},...change})]]),bad=harness('aquarium','#room=aq_'+party+'&travel=1',store);bad.h.resumeWorldTravel();assert(!bad.events.includes('submit'));}
+ console.log('PASS: stale, mismatched-room and invalid-avatar travel records cannot auto-enter.');
+ const blocked=harness('winter','#room='+party);blocked.c.sessionStorage.setItem=()=>{throw Error('blocked');};blocked.c.window.WinterFirebase.remove=async()=>{throw Error('offline');};await blocked.h.travelToOtherWorld();assert(blocked.events.includes('navigated'));
+ console.log('PASS: unavailable storage or cleanup does not trap the visitor; destination invitation still keeps the party.');
+ const peers=harness('winter','#room='+party);let receive;const F={ref:(_,p)=>p,onValue:(ref,fn)=>{assert.equal(ref,'rooms/aq_'+party+'/players');receive=fn;return()=>{};}};peers.h.subscribeOtherWorld(F,1);
+ const now=Date.now(),friend={n:'친구 곰',u:'friend',t:now};receive({val:()=>({f:friend})});assert.equal(peers.events.length,0);peers.h.updateWorldTravelUI();assert(peers.nodes.get('switch-world-text').textContent.includes('따라가기'));assert(peers.nodes.get('other-world-status').textContent.includes('친구 곰'));
+ receive({val:()=>({f:friend,g:{n:'친구 여우',u:'friend-two',t:now}})});assert.equal(peers.events.length,1);receive({val:()=>({f:{...friend,x:3},g:{n:'친구 여우',u:'friend-two',t:now}})});assert.equal(peers.events.length,1);
+ receive({val:()=>({self:{n:'나',u:'self',t:now},stale:{n:'오래된 친구',u:'old',t:now-46000}})});assert.equal(peers.h.activeOtherWorldMembers().length,0);
+ console.log('PASS: the other world shows fresh friends and a follow button; self, stale records and position updates do not cause arrival spam.');
+ const built=fs.readFileSync(__dirname+'/dist/index.html','utf8');assert(!/\/\* WORLD_(TRAVEL_CODE|TRAVEL_STYLE|CONFIG) \*\//.test(built));assert(built.includes('id="switch-world"'));assert(built.includes('resumeWorldTravel();'));
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -4,7 +4,7 @@
   "description": "Three.js로 만든 친구와 함께하는 작은 겨울 마을",
   "scripts": {
     "build": "node build-multiplayer.cjs",
-    "test": "node check.cjs && node check-multiplayer.cjs && node check-notifications.cjs",
+    "test": "node check.cjs && node check-multiplayer.cjs && node check-notifications.cjs && node check-world-travel.cjs",
     "test:live": "node check-live.cjs"
   },
   "keywords": [],

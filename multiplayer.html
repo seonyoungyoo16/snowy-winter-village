@@ -17,12 +17,14 @@
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto;transition:none!important}}
 .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}#status[data-connected="true"] i{background:#c4ead6}#status[data-connected="false"] i{background:#e8c393}.invite-label{display:block;font-size:11px;color:#7b8088;margin:0 0 7px}#invite-link{width:100%;font:12px system-ui,sans-serif;border:1px solid #d4dacf;background:#fffdf7;border-radius:12px;padding:13px 11px;color:#51596b;margin-bottom:13px;touch-action:auto}.new-room{margin-top:10px;background:#8a8c91}#online-players{pointer-events:none}
 .toast{z-index:20}.desktop-notify{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 10px;margin-top:11px;border:1px solid #cad7cd;border-radius:14px;background:#edf1e9;color:#4c6d60;font-size:12px;font-weight:700;min-height:46px}.desktop-notify[aria-pressed="true"]{background:#dae9df}.desktop-notify svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.notify-note{font-size:10px!important;color:#868e89!important;line-height:1.7!important;margin:8px 1px 10px!important}
+/* WORLD_TRAVEL_STYLE */
 </style>
 </head>
 <body>
 <main id="world" aria-label="눈 내리는 3D 겨울 마을"></main><div class="vignette"></div>
 <header class="topbar"><div class="brand"><div class="eyebrow">A LITTLE WINTER, JUST FOR YOU</div><h1>눈 내리는 겨울 마을</h1><p>아무것도 서두르지 않아도 괜찮아요.</p></div><div class="utilities"><button id="invite" class="icon-btn" aria-label="친구 초대" title="친구 초대"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m1-11h6m-3-3v6"/></svg></button><button id="sound" class="icon-btn" aria-label="소리 켜기" aria-pressed="false" title="소리 켜기"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4Z"/><path id="sound-wave" d="m16 9 5 6m0-6-5 6"/></svg></button><button id="help" class="icon-btn" aria-label="놀이 방법" title="놀이 방법"><svg viewBox="0 0 24 24"><path d="M9.3 8a3 3 0 0 1 5.6 1.5c0 2-3 2-3 4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg></button></div></header>
 <div id="status" class="status" hidden><i></i><span id="nickname-label">겨울 손님</span><span class="sep">·</span><span id="village-state">친구와 연결 중…</span><span id="connection-state" class="sr-only">연결 대기</span></div>
+<!-- WORLD_TRAVEL_UI -->
 <div id="label-fire" class="landmark">따뜻한 모닥불</div><div id="label-sled" class="landmark">작은 썰매 언덕</div><div id="label-tree" class="landmark">소원을 품은 나무</div>
 <div id="controls" class="bottom" hidden><div id="hint" class="hint">가고 싶은 눈밭을 톡 눌러보세요</div><div id="rolling-progress" class="progress-wrap" hidden><div class="progress"><span id="progress-fill"></span></div><span id="progress-text">천천히 눈을 굴려보세요</span></div><nav id="travel" class="travel" aria-label="마을 산책"><button data-place="snow"><span>❄</span>눈밭</button><button data-place="fire"><span>♨</span>모닥불</button><button data-place="sled"><span>♧</span>썰매 언덕</button></nav><div class="actions"><button id="main-action" class="action primary"><svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="7"/><path d="m6 4 1 1m10-2-1 2M3 11l2 .5m14-2 2-1"/></svg><span id="main-text">눈덩이 굴리기</span></button><button id="cancel-action" class="action secondary" hidden>그만 굴리기</button></div></div>
 <div id="keyboard" class="keyboard" hidden>눈밭 클릭 · WASD 이동<br>화면 드래그 · 시점 돌리기</div><div id="saved-note" class="saved-note" hidden>이 브라우저에만 추억이 남아요</div>
@@ -179,7 +181,7 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();$('error').hidden=false;$('error-text').textContent='겨울 마을이 잠깐 쉬고 있어요. 파일을 다시 열면 저장된 눈사람과 만날 수 있어요.';});
 /* MULTIPLAYER_CODE */
-updateCamera(.016);renderer.render(scene,camera);$('enter').disabled=false;$('enter').textContent='겨울 마을로 들어가기 →';requestAnimationFrame(tick);
+updateCamera(.016);renderer.render(scene,camera);$('enter').disabled=false;$('enter').textContent='겨울 마을로 들어가기 →';requestAnimationFrame(tick);resumeWorldTravel();
 })();
 </script>
 </body>
