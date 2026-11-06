@@ -25,10 +25,11 @@ function ensureStamp(actor){
 function hideBookProps(actor){if(actor.heldBook)actor.heldBook.root.visible=false;if(actor.heldStamp)actor.heldStamp.root.visible=false;actor.head.rotation.x=0;}
 function animateBookPose(actor,state,index,time,phase){
  const book=setBook(actor,index);book.root.visible=true;
- book.root.position.set(0,state==='writing'?1.03:1.13,.65);book.root.rotation.set(state==='writing'?.1:.32,0,0);
- actor.head.rotation.x=state==='writing'?.24:.3+Math.sin(phase*.6)*.025;
+ book.root.position.set(0,state==='writing'?1.03:.94,state==='writing'?.65:.72);book.root.rotation.set(state==='writing'?.1:.16,0,0);book.root.scale.setScalar(state==='writing'?1:.9);
+ actor.head.rotation.x=state==='writing'?.24:.21+Math.sin(phase*.6)*.025;
  actor.arms[0].rotation.set(-1.66,0,.3);actor.arms[1].rotation.set(-1.66,0,-.3);actor.legs.forEach(leg=>leg.rotation.x=0);
  if(state==='reading'){
+  actor.arms[0].rotation.x=-1.42;actor.arms[1].rotation.x=-1.42;
   if(actor.heldStamp)actor.heldStamp.root.visible=false;
   const turn=clamp((phase%7-5.3)/1.15,0,1);book.turn.rotation.z=turn*Math.PI;actor.arms[1].rotation.x+=Math.sin(turn*Math.PI)*.32;
  }else{
