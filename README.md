@@ -2,7 +2,7 @@
 
 친구와 천천히 놀 수 있는 세 가지 3D 공간입니다. 소스는 [snowy-winter-village](https://github.com/seonyoungyoo16/snowy-winter-village) 하나에 모았고, 친구들에게 공유한 기존 겨울 마을 주소를 그대로 유지합니다. Three.js 기본 도형과 Firebase 익명 접속을 사용하며 경쟁·점수·AI API가 없습니다.
 
-- [눈 내리는 겨울 마을](https://seonyoungyoo16.github.io/snowy-winter-village/): 눈사람, 모닥불, 썰매, 얼음낚시
+- [눈 내리는 겨울 마을](https://seonyoungyoo16.github.io/snowy-winter-village/): 눈사람, 모닥불, 썰매, 얼음낚시, 겨울 정원, 눈토끼, 함께 꾸미는 마당
 - [물결 수족관](https://seonyoungyoo16.github.io/snowy-winter-village/aquarium/): 먹이 주기, 해파리 쉼터, 사진 찍기
 - [책숲 도서관](https://seonyoungyoo16.github.io/snowy-winter-village/library/): 앉아서 책 읽기, 창밖 하늘, 완독 스탬프, 주황 고양이 귤이
 

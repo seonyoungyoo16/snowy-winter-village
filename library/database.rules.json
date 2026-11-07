@@ -183,6 +183,54 @@
               ".validate": false
             }
           }
+        },
+        "garden": {
+          "$id": {
+            ".write": "auth != null && $party.matches(/^[a-f0-9]{24}$/) && newData.exists() && $id.matches(/^plot-[0-2]$/)",
+            ".validate": "newData.hasChildren(['c','k','l','n','u','t'])",
+            "c": {
+              ".validate": "newData.val() === 'none' || newData.val() === 'pansy' || newData.val() === 'camellia' || newData.val() === 'snowdrop'"
+            },
+            "k": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3 && newData.val() % 1 === 0"
+            },
+            "l": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 99999 && newData.val() % 1 === 0"
+            },
+            "n": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 12"
+            },
+            "u": {
+              ".validate": "newData.isString() && newData.val() === auth.uid"
+            },
+            "t": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "yard": {
+          "$id": {
+            ".write": "auth != null && $party.matches(/^[a-f0-9]{24}$/) && newData.exists() && $id.matches(/^cell-[0-8]$/)",
+            ".validate": "newData.hasChildren(['i','n','u','t'])",
+            "i": {
+              ".validate": "newData.val() === 'none' || newData.val() === 'snowman' || newData.val() === 'lantern' || newData.val() === 'pot' || newData.val() === 'bench' || newData.val() === 'wreath' || newData.val() === 'sledge'"
+            },
+            "n": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 12"
+            },
+            "u": {
+              ".validate": "newData.isString() && newData.val() === auth.uid"
+            },
+            "t": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
         }
       }
     }
