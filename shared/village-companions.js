@@ -21,7 +21,8 @@ function createVillageCompanions(){
  // A new egg always brings a friend not met yet, chosen by the day so it does not depend on luck.
  function nextKind(){const left=KINDS.filter(k=>!state.owned.includes(k.id));return left[seoulDay()%left.length];}
  function hatch(){const k=nextKind();state.owned.push(k.id);state.out=k.id;state.egg=null;save();note('first-hatch');toast('알이 깨어났어요! '+k.name+'이(가) 뒤를 따라와요');return k.id;}
- function setOut(id){if(id!==null&&!state.owned.includes(id))return false;state.out=id;save();syncMeshes();return true;}
+ const isAway=id=>typeof villageExpedition==='object'&&villageExpedition&&villageExpedition.away(id);
+ function setOut(id){if(id!==null&&(!state.owned.includes(id)||isAway(id)))return false;state.out=id;save();syncMeshes();return true;}
  // Small figures made from a few basic shapes; each one is a single group following the visitor.
  const M=c=>new THREE.MeshLambertMaterial({color:c}),eye=new THREE.MeshBasicMaterial({color:0x3d3438});
  function build(k){const g=new THREE.Group();g.name='companion-'+k.id;const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);g.add(m);return m;};
@@ -47,13 +48,13 @@ function createVillageCompanions(){
  function render(){const title=document.createElement('h2'),note=document.createElement('p'),list=document.createElement('ul');title.textContent='동반 친구';note.className='creature-count';
   note.textContent=state.egg?'품고 있는 알 '+Math.floor(state.egg.p*100)+'% · '+WARM.name+' 곁에 있으면 세 배 빨리 따뜻해져요':state.owned.length>=KINDS.length?'네 친구를 모두 만났어요':canTakeEgg()?residentGuide.role.name+'에게 오늘의 알을 받을 수 있어요':'내일 또 알을 받을 수 있어요';
   const rows=[];if(!state.egg&&state.owned.length<KINDS.length){const li=document.createElement('li');li.append(button('알 받기',takeEgg,!canTakeEgg()));rows.push(li);}
-  for(const k of KINDS){const li=document.createElement('li'),h=document.createElement('small');if(!state.owned.includes(k.id)){li.className='unseen';h.textContent='아직 만나지 않은 친구';li.append(h);}else{li.className='seen';h.textContent=k.name;li.append(h,state.out===k.id?button('쉬게 하기',()=>setOut(null)):button('함께 걷기',()=>setOut(k.id)));}rows.push(li);}
+  for(const k of KINDS){const li=document.createElement('li'),h=document.createElement('small');if(!state.owned.includes(k.id)){li.className='unseen';h.textContent='아직 만나지 않은 친구';li.append(h);}else if(isAway(k.id)){li.className='seen';h.textContent=k.name+' · 원정 중';li.append(h);}else{li.className='seen';h.textContent=k.name;li.append(h,state.out===k.id?button('쉬게 하기',()=>setOut(null)):button('함께 걷기',()=>setOut(k.id)));}rows.push(li);}
   list.replaceChildren(...rows);body.replaceChildren(title,note,list);}
  function open(){render();sheet.hidden=false;closeButton.focus();}
  if(residentGuide.addAction)residentGuide.addAction('동반 친구',()=>{residentGuide.close();open();});
  return{KINDS,WARM,HATCH,WARM_RATE,get state(){return state;},canTakeEgg,takeEgg,warmNow,setOut,open,close,isOpen:()=>!sheet.hidden,get pet(){return pet;},get egg(){return egg;},
   // Cycles who walks along, for the radial menu: nobody → each friend met → nobody.
-  cycle(){const list=[null,...state.owned],next=list[(list.indexOf(state.out)+1)%list.length];setOut(next);toast(next?kind(next).name+'와(과) 함께 걸어요':'동반 친구가 쉬러 갔어요');return next;},
+  cycle(){const list=[null,...state.owned.filter(id=>!isAway(id))],next=list[(list.indexOf(state.out)+1)%list.length];setOut(next);toast(next?kind(next).name+'와(과) 함께 걸어요':'동반 친구가 쉬러 갔어요');return next;},
   tick(dt){clock+=dt;syncMeshes();if(!entered)return;const moving=lx!==null&&Math.hypot(player.position.x-lx,player.position.z-lz)>.001;lx=player.position.x;lz=player.position.z;calmFor=moving?0:calmFor+dt;
    // An emote makes the companion hop for joy.
    if(typeof villagePlay==='object'&&villagePlay&&villagePlay.activeEmote&&villagePlay.activeEmote()!==null)joy=Math.max(joy,.01);if(joy>0){joy+=dt;if(joy>1.2)joy=0;}

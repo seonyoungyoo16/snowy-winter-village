@@ -112,7 +112,7 @@ function stateBody(){
 function publishState(force=false){
  if(!networkJoined||!networkConnected||!selfRef||!networkAuth?.currentUser)return;
  const now=performance.now();if(!force&&now-lastNetworkSend<200)return;
- const body=villageSnowball.wire(villagePlay.wire(stateBody())),signature=JSON.stringify(body);if(!force&&signature===lastNetworkBody&&now-lastNetworkSend<6000)return;
+ const body=villageTogether.wire(villageSnowball.wire(villagePlay.wire(stateBody()))),signature=JSON.stringify(body);if(!force&&signature===lastNetworkBody&&now-lastNetworkSend<6000)return;
  lastNetworkBody=signature;lastNetworkSend=now;
  return window.WinterFirebase.set(selfRef,{...body,s:++networkSequence,t:window.WinterFirebase.serverTimestamp()}).catch(error=>{networkJoined=false;clearPeers();updateNetworkStatus('접속을 확인해 주세요');console.warn('책숲 도서관 연결:',error.code||'network');toast('친구 연결을 잠시 쉬고 있어요. 초대 버튼에서 다시 연결해요');});
 }
@@ -160,7 +160,7 @@ function updatePeers(dt){
  for(const peer of remotePlayers.values()){
   const data=peer.data;if(Date.now()+serverOffset-data.t>STALE_MS){removePeer(peer.id);updateNetworkStatus();continue;}
   const root=peer.actor.root,distance=root.position.distanceTo(peer.target),blend=1-Math.exp(-dt*12);if(distance>6)root.position.copy(peer.target);else root.position.lerp(peer.target,blend);
-  root.rotation.y+=Math.atan2(Math.sin(data.a-root.rotation.y),Math.cos(data.a-root.rotation.y))*blend;root.rotation.x=lerp(root.rotation.x,data.p,blend);villagePlay.peer(peer,dt);villageSnowball.peer(peer);
+  root.rotation.y+=Math.atan2(Math.sin(data.a-root.rotation.y),Math.cos(data.a-root.rotation.y))*blend;root.rotation.x=lerp(root.rotation.x,data.p,blend);villagePlay.peer(peer,dt);villageSnowball.peer(peer);villageTogether.peer(peer);
   peer.phase+=dt;const reading=data.m==='rolling',writing=data.m==='sled',moving=data.m==='walk';if(!writing)peer.writingTime=null;
   const waking=isCatWake(data),catAction=isCatInteraction(data),catData=catAction?catActionFromWire(data.b):null;const turn=reading?remoteReadingTurn(peer,dt):{time:READING_TURN_DURATION,direction:1};if(!reading){peer.readingKey=null;peer.readingTime=null;}
   animatePose(dt,moving,peer.actor,waking?'catWake':catAction?'cat':reading?'reading':writing?'writing':data.m==='warm'?'rest':data.m==='celebrate'?'wave':'idle',peer.phase,waking?catWakeTime(data.b):catAction?catData.time:writing?remoteWritingTime(peer,dt):turn.time,bookIndexFromWire(data.b),turn.direction,catAction?catData.kind:0);
@@ -203,5 +203,8 @@ setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 /* RADIAL_MENU_CODE */
 /* MINIGAMES_CODE */
 /* SNOWBALL_CODE */
+/* TOGETHER_CODE */
+/* HOTBAR_CODE */
+/* EXPEDITION_CODE */
 /* ARRIVAL_CLIENT_CODE */
 setupWorldTravel();
