@@ -57,7 +57,7 @@ function turnReadingPage(direction){
 }
 function dismissFinishedPrompt(){finishedPromptBook=null;uiKey='';updateUI();}
 function goStamp(){if(mode!=='reading'||finishedPromptBook!==selectedBook)return;stopActivity();travel('desk');updateUI();}
-function startRest(){const seats=windowSeats.filter(s=>Array.from(remotePlayers.values()).every(p=>Math.hypot(p.data.x-s.x,p.data.z-s.z)>.9)).sort((a,b)=>distance(a)-distance(b));if(!seats.length){toast('창가 자리가 잠깐 가득해요');return;}const s=seats[0];restSeat=s;mode='rest';path=[];player.position.set(s.x,.23,s.z);player.rotation.y=s.a;cameraYawTarget=-.12;uiKey='';updateUI();publishState(true);}
+function startRest(){const seats=windowSeats.filter(s=>Array.from(remotePlayers.values()).every(p=>Math.hypot(p.data.x-s.x,p.data.z-s.z)>.9)).sort((a,b)=>distance(a)-distance(b));if(!seats.length){toast('창가 자리가 잠깐 가득해요');return;}const s=seats[0];restSeat=s;mode='rest';creatureBook.observeWindow(skyWeather.state);path=[];player.position.set(s.x,.23,s.z);player.rotation.y=s.a;cameraYawTarget=-.12;uiKey='';updateUI();publishState(true);}
 function startWriting(){mode='writing';writingTime=0;path=[];player.rotation.y=.25;cameraYawTarget=-.6;uiKey='';updateUI();publishState(true);}
 function wave(){if(!entered||mode==='writing'||mode==='wave')return;stopActivity();mode='wave';waveTime=0;path=[];uiKey='';toast('조용히, 반가운 인사를 건네요');}
 function action(){if(!entered)return;if(mode==='reading'||mode==='rest'||pendingBookShelf||pendingReadingSeat||pendingCatAction){stopActivity();updateUI();return;}if(mode==='writing'||mode==='wave'||mode==='cat'||mode==='catWake')return;if(distance(places.desk)<2)startWriting();else if(distance(places.window)<3.5)startRest();else startReading();updateUI();}
@@ -80,7 +80,7 @@ function animatePose(dt,moving,actor=character,state=mode,phase=elapsed,actionTi
  actor.body.position.y=lerp(actor.body.position.y,y,1-Math.exp(-dt*12));actor.body.rotation.x=lerp(actor.body.rotation.x,pitch,1-Math.exp(-dt*10));actor.head.rotation.z=Math.sin(phase*.8)*.018;
  if(state==='cat'){actor.legs.forEach(leg=>leg.position.y=.47-actor.body.position.y);fitCatVisitorHand(actor,catType,actionTime);}
 }
-function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||!$('memory-modal').hidden||!$('cat-modal').hidden||!$('book-picker').hidden||residentGuide.isOpen();}
+function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||!$('memory-modal').hidden||!$('cat-modal').hidden||!$('book-picker').hidden||residentGuide.isOpen()||creatureBook.isOpen();}
 function closeHelp(){$('help-modal').hidden=true;$('help').focus();}
 $('help').addEventListener('click',()=>{$('help-modal').hidden=false;keys.clear();$('close-help').focus();});$('close-help').addEventListener('click',closeHelp);$('return-village').addEventListener('click',closeHelp);$('help-modal').addEventListener('click',e=>{if(e.target===$('help-modal'))closeHelp();});
 $('memory-action').addEventListener('click',openMemories);$('close-memories').addEventListener('click',closeMemories);$('memory-modal').addEventListener('click',e=>{if(e.target===$('memory-modal'))closeMemories();});
