@@ -28,10 +28,13 @@ Worker 이름은 `my-little-village-arrivals`, D1 이름은 `my-little-village-n
 
 ## 동작과 보관 정보
 
-- 실제 Firebase 입장 기록을 기록한 다음 방문자가 요청합니다. 서버는 Firebase 로그인 토큰과 해당 방·세션의 최근 접속 상태를 확인하고 그 기록의 닉네임과 공간만 메시지로 보냅니다. Firebase 관리자 키는 필요 없습니다.
+- 실제 Firebase 입장 기록을 기록한 다음 방문자가 요청합니다. 서버는 Firebase 로그인 토큰과 해당 방·세션의 최근 접속 상태를 확인하고 닉네임·공간·시각·첫 방문/재방문·모바일/PC·대략적인 지역을 메시지로 보냅니다. Firebase 관리자 키는 필요 없습니다.
 - 기존 공유 친구 그룹 한 곳의 겨울·수족관·도서관만 알립니다. 공간 이동·재접속은 Firebase 사용자 기준 5분 동안 중복 알림을 보내지 않습니다. 브라우저나 기기를 바꾸면 다른 익명 사용자로 취급될 수 있습니다. 주인도 일반 방문자로 들어가면 알림 대상입니다.
 - PC를 끄는 행위와 무관하게 동작하지만, 방문자가 오프라인이거나 요청을 차단하면 알림이 누락될 수 있습니다. 요청 실패는 방문자 브라우저에서 최대 세 번 재시도합니다. 멀티플레이 입장을 막지 않습니다.
-- D1에는 수신 대화 ID, 연결 여부, 최근 알림의 해시 식별자와 시간만 보관합니다. 접속자 닉네임·토큰·방문 이력 원문은 저장하지 않습니다. 중복 방지 행은 다음 정상 알림 시 24시간 지난 항목을 지웁니다.
+- 첫 방문/재방문은 친구 그룹과 Firebase 익명 계정으로 만든 SHA-256 식별자 기준입니다. 첫 알림을 성공적으로 보낸 뒤 `visitor_history`에 식별자와 최초 관측 시각만 남깁니다. 닉네임을 바꾸거나 세 공간을 오가도 같은 방문자로 보며, 24시간 중복 방지 정리 후에도 재방문 여부를 유지합니다. 기기·브라우저 변경이나 사이트 데이터 삭제 시 새 방문자로 잡힐 수 있습니다. 적용 전의 오래된 방문은 복원할 수 없으며, 기존에 남아 있는 최근 접속 식별자는 마이그레이션 시 재방문 기록으로 이관합니다.
+- 모바일/PC는 브라우저 정보로 추정합니다. 휴대폰과 태블릿은 모바일로 묶고 데스크톱 모드 iPad도 터치 정보로 보완합니다. 구버전 게임은 요청 헤더로 구분하며 알 수 없으면 `기기 확인 불가`로 표시합니다. 기기 모델이나 브라우저 원문은 별도 저장하지 않습니다. [Client Hints 설명](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Sec-CH-UA-Mobile).
+- 지역은 [Cloudflare의 IP 기반 국가·시도 정보](https://developers.cloudflare.com/workers/runtime-apis/request/)만 사용하고 `IP 추정`을 붙입니다. 실제 IP 주소·도시·우편번호·위도·경도는 알림이나 D1에 저장하지 않고 GPS 권한을 요청하지 않습니다. 국가만 확인되면 국가만 표시하고, 없으면 `지역 확인 불가`로 표시합니다. VPN이나 통신사 망 때문에 실제 위치와 다를 수 있습니다. 기기·대략적인 지역은 Telegram 메시지에 포함됩니다.
+- D1에는 수신 대화 ID, 연결 여부, 최근 알림의 해시 식별자와 시간, 재방문 구분용 식별자와 최초 관측 시각을 보관합니다. 닉네임·토큰·기기·지역·상세 이동 이력은 D1에 저장하지 않습니다. 중복 방지 행은 다음 정상 알림 시 24시간 지난 항목을 지우며 재방문 구분 기록은 유지합니다.
 - 봇 토큰·웹훅 검증값·일회용 연결값은 **Worker secrets**로 보관합니다. 설정 도구는 CLI 표준입력으로 전달하고 토큰을 설정 파일에 쓰지 않습니다. 공개 게임에는 서버 주소와 친구 그룹 ID만 포함됩니다. 로컬 설정 파일과 Wrangler 상태는 gitignore 대상입니다.
 - Telegram 봇을 차단하면 휴대폰 수신을 중단할 수 있습니다. 알림 요청도 중단하려면 공개 설정의 endpoint를 비운 뒤 다시 빌드·배포합니다. 서버와 저장소 삭제는 Cloudflare 대시보드에서 별도로 진행합니다.
 
@@ -42,13 +45,13 @@ Worker 이름은 `my-little-village-arrivals`, D1 이름은 `my-little-village-n
 | 서비스 | 무료 범위 | 이 기능에서 하는 일 |
 | --- | --- | --- |
 | [Cloudflare Workers](https://developers.cloudflare.com/workers/platform/limits/) | 하루 100,000 요청, 요청당 CPU 10ms | 입장 확인과 Telegram 전송 |
-| [Cloudflare D1](https://developers.cloudflare.com/d1/platform/pricing/) | 하루 500만 행 읽기·10만 행 쓰기, 전체 5GB | 중복 알림 방지·수신 대화 저장 |
+| [Cloudflare D1](https://developers.cloudflare.com/d1/platform/pricing/) | 하루 500만 행 읽기·10만 행 쓰기, 전체 5GB | 중복 알림 방지·재방문 구분·수신 대화 저장 |
 | [Telegram Bot](https://core.telegram.org/bots) | 봇 플랫폼 무료 | 휴대폰 알림 수신 |
 
 Workers 한도는 사전 요청·상태 확인도 포함하므로 100,000명이 접속할 수 있다는 뜻은 아닙니다. D1 한도 역시 SQL이 실제 읽거나 쓰는 행 기준입니다. [Telegram 전송 제한](https://core.telegram.org/bots/faq)에 맞춰 한 대화로 약 1.1초 간격을 예약하며 한꺼번에 많이 접속하면 재시도합니다. 무료 한도 초과나 서비스 장애 시 알림이 실패할 수 있고, 자동 결제 업그레이드는 설정하지 않습니다.
 
 ## 확인 명령
 
-`npm test`는 실제 SQLite 스키마로 중복·동시 접속·검증 실패·전송 실패 재시도·일회용 개인 대화 연결·CORS를 검사합니다. 외부 Firebase/Telegram 호출은 대역이므로 실제 폰 수신 검사는 별도입니다.
+`npm test`는 실제 SQLite 스키마로 첫 방문/재방문·기존 기록 이관·기기 추정·지역 누락·중복·동시 접속·검증 실패·전송 실패 재시도·일회용 개인 대화 연결·CORS를 검사합니다. 외부 Firebase/Telegram 호출은 대역이므로 실제 폰 수신 검사는 별도입니다. 기존 서버 갱신은 `npx wrangler d1 execute DB --remote --file schema.sql --yes --config wrangler.local.jsonc`로 테이블을 먼저 추가하고 `npx wrangler deploy --config wrangler.local.jsonc`로 배포합니다. 공개 게임도 다시 빌드·배포합니다.
 
 `npx wrangler deploy --dry-run --config wrangler.example.jsonc`는 묶음이 Workers에서 배포 가능한지 확인하며 외부 서버를 만들지 않습니다. 실제 배포는 로컬 설정 창에서 합니다. 알림 서버의 `/health`는 연결 여부만 반환하고 수신자나 비밀값을 반환하지 않습니다.
