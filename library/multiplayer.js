@@ -209,5 +209,6 @@ setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 /* RUN_CODE */
 /* EXPEDITION_CODE */
 /* FOLK_CODE */
+/* MAP_CODE */
 /* ARRIVAL_CLIENT_CODE */
 setupWorldTravel();
