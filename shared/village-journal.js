@@ -30,6 +30,8 @@ function createVillageJournal(){
   ['first-lantern','풍등을 띄웠어요','겨울 밤에 풍등 띄우기'],
   ['first-purchase','마을 가게에서 처음 마련했어요','주민의 마을 가게 둘러보기'],
   ['first-saving','저금통에 조개껍데기를 넣었어요','마을 가게 저금통 쓰기'],
+  ['goal-done','친구들과 이번 주 목표를 이뤘어요','게시판 옆 주민에게 함께하는 목표 묻기'],
+  ['photo-theme','오늘의 사진 주제를 담았어요','주제에 맞는 날 수족관 바다 수조 사진 찍기'],
   ['creatures-5','다섯 생물을 만났어요','도감에서 다섯 쪽 채우기',()=>Object.keys(book()).length>=5],
   ['pond-all','얼음 연못 물고기를 모두 만났어요','시간과 날씨를 바꿔 가며 낚시하기',()=>pages().length>0&&metIn('winter')],
   ['tanks-all','수족관 생물을 모두 만났어요','세 수조에서 활동하기 (등불해파리는 밤에)',()=>pages().length>0&&metIn('aquarium')],

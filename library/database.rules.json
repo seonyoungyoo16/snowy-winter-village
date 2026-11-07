@@ -153,6 +153,36 @@
               ".validate": false
             }
           }
+        },
+        "goals": {
+          "$id": {
+            ".write": "auth != null && $party.matches(/^[a-f0-9]{24}$/) && $id.matches(/^w[0-9]{4,5}-[a-zA-Z0-9]{6,40}$/) && $id.endsWith(auth.uid) && (!data.exists() || data.child('u').val() === auth.uid)",
+            ".validate": "newData.hasChildren(['w','f','p','r','n','u','t'])",
+            "w": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 99999 && newData.val() % 1 === 0"
+            },
+            "f": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && newData.val() % 1 === 0"
+            },
+            "p": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && newData.val() % 1 === 0"
+            },
+            "r": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && newData.val() % 1 === 0"
+            },
+            "n": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 12"
+            },
+            "u": {
+              ".validate": "newData.isString() && newData.val() === auth.uid"
+            },
+            "t": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
         }
       }
     }

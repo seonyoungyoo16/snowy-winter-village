@@ -42,7 +42,7 @@ function createVillageNotes(){
  // #8 Board: two of the resident's small requests each Seoul day (no rewards, just thanks) and short friend memos.
  let memos={};const doneKey=()=>'village-requests:'+CURRENT_WORLD+':'+seoulDay();
  function todaysRequests(day=seoulDay()){const all=LAYOUT.requests,skip=((day%3)+3)%3;return all.filter((_,i)=>i!==skip);}
- function villageEventInner(name){const req=todaysRequests().find(r=>r[0]===name);if(!req)return false;const done=readLocal(doneKey(),[]);if(done.includes(name))return false;writeLocal(doneKey(),[...done,name]);if(typeof villageJournal==='object')villageJournal.note('first-request');toast(LAYOUT.resident+': 부탁 들어줘서 고마워요!');if(typeof villageMarket==='object')villageMarket.earn(2,'오늘의 부탁');return true;}
+ function villageEventInner(name){const req=todaysRequests().find(r=>r[0]===name);if(!req)return false;const done=readLocal(doneKey(),[]);if(done.includes(name))return false;writeLocal(doneKey(),[...done,name]);if(typeof villageJournal==='object')villageJournal.note('first-request');if(typeof villageGoals==='object')villageGoals.event('request');toast(LAYOUT.resident+': 부탁 들어줘서 고마워요!');if(typeof villageMarket==='object')villageMarket.earn(2,'오늘의 부탁');return true;}
  function boardMemos(){const cutoff=Date.now()-MEMO_DAYS*86400e3;return Object.entries(memos).map(([id,m])=>({id,...m})).filter(m=>m&&m.t>cutoff).sort((a,b)=>b.t-a.t).slice(0,8);}
  function openBoard(){const done=readLocal(doneKey(),[]),text=el('input',{maxLength:LIMITS.memo,placeholder:'친구에게 짧은 메모 (40자)',ariaLabel:'메모 내용'}),send=el('button',{className:'note-send',textContent:'메모 붙이기'});
   send.addEventListener('click',async()=>{if(await postMemo(text.value)){text.value='';openBoard();}});
@@ -62,4 +62,4 @@ function createVillageNotes(){
 }
 const villageNotes=createVillageNotes();
 // Worlds report small activities here so the board can thank the visitor for today's requests.
-function villageEvent(name){if(typeof villageJournal==='object'){villageJournal.note('did-'+name);villageJournal.sync();}return villageNotes.event(name);}
+function villageEvent(name){if(typeof villageJournal==='object'){villageJournal.note('did-'+name);villageJournal.sync();}if(typeof villageGoals==='object')villageGoals.event(name);return villageNotes.event(name);}

@@ -3825,7 +3825,7 @@ function animatePose(dt,moving,actor=character,state=mode,phase=elapsed,celebrat
  }
  b.position.y=lerp(b.position.y,by+bob,1-Math.exp(-dt*12));b.rotation.x=lerp(b.rotation.x,pitch,1-Math.exp(-dt*10));actor.head.rotation.z=state==='warm'?Math.sin(t*.6)*.025:Math.sin(t*1.1)*.02;
 }
-function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||residentGuide.isOpen()||creatureBook.isOpen()||exhibit.isOpen()||villageNotes.isOpen()||villageMarket.isOpen()||villageJournal.isOpen();}
+function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||residentGuide.isOpen()||creatureBook.isOpen()||exhibit.isOpen()||villageNotes.isOpen()||villageMarket.isOpen()||villageJournal.isOpen()||villageGoals.isOpen();}
 function closeHelp(){$('help-modal').hidden=true;$('help').focus();}
 $('help').addEventListener('click',()=>{$('help-modal').hidden=false;keys.clear();$('close-help').focus();});$('close-help').addEventListener('click',closeHelp);$('return-village').addEventListener('click',closeHelp);$('help-modal').addEventListener('click',e=>{if(e.target===$('help-modal'))closeHelp();});
 $('entry-form').addEventListener('submit',e=>{e.preventDefault();if(entered)return;nickname=$('nickname').value.trim().replace(/[\u0000-\u001f\u007f]/g,'').slice(0,12)||'바다 손님';entered=true;$('welcome').hidden=true;for(const id of['controls','status','keyboard'])$(id).hidden=false;$('nickname-label').textContent=nickname;save();updateUI();toast('어서 와요, '+nickname+' 님');renderer.domElement.focus({preventScroll:true});startNetwork();});document.querySelectorAll('[data-character]').forEach(b=>b.addEventListener('click',()=>chooseCharacter(Number(b.dataset.character))));$('main-action').addEventListener('click',action);$('cancel-action').addEventListener('click',()=>{stopActivity();updateUI();});$('wave-action').addEventListener('click',wave);document.querySelectorAll('[data-place]').forEach(b=>b.addEventListener('click',()=>travel(b.dataset.place)));
@@ -4363,7 +4363,7 @@ function createVillageNotes(){
  // #8 Board: two of the resident's small requests each Seoul day (no rewards, just thanks) and short friend memos.
  let memos={};const doneKey=()=>'village-requests:'+CURRENT_WORLD+':'+seoulDay();
  function todaysRequests(day=seoulDay()){const all=LAYOUT.requests,skip=((day%3)+3)%3;return all.filter((_,i)=>i!==skip);}
- function villageEventInner(name){const req=todaysRequests().find(r=>r[0]===name);if(!req)return false;const done=readLocal(doneKey(),[]);if(done.includes(name))return false;writeLocal(doneKey(),[...done,name]);if(typeof villageJournal==='object')villageJournal.note('first-request');toast(LAYOUT.resident+': 부탁 들어줘서 고마워요!');if(typeof villageMarket==='object')villageMarket.earn(2,'오늘의 부탁');return true;}
+ function villageEventInner(name){const req=todaysRequests().find(r=>r[0]===name);if(!req)return false;const done=readLocal(doneKey(),[]);if(done.includes(name))return false;writeLocal(doneKey(),[...done,name]);if(typeof villageJournal==='object')villageJournal.note('first-request');if(typeof villageGoals==='object')villageGoals.event('request');toast(LAYOUT.resident+': 부탁 들어줘서 고마워요!');if(typeof villageMarket==='object')villageMarket.earn(2,'오늘의 부탁');return true;}
  function boardMemos(){const cutoff=Date.now()-MEMO_DAYS*86400e3;return Object.entries(memos).map(([id,m])=>({id,...m})).filter(m=>m&&m.t>cutoff).sort((a,b)=>b.t-a.t).slice(0,8);}
  function openBoard(){const done=readLocal(doneKey(),[]),text=el('input',{maxLength:LIMITS.memo,placeholder:'친구에게 짧은 메모 (40자)',ariaLabel:'메모 내용'}),send=el('button',{className:'note-send',textContent:'메모 붙이기'});
   send.addEventListener('click',async()=>{if(await postMemo(text.value)){text.value='';openBoard();}});
@@ -4383,7 +4383,7 @@ function createVillageNotes(){
 }
 const villageNotes=createVillageNotes();
 // Worlds report small activities here so the board can thank the visitor for today's requests.
-function villageEvent(name){if(typeof villageJournal==='object'){villageJournal.note('did-'+name);villageJournal.sync();}return villageNotes.event(name);}
+function villageEvent(name){if(typeof villageJournal==='object'){villageJournal.note('did-'+name);villageJournal.sync();}if(typeof villageGoals==='object')villageGoals.event(name);return villageNotes.event(name);}
 
 // Small ways to say something without words: emote bubbles everywhere, and in the winter village a kite by day and sky lanterns by night.
 // Friends see them through fields the deployed rules already accept: emotes as m:'celebrate' with b 0.10–0.35 (the library's cat uses 0.55+),
@@ -4560,6 +4560,8 @@ function createVillageJournal(){
   ['first-lantern','풍등을 띄웠어요','겨울 밤에 풍등 띄우기'],
   ['first-purchase','마을 가게에서 처음 마련했어요','주민의 마을 가게 둘러보기'],
   ['first-saving','저금통에 조개껍데기를 넣었어요','마을 가게 저금통 쓰기'],
+  ['goal-done','친구들과 이번 주 목표를 이뤘어요','게시판 옆 주민에게 함께하는 목표 묻기'],
+  ['photo-theme','오늘의 사진 주제를 담았어요','주제에 맞는 날 수족관 바다 수조 사진 찍기'],
   ['creatures-5','다섯 생물을 만났어요','도감에서 다섯 쪽 채우기',()=>Object.keys(book()).length>=5],
   ['pond-all','얼음 연못 물고기를 모두 만났어요','시간과 날씨를 바꿔 가며 낚시하기',()=>pages().length>0&&metIn('winter')],
   ['tanks-all','수족관 생물을 모두 만났어요','세 수조에서 활동하기 (등불해파리는 밤에)',()=>pages().length>0&&metIn('aquarium')],
@@ -4584,6 +4586,38 @@ function createVillageJournal(){
  return{ENTRIES,note,sync,done,open,close,isOpen:()=>!sheet.hidden};
 }
 const villageJournal=createVillageJournal();
+
+// Contests without winners: one weekly goal the friend group reaches together, and a daily photo theme for the ocean tank.
+// Each visitor writes only their own weekly contribution; the sheet shows the group total and who joined, never per-person counts or ranks.
+function createVillageGoals(){
+ const GOALS=[{key:'f',target:20,text:'물고기 20마리 함께 낚기',event:'fish'},{key:'p',target:12,text:'바다 수조 사진 12장 함께 찍기',event:'ocean'},{key:'r',target:10,text:'주민 부탁 10개 함께 들어주기',event:'request'}];
+ const THEMES=[
+  {id:'clear-day',text:'맑은 낮의 바다 수조',test:s=>s.kind==='clear'&&s.daylight>.5},
+  {id:'night',text:'밤의 바다 수조',test:s=>s.phase==='night'},
+  {id:'rain',text:'비 오는 날의 바다 수조',test:s=>s.kind==='precip'||s.kind==='heavy'},
+  {id:'golden',text:'새벽이나 노을 무렵의 바다 수조',test:s=>s.phase==='dawn'||s.phase==='dusk'},
+  {id:'soft',text:'흐리거나 안개 낀 날의 바다 수조',test:s=>s.kind==='cloudy'||s.kind==='fog'}
+ ];
+ const seoulDay=(ms=Date.now())=>Math.floor((ms+9*3600e3)/86400e3),week=(ms=Date.now())=>Math.floor((seoulDay(ms)+3)/7);
+ const goalFor=(w=week())=>GOALS[((w%3)+3)%3],themeFor=(d=seoulDay())=>THEMES[((d%5)+5)%5];
+ const read=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k)||'null');return v===null?f:v;}catch{return f;}},write=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
+ let records={};villageStore.subscribe('goals',v=>{records=v||{};});
+ const mineKey=()=>'w'+week()+'-'+(villageStore.uid()||'local');
+ function mine(){const r=records[mineKey()];return r&&r.w===week()?{...r}:{w:week(),f:0,p:0,r:0};}
+ function progress(){const g=goalFor(),w=week(),rows=Object.values(records).filter(r=>r&&r.w===w),total=rows.reduce((n,r)=>n+Math.max(0,Math.min(500,r[g.key]|0)),0),names=[...new Set(rows.filter(r=>(r[g.key]|0)>0).map(r=>r.n))].sort();return{goal:g,total,names,done:total>=g.target};}
+ // Adds one to this visitor's own record for the week; the group total is recomputed from everyone's records.
+ async function add(key){const before=progress(),r=mine();r[key]=Math.min(500,(r[key]|0)+1);r.n=nickname;r.u=villageStore.uid();r.t=Date.now();r.w=week();const result=await villageStore.put('goals',mineKey(),r);const after=progress();if(!before.done&&after.done&&after.goal.key===key){toast('이번 주 목표를 함께 이뤘어요 · '+after.goal.text);if(typeof villageJournal==='object')villageJournal.note('goal-done');}return result;}
+ function event(name){const g=GOALS.find(x=>x.event===name);if(g)add(g.key);if(name==='ocean')photo(skyWeather.state);}
+ // The photo theme is met when the ocean tank photo happens under today's sky.
+ function photo(sky){const theme=themeFor(),key='village-photo-theme:'+seoulDay();if(!theme.test(sky))return false;if(read(key,false))return false;write(key,true);toast('오늘의 사진 주제를 담았어요 · '+theme.text);if(typeof villageJournal==='object')villageJournal.note('photo-theme');return true;}
+ const sheet=document.createElement('section');sheet.className='creature-book village-notes village-goals';sheet.hidden=true;const card=document.createElement('div');card.className='creature-book-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');const closeButton=document.createElement('button');closeButton.className='creature-book-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','목표 닫기');const body=document.createElement('div');card.append(closeButton,body);sheet.append(card);document.body.append(sheet);
+ function close(){sheet.hidden=true;}closeButton.addEventListener('click',close);sheet.addEventListener('click',e=>{if(e.target===sheet)close();});addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)close();});
+ const line=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;n.textContent=text;return n;};
+ function open(){if(!entered)return;const p=progress(),t=themeFor();body.replaceChildren(line('h2','','함께하는 목표'),line('h3','','이번 주'),line('p','creature-count',p.goal.text+' · '+Math.min(p.total,p.goal.target)+' / '+p.goal.target+(p.done?' · 함께 이뤘어요!':'')),line('p','creature-count',p.names.length?'함께한 친구: '+p.names.join(', '):'아직 아무도 시작하지 않았어요'),line('h3','','오늘의 사진 주제'),line('p','creature-count',t.text+(read('village-photo-theme:'+seoulDay(),false)?' · 담았어요':' · 수족관 바다 수조에서 사진 찍기')),line('p','creature-count',villageStore.mode==='shared'?'순위 없이 모두의 기록을 더해요.':'지금은 이 브라우저의 기록만 더해져요 (이 브라우저에만 보여요).'));sheet.hidden=false;closeButton.focus();}
+ if(typeof residentGuide==='object'&&residentGuide.addAction)residentGuide.addAction('함께하는 목표',()=>{residentGuide.close();open();});
+ return{GOALS,THEMES,week,goalFor,themeFor,progress,add,event,photo,open,close,isOpen:()=>!sheet.hidden};
+}
+const villageGoals=createVillageGoals();
 
 // A friend-group exhibit tank: creatures met anywhere in the village can be donated through Harry, and each one swims here with its donor's name.
 // 을/를 by whether the last syllable has a final consonant.
