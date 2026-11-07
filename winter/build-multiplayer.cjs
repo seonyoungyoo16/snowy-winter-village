@@ -22,6 +22,7 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),esbuild=require('es
   source=source.replace('/* AVATAR_LIFE_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/avatar-life.js'),'utf8'));
   source=source.replace('/* VILLAGE_LOOKS_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-looks.js'),'utf8'));
   source=source.replace('/* RESIDENT_GIFTS_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/resident-gifts.js'),'utf8'));
+  source=source.replace('/* VILLAGE_NEWSPAPER_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-newspaper.js'),'utf8'));
   source=source.replace('/* HOMESTEAD_CODE */',()=>fs.readFileSync(path.join(__dirname,'homestead.js'),'utf8'));
   source=source.replace('/* WORLD_TRAVEL_CODE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.js'),'utf8').replace('/* WORLD_CONFIG */',JSON.stringify({current:'winter',winterPath:'/snowy-winter-village/',aquariumPath:'/snowy-winter-village/aquarium/',libraryPath:'/snowy-winter-village/library/',publicOrigin:'https://seonyoungyoo16.github.io'})));
   source=source.replace('/* WORLD_TRAVEL_STYLE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.css'),'utf8'));
