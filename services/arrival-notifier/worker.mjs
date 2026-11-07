@@ -2,6 +2,19 @@ const QUIET_MS=5*60*1000;
 const FAILURE_WINDOW_MS = 5 * 60 * 1000;
 const FAILURE_THRESHOLD = 5;
 const FAILURE_ALERT_COOLDOWN_MS = 15 * 60 * 1000;
+const FAILURE_STAGES = {
+ connect: '연결 대기', register: '입장 등록', presence: '접속 상태 저장',
+ sync: '친구 동기화', setup: '연결 초기화', unknown: '단계 미확인'
+};
+const FAILURE_CAUSES = {
+ PERMISSION_DENIED: '접근 권한 거부', UNAVAILABLE: '서비스 응답 불가',
+ DISCONNECTED: '연결 끊김', INVALID_TOKEN: '인증 토큰 거부',
+ EXPIRED_TOKEN: '인증 토큰 만료', TOO_BIG: '데이터 크기 제한 초과',
+ 'auth/network-request-failed': '인증 서버에 연결하지 못함',
+ 'auth/too-many-requests': '인증 요청 제한에 걸림',
+ 'auth/user-token-expired': '인증 토큰 만료',
+ TIMEOUT: '20초 내 연결 미완료', UNKNOWN: '원인 미확인'
+};
 const json=(value,status=200,headers={})=>new Response(JSON.stringify(value),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers}});
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const KOREAN_REGIONS={'11':'서울','26':'부산','27':'대구','28':'인천','29':'광주','30':'대전','31':'울산','41':'경기','42':'강원','43':'충북','44':'충남','45':'전북','46':'전남','47':'경북','48':'경남','49':'제주','50':'세종','51':'강원','52':'전북'};
@@ -96,17 +109,33 @@ async function connectionFailure(request, env, fetchImpl, now, sleep) {
  if (!ready(env)) return json({ error: 'not_ready' }, 503);
  const input = await body(request);
  const place = roomDetails(input?.room, env);
- if (!place || typeof input.event !== 'string' || !/^[a-f0-9]{32}$/.test(input.event) || Object.keys(input).length !== 2) {
+ if (!place || typeof input.event !== 'string' || !/^[a-f0-9]{32}$/.test(input.event) ||
+     Object.keys(input).some(key => !['room', 'event', 'nickname', 'stage', 'code'].includes(key))) {
   return json({ error: 'invalid_failure' }, 400);
  }
  const { uid, status } = await authenticateVisitor(request, env, fetchImpl);
  if (status) return json({ error: 'sign_in_required' }, status);
 
  const room = input.room;
+ const nickname = typeof input.nickname === 'string'
+  ? input.nickname.replace(/[\u0000-\u001f\u007f-\u009f\u2028-\u202e\u2066-\u2069]/g, '').trim().slice(0, 12) || null
+  : null;
+ const stage = typeof input.stage === 'string' && Object.hasOwn(FAILURE_STAGES, input.stage) ? input.stage : 'unknown';
+ const code = typeof input.code === 'string' && Object.hasOwn(FAILURE_CAUSES, input.code) ? input.code : 'UNKNOWN';
  const eventKey = await hashKey(room + ':' + uid + ':' + input.event);
- await env.DB.prepare('INSERT OR IGNORE INTO connection_failures(room,event_key,occurred_at) VALUES(?,?,?)').bind(room,eventKey,now).run();
+ await env.DB.prepare(`
+  INSERT OR IGNORE INTO connection_failures(room,event_key,occurred_at,nickname,stage,code)
+  VALUES(?,?,?,?,?,?)
+ `).bind(room,eventKey,now,nickname,stage,code).run();
  await env.DB.prepare('DELETE FROM connection_failures WHERE room=? AND occurred_at<?').bind(room,now-86400000).run();
- const failures = await env.DB.prepare('SELECT COUNT(*) AS count FROM connection_failures WHERE room=? AND occurred_at>?').bind(room,now-FAILURE_WINDOW_MS).first('count');
+ const { results: details } = await env.DB.prepare(`
+  SELECT nickname, stage, code, COUNT(*) AS count, SUM(COUNT(*)) OVER () AS total
+  FROM connection_failures WHERE room=? AND occurred_at>?
+  GROUP BY nickname, stage, code
+  ORDER BY count DESC, MAX(occurred_at) DESC, nickname, stage, code
+  LIMIT 12
+ `).bind(room,now-FAILURE_WINDOW_MS).all();
+ const failures = details[0]?.total ?? 0;
  if (failures < FAILURE_THRESHOLD) return json({ status: 'recorded' }, 202);
 
  const chat = await env.DB.prepare("SELECT value FROM settings WHERE key='telegram_chat'").first('value');
@@ -122,9 +151,17 @@ async function connectionFailure(request, env, fetchImpl, now, sleep) {
   if (!await waitForTelegramSlot(env, now, sleep)) throw new Error('telegram_busy');
   const url = new URL(place.path, env.SITE_BASE);
   url.hash = 'room=' + room;
+  const lines = details.map(({ nickname, stage, code, count }) => {
+   const cause = FAILURE_CAUSES[code];
+   const label = code === 'UNKNOWN' || code === 'TIMEOUT' ? cause : `${cause} (${code})`;
+   return `• ${nickname || '닉네임 미확인'} · ${FAILURE_STAGES[stage]} · ${label} · ${count}회`;
+  });
+  const remaining = failures - details.reduce((sum, row) => sum + row.count, 0);
+  if (remaining > 0) lines.push(`• 그 외 ${remaining}회`);
   await telegram(env, fetchImpl, 'sendMessage', {
    chat_id: chat,
-   text: `🚨 반복 접속 오류\n${place.name}\n최근 5분 동안 연결 실패 ${failures}회`,
+   text: `🚨 반복 접속 오류\n${place.name}\n최근 5분 동안 연결 실패 ${failures}회\n\n${lines.join('\n')}`,
+   link_preview_options: { is_disabled: true },
    reply_markup: { inline_keyboard: [[{ text: '해당 공간 열기', url: url.href }]] }
   });
   return json({ status: 'alert_sent' });

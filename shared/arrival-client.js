@@ -3,17 +3,20 @@ const ARRIVAL_SERVICE=/* ARRIVAL_SERVICE_CONFIG */,arrivalRequests=new Map();
 const CONNECTION_TIMEOUT_MS = 20000;
 let connectionAttempt;
 
-function watchVillageConnection(generation) {
+function watchVillageConnection(generation, stage = 'connect') {
  if (!ARRIVAL_SERVICE.endpoint || partyId(roomId) !== ARRIVAL_SERVICE.partyId || generation !== networkGeneration) return;
- if (connectionAttempt?.generation === generation) return;
+ if (connectionAttempt?.generation === generation) {
+  connectionAttempt.stage = stage;
+  return;
+ }
  clearTimeout(connectionAttempt?.timer);
- connectionAttempt = {
-  generation,
-  reported: false,
-  timer: setTimeout(() => {
-   if (!document.hidden) void reportVillageConnectionFailure(generation);
-  }, CONNECTION_TIMEOUT_MS)
- };
+ const attempt = { generation, stage, reported: false };
+ attempt.timer = setTimeout(() => {
+  if (connectionAttempt === attempt && !document.hidden) {
+   void reportVillageConnectionFailure(generation, attempt.stage, 'TIMEOUT');
+  }
+ }, CONNECTION_TIMEOUT_MS);
+ connectionAttempt = attempt;
 }
 
 function finishVillageConnection(generation) {
@@ -22,16 +25,30 @@ function finishVillageConnection(generation) {
  connectionAttempt = undefined;
 }
 
-async function reportVillageConnectionFailure(generation) {
+function villageConnectionErrorCode(error) {
+ const raw = typeof error === 'string' ? error : error?.code;
+ const code = typeof raw === 'string' && !raw.startsWith('auth/') ? raw.toUpperCase() : raw;
+ if (['PERMISSION_DENIED', 'UNAVAILABLE', 'DISCONNECTED', 'INVALID_TOKEN', 'EXPIRED_TOKEN', 'TOO_BIG', 'TIMEOUT', 'auth/network-request-failed', 'auth/too-many-requests', 'auth/user-token-expired'].includes(code)) return code;
+ if (/^permission[ _]denied\b/i.test(error?.message || '')) return 'PERMISSION_DENIED';
+ return 'UNKNOWN';
+}
+
+async function reportVillageConnectionFailure(generation, stage, error) {
  const user = networkAuth?.currentUser;
  if (!user || roomFull || navigator.onLine === false) return;
- watchVillageConnection(generation);
+ watchVillageConnection(generation, stage);
  if (generation !== networkGeneration || connectionAttempt?.generation !== generation || connectionAttempt.reported) return;
  connectionAttempt.reported = true;
  clearTimeout(connectionAttempt.timer);
 
  const url = ARRIVAL_SERVICE.endpoint.replace(/\/$/, '') + '/connection-failure';
- const payload = JSON.stringify({ room: roomId, event: crypto.randomUUID().replace(/-/g, '') });
+ const payload = JSON.stringify({
+  room: roomId,
+  event: crypto.randomUUID().replace(/-/g, ''),
+  nickname,
+  stage,
+  code: villageConnectionErrorCode(error)
+ });
  for (let retry = 0; retry < 2; retry++) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);

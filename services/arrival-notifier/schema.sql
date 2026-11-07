@@ -7,6 +7,9 @@ CREATE TABLE IF NOT EXISTS connection_failures (
   room TEXT NOT NULL,
   event_key TEXT NOT NULL,
   occurred_at INTEGER NOT NULL,
+  nickname TEXT,
+  stage TEXT NOT NULL DEFAULT 'unknown',
+  code TEXT NOT NULL DEFAULT 'UNKNOWN',
   PRIMARY KEY (room, event_key)
 );
 CREATE INDEX IF NOT EXISTS connection_failures_room_time ON connection_failures (room, occurred_at);

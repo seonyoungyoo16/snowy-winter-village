@@ -117,12 +117,13 @@ function publishState(force=false){
  const generation = networkGeneration;
  return window.WinterFirebase.set(selfRef,{...body,s:++networkSequence,t:window.WinterFirebase.serverTimestamp()}).catch(error=>{
   if(generation!==networkGeneration)return;
-  void reportVillageConnectionFailure(generation);
+  void reportVillageConnectionFailure(generation,'presence',error);
   networkJoined=false;clearPeers();updateNetworkStatus('접속을 확인해 주세요');console.warn('책숲 도서관 연결:',error.code||'network');toast('친구 연결을 잠시 쉬고 있어요. 초대 버튼에서 다시 연결해요');
  });
 }
 async function registerPresence(generation){
  if(generation!==networkGeneration||!networkConnected||roomFull)return;
+ watchVillageConnection(generation,'register');
  const F=window.WinterFirebase,players=F.ref(networkDB,'rooms/'+roomId+'/players');
  try{
   const current=await F.get(players);if(generation!==networkGeneration)return;
@@ -133,13 +134,14 @@ async function registerPresence(generation){
    const spawn=[[-1.5,7],[1.5,7],[0,5.2],[0,8.8]].find(([x,z])=>active.every(([,d])=>Math.hypot(d.x-x,d.z-z)>1));if(spawn)player.position.set(spawn[0],0,spawn[1]);
   }
   disconnectJob=F.onDisconnect(selfRef);await disconnectJob.remove();if(generation!==networkGeneration)return;
-  arrivalTracker.seed(active);networkJoined=true;const saved=publishState(true);reconcileRoom();
+  arrivalTracker.seed(active);networkJoined=true;watchVillageConnection(generation,'presence');
+  const saved=publishState(true);reconcileRoom();
   if(saved?.then)saved.then(()=>{
    if(generation!==networkGeneration||!networkJoined)return;
    finishVillageConnection(generation);
    return reportOwnArrival(generation);
   }).catch(()=>{});
- }catch(error){if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation);networkJoined=false;updateNetworkStatus('친구 연결 대기');console.warn('책숲 도서관 입장:',error.code||'network');toast('친구 연결을 준비하지 못했어요. 잠시 후 초대 버튼을 눌러주세요');}
+ }catch(error){if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation,'register',error);networkJoined=false;updateNetworkStatus('친구 연결 대기');console.warn('책숲 도서관 입장:',error.code||'network');toast('친구 연결을 준비하지 못했어요. 잠시 후 초대 버튼을 눌러주세요');}
 }
 async function startNetwork(){
  if(!entered||networkStarting||networkJoined||roomFull)return;
@@ -154,12 +156,12 @@ async function startNetwork(){
   selfRef=F.ref(networkDB,'rooms/'+roomId+'/players/'+sessionKey);
   const players=F.ref(networkDB,'rooms/'+roomId+'/players');
   const change=snapshot=>{if(generation!==networkGeneration)return;const data=snapshot.val();if(validState(data)){roomMembers.set(snapshot.key,data);if(snapshot.key!==sessionKey&&isCatWake(data))rememberCatWake(data);}else roomMembers.delete(snapshot.key);reconcileRoom();};
-  const failed=error=>{if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation);networkJoined=false;clearPeers();updateNetworkStatus('친구 연결 대기');console.warn('책숲 도서관 동기화:',error.code||'network');};
+  const failed=error=>{if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation,'sync',error);networkJoined=false;clearPeers();updateNetworkStatus('친구 연결 대기');console.warn('책숲 도서관 동기화:',error.code||'network');};
   networkStops.push(subscribeOtherWorld(F,generation),subscribeAdditionalWorld(F,generation));
   networkStops.push(F.onChildAdded(players,change,failed),F.onChildChanged(players,change,failed),F.onChildRemoved(players,snapshot=>{roomMembers.delete(snapshot.key);reconcileRoom();},failed));
   networkStops.push(F.onValue(F.ref(networkDB,'.info/serverTimeOffset'),snapshot=>{serverOffset=Number(snapshot.val())||0;}));
   networkStops.push(F.onValue(F.ref(networkDB,'.info/connected'),snapshot=>{if(generation!==networkGeneration)return;networkConnected=snapshot.val()===true;if(networkConnected)registerPresence(generation);else{networkJoined=false;watchVillageConnection(generation);arrivalTracker.pause();clearPeers();resetWorldTravel();updateNetworkStatus('다시 연결 중…');}}));
- }catch(error){if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation);updateNetworkStatus('혼자 산책 중');console.warn('책숲 도서관 연결 준비:',error.code||error.message);toast('인터넷 연결을 확인해 주세요. 혼자 산책은 계속할 수 있어요');}
+ }catch(error){if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation,'setup',error);updateNetworkStatus('혼자 산책 중');console.warn('책숲 도서관 연결 준비:',error.code||error.message);toast('인터넷 연결을 확인해 주세요. 혼자 산책은 계속할 수 있어요');}
  finally{networkStarting=false;}
 }
 async function newRoom(){

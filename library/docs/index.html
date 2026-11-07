@@ -4254,12 +4254,13 @@ function publishState(force=false){
  const generation = networkGeneration;
  return window.WinterFirebase.set(selfRef,{...body,s:++networkSequence,t:window.WinterFirebase.serverTimestamp()}).catch(error=>{
   if(generation!==networkGeneration)return;
-  void reportVillageConnectionFailure(generation);
+  void reportVillageConnectionFailure(generation,'presence',error);
   networkJoined=false;clearPeers();updateNetworkStatus('접속을 확인해 주세요');console.warn('책숲 도서관 연결:',error.code||'network');toast('친구 연결을 잠시 쉬고 있어요. 초대 버튼에서 다시 연결해요');
  });
 }
 async function registerPresence(generation){
  if(generation!==networkGeneration||!networkConnected||roomFull)return;
+ watchVillageConnection(generation,'register');
  const F=window.WinterFirebase,players=F.ref(networkDB,'rooms/'+roomId+'/players');
  try{
   const current=await F.get(players);if(generation!==networkGeneration)return;
@@ -4270,13 +4271,14 @@ async function registerPresence(generation){
    const spawn=[[-1.5,7],[1.5,7],[0,5.2],[0,8.8]].find(([x,z])=>active.every(([,d])=>Math.hypot(d.x-x,d.z-z)>1));if(spawn)player.position.set(spawn[0],0,spawn[1]);
   }
   disconnectJob=F.onDisconnect(selfRef);await disconnectJob.remove();if(generation!==networkGeneration)return;
-  arrivalTracker.seed(active);networkJoined=true;const saved=publishState(true);reconcileRoom();
+  arrivalTracker.seed(active);networkJoined=true;watchVillageConnection(generation,'presence');
+  const saved=publishState(true);reconcileRoom();
   if(saved?.then)saved.then(()=>{
    if(generation!==networkGeneration||!networkJoined)return;
    finishVillageConnection(generation);
    return reportOwnArrival(generation);
   }).catch(()=>{});
- }catch(error){if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation);networkJoined=false;updateNetworkStatus('친구 연결 대기');console.warn('책숲 도서관 입장:',error.code||'network');toast('친구 연결을 준비하지 못했어요. 잠시 후 초대 버튼을 눌러주세요');}
+ }catch(error){if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation,'register',error);networkJoined=false;updateNetworkStatus('친구 연결 대기');console.warn('책숲 도서관 입장:',error.code||'network');toast('친구 연결을 준비하지 못했어요. 잠시 후 초대 버튼을 눌러주세요');}
 }
 async function startNetwork(){
  if(!entered||networkStarting||networkJoined||roomFull)return;
@@ -4291,12 +4293,12 @@ async function startNetwork(){
   selfRef=F.ref(networkDB,'rooms/'+roomId+'/players/'+sessionKey);
   const players=F.ref(networkDB,'rooms/'+roomId+'/players');
   const change=snapshot=>{if(generation!==networkGeneration)return;const data=snapshot.val();if(validState(data)){roomMembers.set(snapshot.key,data);if(snapshot.key!==sessionKey&&isCatWake(data))rememberCatWake(data);}else roomMembers.delete(snapshot.key);reconcileRoom();};
-  const failed=error=>{if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation);networkJoined=false;clearPeers();updateNetworkStatus('친구 연결 대기');console.warn('책숲 도서관 동기화:',error.code||'network');};
+  const failed=error=>{if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation,'sync',error);networkJoined=false;clearPeers();updateNetworkStatus('친구 연결 대기');console.warn('책숲 도서관 동기화:',error.code||'network');};
   networkStops.push(subscribeOtherWorld(F,generation),subscribeAdditionalWorld(F,generation));
   networkStops.push(F.onChildAdded(players,change,failed),F.onChildChanged(players,change,failed),F.onChildRemoved(players,snapshot=>{roomMembers.delete(snapshot.key);reconcileRoom();},failed));
   networkStops.push(F.onValue(F.ref(networkDB,'.info/serverTimeOffset'),snapshot=>{serverOffset=Number(snapshot.val())||0;}));
   networkStops.push(F.onValue(F.ref(networkDB,'.info/connected'),snapshot=>{if(generation!==networkGeneration)return;networkConnected=snapshot.val()===true;if(networkConnected)registerPresence(generation);else{networkJoined=false;watchVillageConnection(generation);arrivalTracker.pause();clearPeers();resetWorldTravel();updateNetworkStatus('다시 연결 중…');}}));
- }catch(error){if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation);updateNetworkStatus('혼자 산책 중');console.warn('책숲 도서관 연결 준비:',error.code||error.message);toast('인터넷 연결을 확인해 주세요. 혼자 산책은 계속할 수 있어요');}
+ }catch(error){if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation,'setup',error);updateNetworkStatus('혼자 산책 중');console.warn('책숲 도서관 연결 준비:',error.code||error.message);toast('인터넷 연결을 확인해 주세요. 혼자 산책은 계속할 수 있어요');}
  finally{networkStarting=false;}
 }
 async function newRoom(){
@@ -5785,17 +5787,20 @@ const ARRIVAL_SERVICE={"endpoint":"https://my-little-village-arrivals.seonyoungy
 const CONNECTION_TIMEOUT_MS = 20000;
 let connectionAttempt;
 
-function watchVillageConnection(generation) {
+function watchVillageConnection(generation, stage = 'connect') {
  if (!ARRIVAL_SERVICE.endpoint || partyId(roomId) !== ARRIVAL_SERVICE.partyId || generation !== networkGeneration) return;
- if (connectionAttempt?.generation === generation) return;
+ if (connectionAttempt?.generation === generation) {
+  connectionAttempt.stage = stage;
+  return;
+ }
  clearTimeout(connectionAttempt?.timer);
- connectionAttempt = {
-  generation,
-  reported: false,
-  timer: setTimeout(() => {
-   if (!document.hidden) void reportVillageConnectionFailure(generation);
-  }, CONNECTION_TIMEOUT_MS)
- };
+ const attempt = { generation, stage, reported: false };
+ attempt.timer = setTimeout(() => {
+  if (connectionAttempt === attempt && !document.hidden) {
+   void reportVillageConnectionFailure(generation, attempt.stage, 'TIMEOUT');
+  }
+ }, CONNECTION_TIMEOUT_MS);
+ connectionAttempt = attempt;
 }
 
 function finishVillageConnection(generation) {
@@ -5804,16 +5809,30 @@ function finishVillageConnection(generation) {
  connectionAttempt = undefined;
 }
 
-async function reportVillageConnectionFailure(generation) {
+function villageConnectionErrorCode(error) {
+ const raw = typeof error === 'string' ? error : error?.code;
+ const code = typeof raw === 'string' && !raw.startsWith('auth/') ? raw.toUpperCase() : raw;
+ if (['PERMISSION_DENIED', 'UNAVAILABLE', 'DISCONNECTED', 'INVALID_TOKEN', 'EXPIRED_TOKEN', 'TOO_BIG', 'TIMEOUT', 'auth/network-request-failed', 'auth/too-many-requests', 'auth/user-token-expired'].includes(code)) return code;
+ if (/^permission[ _]denied\b/i.test(error?.message || '')) return 'PERMISSION_DENIED';
+ return 'UNKNOWN';
+}
+
+async function reportVillageConnectionFailure(generation, stage, error) {
  const user = networkAuth?.currentUser;
  if (!user || roomFull || navigator.onLine === false) return;
- watchVillageConnection(generation);
+ watchVillageConnection(generation, stage);
  if (generation !== networkGeneration || connectionAttempt?.generation !== generation || connectionAttempt.reported) return;
  connectionAttempt.reported = true;
  clearTimeout(connectionAttempt.timer);
 
  const url = ARRIVAL_SERVICE.endpoint.replace(/\/$/, '') + '/connection-failure';
- const payload = JSON.stringify({ room: roomId, event: crypto.randomUUID().replace(/-/g, '') });
+ const payload = JSON.stringify({
+  room: roomId,
+  event: crypto.randomUUID().replace(/-/g, ''),
+  nickname,
+  stage,
+  code: villageConnectionErrorCode(error)
+ });
  for (let retry = 0; retry < 2; retry++) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
