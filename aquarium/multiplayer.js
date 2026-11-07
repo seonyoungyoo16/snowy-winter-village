@@ -147,7 +147,7 @@ async function startNetwork(){
  networkStarting=true;arrivalTracker.pause();const generation=++networkGeneration;updateNetworkStatus('친구와 연결 중…');
  try{
   const F=window.WinterFirebase;if(!F)throw new Error('sdk-not-ready');
-  if(!networkAuth){const app=F.initializeApp(firebaseConfig);networkAuth=F.getAuth(app);await F.setPersistence(networkAuth,F.browserSessionPersistence);networkDB=F.getDatabase(app);}
+  if(!networkAuth){const app=F.initializeApp(firebaseConfig);networkAuth=F.getAuth(app);await F.setPersistence(networkAuth,F.browserLocalPersistence);networkDB=F.getDatabase(app);}
   if(!networkAuth.currentUser)await F.signInAnonymously(networkAuth);
   if(generation!==networkGeneration)return;
   watchVillageConnection(generation);
