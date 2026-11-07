@@ -4162,7 +4162,7 @@ function createResidentGuide(){
 const residentGuide=createResidentGuide();
 
 // The visitor reports their own confirmed join; the owner's browser is never the notification server.
-const ARRIVAL_SERVICE={"endpoint":"","partyId":"0946f302b9cf8449c6970809"},arrivalRequests=new Map();
+const ARRIVAL_SERVICE={"endpoint":"https://my-little-village-arrivals.seonyoungyoo16.workers.dev","partyId":"0946f302b9cf8449c6970809"},arrivalRequests=new Map();
 async function reportOwnArrival(generation){
  if(!ARRIVAL_SERVICE.endpoint||partyId(roomId)!==ARRIVAL_SERVICE.partyId||!networkJoined||!networkAuth?.currentUser||generation!==networkGeneration)return;
  const expectedRoom=roomId,user=networkAuth.currentUser,key='village-phone-arrival-v1:'+ARRIVAL_SERVICE.partyId+':'+user.uid;

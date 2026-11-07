@@ -1,5 +1,12 @@
 # 테마별 주민과 접속 알림 점검
 
+## 게임 쪽 알림 연결 주소 설정 · 2026-11-07
+
+- 세 공간 공통 `shared/arrival-config.json`에 실제 배포된 Worker 주소를 설정하고 단일 HTML 세 벌을 다시 빌드했다. `npm test` 전체 통과. 서버 비밀값은 HTML에 없으며 세 공간은 같은 친구 그룹의 확인된 입장만 요청한다.
+- Worker의 세 비밀값 이름이 `secret_text`로 등록된 것을 공식 CLI에서 확인했다. 값은 읽거나 출력하지 않았다. 토큰 입력 뒤 설정 창은 `waiting_phone` 단계이며 실제 `/health`는 `ready:false`다.
+- PC에 연결된 Telegram 앱이 없어 휴대폰에서 최초 수신 계정을 연결할 수 있도록 로컬 QR을 생성했다. 일회용 연결 링크는 명령 인수·소스 파일에 넣지 않고 표준입력으로 전달했고 QR 이미지는 gitignore된 `.local-runs/`에만 둔다.
+- 공개 게임의 서버 주소 설정과 수신 계정 연결, 실제 폰 수신은 구분한다. 이 시점에는 최초 봇 시작과 실제 접속 알림 수신 확인을 기다린다. 준비 전 요청은 게임 입장을 막지 않고 제한된 재시도 후 조용히 끝난다.
+
 ## 알림 서버 실제 배포 · 2026-11-07
 
 - 본인 승인 후 공식 Wrangler OAuth를 연결했다. 실제 배포에는 `account:read`, `user:read`, `workers_scripts:write`, `d1:write`, `offline_access`를 사용한다. 이름이 비슷한 `workers:write`만으로는 배포 API가 거부되어 `workers_scripts:write`로 바로잡았다. 인증 값은 OS 키링으로 보관하며 저장소에 넣지 않는다.
