@@ -4072,7 +4072,7 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
  updateResidentCat(dt);networkTick(dt,moving);animatePose(dt,moving,character,mode,elapsed,mode==='cat'||mode==='catWake'?catActionTime:mode==='reading'?readingTurnTime:writingTime);playerShadow.position.set(player.position.x,.035,player.position.z);
  for(let i=0;i<dustCount;i++){const s=dustSeed[i];dustArray[i*3]=s.x+Math.sin(elapsed*.12+i)*.3;dustArray[i*3+1]=s.y+Math.sin(elapsed*.2+i*2)*.12;dustArray[i*3+2]=s.z+Math.cos(elapsed*.1+i)*.2;}dustGeo.attributes.position.needsUpdate=true;
  if(ringTimer>0){ringTimer-=dt;targetRing.scale.setScalar(1+Math.sin(elapsed*4)*.08);targetRing.material.opacity=clamp(ringTimer,0,.7);if(ringTimer<=0)targetRing.visible=false;}
- residentGuide.tick(dt);skyWeather.tick(dt);updateCamera(dt);if(frameCount++%5===0){label('label-books',-12,4.5,-7.3);label('label-window',10,3.2,-11);label('label-desk',13.2,3.4,1.2);updateCatBubble();if(entered)updateUI();}renderer.render(scene,camera);
+ residentGuide.tick(dt);skyWeather.tick(dt);villagePlay.tick(dt);updateCamera(dt);if(frameCount++%5===0){label('label-books',-12,4.5,-7.3);label('label-window',10,3.2,-11);label('label-desk',13.2,3.4,1.2);updateCatBubble();if(entered)updateUI();}renderer.render(scene,camera);
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();$('error').hidden=false;$('error-text').textContent='도서관이 잠깐 쉬고 있어요. 페이지를 다시 열어주세요.';});
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('memory-modal').hidden)closeMemories();});
@@ -4222,7 +4222,7 @@ function updateNetworkStatus(message){
 function visitorActivity(data){return isCatWake(data)?'잠든 귤이를 깨운 중':isCatInteraction(data)?CAT_ACTIONS[catActionKind(data.b)].status:activityNames[data.m];}
 function validState(data){return data&&data.v===1&&typeof data.u==='string'&&typeof data.n==='string'&&data.n.length>0&&data.n.length<=12&&Number.isInteger(data.k)&&data.k>=0&&data.k<=2&&['x','y','z','a','p','b','t','j','s'].every(k=>Number.isFinite(data[k]))&&Math.abs(data.x)<=26&&Math.abs(data.z)<=26&&data.y>=-1&&data.y<=10&&Math.abs(data.a)<=3.142&&Math.abs(data.p)<=1.6&&data.b>=0&&data.b<=.7&&Object.hasOwn(activityNames,data.m);}
 function disposeActor(root){root.traverse(o=>{if(!o.isMesh)return;if(!Object.values(geom).includes(o.geometry))o.geometry.dispose();});scene.remove(root);}
-function removePeer(id){const peer=remotePlayers.get(id);if(!peer)return;disposeActor(peer.actor.root);scene.remove(peer.shadow);peer.label.material.map.dispose();peer.label.material.dispose();remotePlayers.delete(id);}
+function removePeer(id){const peer=remotePlayers.get(id);if(!peer)return;villagePlay.drop(peer);disposeActor(peer.actor.root);scene.remove(peer.shadow);peer.label.material.map.dispose();peer.label.material.dispose();remotePlayers.delete(id);}
 function clearPeers(){for(const id of Array.from(remotePlayers.keys()))removePeer(id);}
 function makePeer(id,data){
  const actor=avatar(data.k);actor.root.position.set(data.x,data.y,data.z);actor.root.rotation.set(data.p,data.a,0);scene.add(actor.root);
@@ -4249,7 +4249,7 @@ function stateBody(){
 function publishState(force=false){
  if(!networkJoined||!networkConnected||!selfRef||!networkAuth?.currentUser)return;
  const now=performance.now();if(!force&&now-lastNetworkSend<200)return;
- const body=stateBody(),signature=JSON.stringify(body);if(!force&&signature===lastNetworkBody&&now-lastNetworkSend<6000)return;
+ const body=villagePlay.wire(stateBody()),signature=JSON.stringify(body);if(!force&&signature===lastNetworkBody&&now-lastNetworkSend<6000)return;
  lastNetworkBody=signature;lastNetworkSend=now;
  return window.WinterFirebase.set(selfRef,{...body,s:++networkSequence,t:window.WinterFirebase.serverTimestamp()}).catch(error=>{networkJoined=false;clearPeers();updateNetworkStatus('접속을 확인해 주세요');console.warn('책숲 도서관 연결:',error.code||'network');toast('친구 연결을 잠시 쉬고 있어요. 초대 버튼에서 다시 연결해요');});
 }
@@ -4297,7 +4297,7 @@ function updatePeers(dt){
  for(const peer of remotePlayers.values()){
   const data=peer.data;if(Date.now()+serverOffset-data.t>STALE_MS){removePeer(peer.id);updateNetworkStatus();continue;}
   const root=peer.actor.root,distance=root.position.distanceTo(peer.target),blend=1-Math.exp(-dt*12);if(distance>6)root.position.copy(peer.target);else root.position.lerp(peer.target,blend);
-  root.rotation.y+=Math.atan2(Math.sin(data.a-root.rotation.y),Math.cos(data.a-root.rotation.y))*blend;root.rotation.x=lerp(root.rotation.x,data.p,blend);
+  root.rotation.y+=Math.atan2(Math.sin(data.a-root.rotation.y),Math.cos(data.a-root.rotation.y))*blend;root.rotation.x=lerp(root.rotation.x,data.p,blend);villagePlay.peer(peer,dt);
   peer.phase+=dt;const reading=data.m==='rolling',writing=data.m==='sled',moving=data.m==='walk';if(!writing)peer.writingTime=null;
   const waking=isCatWake(data),catAction=isCatInteraction(data),catData=catAction?catActionFromWire(data.b):null;const turn=reading?remoteReadingTurn(peer,dt):{time:READING_TURN_DURATION,direction:1};if(!reading){peer.readingKey=null;peer.readingTime=null;}
   animatePose(dt,moving,peer.actor,waking?'catWake':catAction?'cat':reading?'reading':writing?'writing':data.m==='warm'?'rest':data.m==='celebrate'?'wave':'idle',peer.phase,waking?catWakeTime(data.b):catAction?catData.time:writing?remoteWritingTime(peer,dt):turn.time,bookIndexFromWire(data.b),turn.direction,catAction?catData.kind:0);
@@ -4607,6 +4607,54 @@ function createVillageNotes(){
 const villageNotes=createVillageNotes();
 // Worlds report small activities here so the board can thank the visitor for today's requests.
 function villageEvent(name){return villageNotes.event(name);}
+
+// Small ways to say something without words: emote bubbles everywhere, and in the winter village a kite by day and sky lanterns by night.
+// Friends see them through fields the deployed rules already accept: emotes as m:'celebrate' with b 0.10–0.35 (the library's cat uses 0.55+),
+// a kite as b 0.41 and a released lantern as b 0.45 on an idle or walking visitor, which older pages simply ignore.
+function createVillagePlay(){
+ const EMOTES=[['♥','좋아요'],['☺','웃음'],['✋','반가워'],['☾','졸려요'],['!','놀랐어요'],['✧','박수']],EMOTE_TIME=1.8,LANTERN_WIRE=2.5,WINTER=CURRENT_WORLD==='winter';
+ const now=()=>performance.now()/1000;
+ let emote=null,emoteAt=-99,kiteOn=false,lanternAt=-99;
+ function bubbleTexture(glyph){const canvas=document.createElement('canvas');canvas.width=canvas.height=128;const c=canvas.getContext('2d');c.fillStyle='rgba(255,247,232,.95)';c.beginPath();c.arc(64,58,46,0,Math.PI*2);c.fill();c.beginPath();c.moveTo(52,98);c.lineTo(64,120);c.lineTo(76,98);c.fill();c.fillStyle='#b15f5a';c.font='bold 56px "Winter Jua",sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(glyph,64,60);const t=new THREE.CanvasTexture(canvas);if(THREE.SRGBColorSpace)t.colorSpace=THREE.SRGBColorSpace;return t;}
+ const textures=EMOTES.map(([g])=>bubbleTexture(g));
+ function bubbleFor(root){let s=root.getObjectByName('emote-bubble');if(!s){s=new THREE.Sprite(new THREE.SpriteMaterial({map:textures[0],transparent:true,depthWrite:false}));s.name='emote-bubble';s.position.y=2.55;s.visible=false;root.add(s);}return s;}
+ function showBubble(root,index,age){const s=bubbleFor(root);s.material.map=textures[index];const pop=Math.min(1,age*6),fade=Math.max(0,Math.min(1,(EMOTE_TIME+.5-age)*2));s.visible=fade>0;s.scale.setScalar(.7*pop);s.material.opacity=fade;}
+ // Winter sky toys: the kite drifts downwind from the shared weather; lanterns rise slowly and fade.
+ const kites=new Map(),lanterns=[];
+ function kiteFor(root){let k=kites.get(root);if(k)return k;const group=new THREE.Group();group.name='village-kite';const sail=new THREE.Mesh(new THREE.ConeGeometry(.55,.08,4),new THREE.MeshLambertMaterial({color:[0xe48f7e,0x8fb8c9,0xe9c36f][kites.size%3]}));sail.rotation.x=Math.PI/2;sail.scale.set(1,1,1.4);group.add(sail);const tail=new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,1.2,4),new THREE.MeshBasicMaterial({color:0xf4efe6}));tail.position.y=-.9;group.add(tail);scene.add(group);const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6),3));const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0xf4efe6,transparent:true,opacity:.7}));line.frustumCulled=false;scene.add(line);k={group,line};kites.set(root,k);return k;}
+ function placeKite(root,on,t){const k=on||kites.has(root)?kiteFor(root):null;if(!k)return;k.group.visible=k.line.visible=on;if(!on)return;const w=skyWeather.state.wind,len=Math.max(.35,Math.hypot(w.x,w.z)),dx=w.x/len,dz=w.z/len;k.group.position.set(root.position.x+dx*5.5+Math.sin(t*.9)*.5,root.position.y+7.5+Math.sin(t*1.3)*.4,root.position.z+dz*5.5+Math.cos(t*.7)*.5);k.group.rotation.set(-.6,Math.atan2(dx,dz),Math.sin(t*1.1)*.25);const p=k.line.geometry.attributes.position.array;p.set([root.position.x,root.position.y+1.1,root.position.z,k.group.position.x,k.group.position.y-.2,k.group.position.z]);k.line.geometry.attributes.position.needsUpdate=true;}
+ function dropKite(root){const k=kites.get(root);if(!k)return;scene.remove(k.group,k.line);k.line.geometry.dispose();kites.delete(root);}
+ function releaseLantern(at){if(lanterns.length>=8){const old=lanterns.shift();scene.remove(old.mesh);}const mesh=new THREE.Group();mesh.name='sky-lantern';const glow=new THREE.Mesh(new THREE.CylinderGeometry(.22,.17,.42,8),new THREE.MeshBasicMaterial({color:0xffc983,transparent:true,opacity:.95}));mesh.add(glow);const top=new THREE.Mesh(new THREE.CylinderGeometry(.23,.23,.04,8),new THREE.MeshBasicMaterial({color:0xf6e2bd,transparent:true,opacity:.95}));top.position.y=.22;mesh.add(top);mesh.position.set(at.x,at.y+1.6,at.z);scene.add(mesh);lanterns.push({mesh,age:0,seed:Math.random()*6});}
+ function lanternsTick(dt){for(let i=lanterns.length-1;i>=0;i--){const l=lanterns[i];l.age+=dt;const w=skyWeather.state.wind;l.mesh.position.y+=dt*.55;l.mesh.position.x+=(w.x*.25+Math.sin(l.age*.7+l.seed)*.08)*dt;l.mesh.position.z+=(w.z*.25+Math.cos(l.age*.6+l.seed)*.08)*dt;const fade=Math.max(0,Math.min(1,(28-l.age)/6));for(const m of l.mesh.children)m.material.opacity=.95*fade;if(fade<=0){scene.remove(l.mesh);lanterns.splice(i,1);}}}
+ function decode(m,b){if(m==='celebrate'&&b>=.09&&b<=.36)return{emote:Math.round((b-.1)/.05)};if((m==='idle'||m==='walk')&&Math.abs(b-.41)<.005)return{kite:true};if((m==='idle'||m==='walk')&&Math.abs(b-.45)<.005)return{lantern:true};return null;}
+ const canKite=()=>WINTER&&skyWeather.state.daylight>.25,canLantern=()=>WINTER&&skyWeather.state.daylight<.35;
+ // Palette: a round button at the lower right opens the emotes (and, in winter, the kite or a lantern for the hour).
+ const style=document.createElement('style');style.textContent='.play-toggle{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 132px);z-index:4;width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,247,232,.88);color:#8f5a54;font:700 21px/1 "Winter Jua",sans-serif;box-shadow:0 3px 12px rgba(40,40,70,.18);cursor:pointer}.play-palette{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 186px);z-index:4;display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:18px;background:rgba(255,247,232,.94);box-shadow:0 3px 14px rgba(40,40,70,.2)}.play-palette button{min-width:44px;min-height:40px;border:0;border-radius:12px;background:#f3e6d1;color:#6a5050;font:700 13px "Winter Jua",sans-serif;cursor:pointer;white-space:nowrap}.play-palette button[aria-pressed=true]{background:#d9b98d}';(document.head||document.body).append(style);
+ const toggle=document.createElement('button');toggle.className='play-toggle';toggle.textContent='☺';toggle.setAttribute('aria-label','표현하기');toggle.hidden=true;const palette=document.createElement('div');palette.className='play-palette';palette.hidden=true;palette.setAttribute('aria-label','표현 고르기');document.body.append(toggle,palette);
+ let kiteButton=null,lanternButton=null;
+ for(const[i,[glyph,label]]of EMOTES.entries()){const b=document.createElement('button');b.textContent=glyph+' '+label;b.setAttribute('aria-label',label);b.addEventListener('click',()=>{say(i);palette.hidden=true;});palette.append(b);}
+ if(WINTER){kiteButton=document.createElement('button');kiteButton.textContent='연 날리기';kiteButton.addEventListener('click',()=>{toggleKite();palette.hidden=true;});lanternButton=document.createElement('button');lanternButton.textContent='풍등 띄우기';lanternButton.addEventListener('click',()=>{lantern();palette.hidden=true;});palette.append(kiteButton,lanternButton);}
+ toggle.addEventListener('click',()=>{if(kiteButton){kiteButton.hidden=!canKite();kiteButton.setAttribute('aria-pressed',String(kiteOn));kiteButton.textContent=kiteOn?'연 거두기':'연 날리기';lanternButton.hidden=!canLantern();}palette.hidden=!palette.hidden;});
+ function free(){return entered&&mode==='idle';}
+ function say(i){if(!free()){toast('하던 일을 마치고 표현해 볼까요?');return false;}if(now()-emoteAt<2.5)return false;emote=i;emoteAt=now();if(typeof publishState==='function')publishState(true);return true;}
+ function toggleKite(){if(!kiteOn&&!canKite()){toast('연은 해가 있을 때 날려요');return false;}kiteOn=!kiteOn;toast(kiteOn?'바람을 타고 연이 올라가요':'연을 거두었어요');if(typeof publishState==='function')publishState(true);return kiteOn;}
+ function lantern(){if(!canLantern()){toast('풍등은 해가 진 뒤에 띄워요');return false;}if(now()-lanternAt<4)return false;lanternAt=now();releaseLantern(player.position);toast('소원을 담아 풍등을 띄웠어요');if(typeof publishState==='function')publishState(true);return true;}
+ return{
+  EMOTES,say,toggleKite,lantern,isOpen:()=>!palette.hidden,get kiteOn(){return kiteOn;},lanterns,
+  // Applied to the published state; only an idle or walking visitor is ever rewritten.
+  wire(body){const t=now(),calm=body.m==='idle'||body.m==='walk';if(!calm)return body;if(emote!==null&&t-emoteAt<EMOTE_TIME)return{...body,m:'celebrate',b:Math.round((.1+emote*.05)*1000)/1000};if(WINTER&&t-lanternAt<LANTERN_WIRE)return{...body,b:.45};if(WINTER&&kiteOn)return{...body,b:.41};return body;},
+  fromWire:decode,
+  // A friend's emote pops once per change; the same emote can show again after they stop.
+  peer(peer,dt){const root=peer.actor.root,signal=decode(peer.data.m,peer.data.b),t=now();
+   if(signal&&signal.emote!==undefined){if(peer.emoteIndex!==signal.emote){peer.emoteIndex=signal.emote;peer.emoteShown=signal.emote;peer.emoteAt=t;}}else peer.emoteIndex=undefined;
+   if(peer.emoteAt!==undefined){const age=t-peer.emoteAt;if(age<EMOTE_TIME+.5)showBubble(root,peer.emoteShown,age);else{bubbleFor(root).visible=false;peer.emoteAt=undefined;}}
+   if(WINTER){placeKite(root,Boolean(signal&&signal.kite),t);if(signal&&signal.lantern){if(!peer.lanternSent){peer.lanternSent=true;releaseLantern(root.position);}}else peer.lanternSent=false;}},
+  drop(peer){if(WINTER)dropKite(peer.actor.root);},
+  tick(dt){const t=now();toggle.hidden=!entered;if(!entered)palette.hidden=true;if(emote!==null){const age=t-emoteAt;if(age<EMOTE_TIME+.5)showBubble(player,emote,age);else{bubbleFor(player).visible=false;emote=null;}}
+   if(WINTER){if(kiteOn&&(!canKite()||mode!=='idle')){kiteOn=false;}placeKite(player,kiteOn,t);lanternsTick(dt);}}
+ };
+}
+const villagePlay=createVillagePlay();
 
 // The visitor reports their own confirmed join; the owner's browser is never the notification server.
 const ARRIVAL_SERVICE={"endpoint":"","partyId":"0946f302b9cf8449c6970809"},arrivalRequests=new Map();
