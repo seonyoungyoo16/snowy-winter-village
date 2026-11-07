@@ -28,6 +28,8 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),esbuild=require('es
   source=source.replace('/* PHOTO_MODE_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/photo-mode.js'),'utf8'));
   source=source.replace('/* COMPANIONS_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-companions.js'),'utf8'));
   source=source.replace('/* RADIAL_MENU_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/radial-menu.js'),'utf8'));
+  source=source.replace('/* MINIGAMES_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-minigames.js'),'utf8'));
+  source=source.replace('/* SNOWBALL_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-snowball.js'),'utf8'));
   source=source.replace('/* EXHIBIT_CODE */',()=>fs.readFileSync(path.join(__dirname,'exhibit.js'),'utf8'));
   source=source.replace('/* WORLD_TRAVEL_CODE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.js'),'utf8').replace('/* WORLD_CONFIG */',JSON.stringify({current:'aquarium',winterPath:'/snowy-winter-village/',aquariumPath:'/snowy-winter-village/aquarium/',libraryPath:'/snowy-winter-village/library/',publicOrigin:'https://seonyoungyoo16.github.io'})));
   source=source.replace('/* WORLD_TRAVEL_STYLE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.css'),'utf8'));
