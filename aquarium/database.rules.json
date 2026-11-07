@@ -81,6 +81,78 @@
               ".validate": false
             }
           }
+        },
+        "letters": {
+          "$id": {
+            ".write": "auth != null && $party.matches(/^[a-f0-9]{24}$/) && $id.matches(/^[a-z0-9]{6,20}$/) && ((!data.exists() && newData.exists()) || (data.exists() && !newData.exists() && data.child('u').val() === auth.uid))",
+            ".validate": "newData.hasChildren(['f','to','b','s','u','t'])",
+            "f": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 12"
+            },
+            "to": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 12"
+            },
+            "b": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+            },
+            "s": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2 && newData.val() % 1 === 0"
+            },
+            "u": {
+              ".validate": "newData.isString() && newData.val() === auth.uid"
+            },
+            "t": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "board": {
+          "$id": {
+            ".write": "auth != null && $party.matches(/^[a-f0-9]{24}$/) && $id.matches(/^[a-z0-9]{6,20}$/) && ((!data.exists() && newData.exists()) || (data.exists() && !newData.exists() && data.child('u').val() === auth.uid))",
+            ".validate": "newData.hasChildren(['n','b','u','t','w'])",
+            "n": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 12"
+            },
+            "b": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40"
+            },
+            "u": {
+              ".validate": "newData.isString() && newData.val() === auth.uid"
+            },
+            "t": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+            },
+            "w": {
+              ".validate": "newData.val() === 'winter' || newData.val() === 'aquarium' || newData.val() === 'library'"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "signs": {
+          "$id": {
+            ".write": "auth != null && $party.matches(/^[a-f0-9]{24}$/) && $id.matches(/^(winter|aquarium|library)-[01]$/) && newData.exists()",
+            ".validate": "newData.hasChildren(['b','n','u','t'])",
+            "b": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 24"
+            },
+            "n": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 12"
+            },
+            "u": {
+              ".validate": "newData.isString() && newData.val() === auth.uid"
+            },
+            "t": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
         }
       }
     }
