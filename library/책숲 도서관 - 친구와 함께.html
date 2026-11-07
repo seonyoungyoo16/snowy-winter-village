@@ -3815,7 +3815,7 @@ function animateBookPose(actor,state,index,time,phase,direction=1){
 function remoteWritingTime(peer,dt){const target=writingTimeFromWire(peer.data.b);if(peer.writingTime==null||target<peer.writingTime-.4)peer.writingTime=target;else peer.writingTime=lerp(peer.writingTime,target,1-Math.exp(-dt*16));return peer.writingTime;}
 function remoteReadingTurn(peer,dt){const target=readingTurnFromWire(peer.data.b),key=bookIndexFromWire(peer.data.b)+'_'+readingPageFromWire(peer.data.b)+'_'+target.direction;if(peer.readingKey!==key||peer.readingTime==null||target.time<peer.readingTime-.3)peer.readingTime=target.time;else peer.readingTime=lerp(peer.readingTime,target.time,1-Math.exp(-dt*18));peer.readingKey=key;return{time:peer.readingTime,direction:target.direction};}
 function normalizedMemories(data){return Array.isArray(data)?data.filter(m=>m&&Number.isInteger(m.book)&&m.book>=0&&m.book<3&&Number.isFinite(m.created)&&m.created>0&&m.created<=Date.now()+1000&&typeof m.name==='string').sort((a,b)=>a.created-b.created).slice(-30).map(m=>({book:m.book,created:m.created,name:m.name.slice(0,12)})):[];}
-function finishBookmark(){
+function finishBookmark(){setTimeout(()=>{if(typeof villageJournal==='object')villageJournal.sync();},0);
  memories.push({book:selectedBook,created:Date.now(),name:nickname});memories=memories.slice(-30);save();drawMemoryBoard();stopActivity();toast('작은 책갈피 한 장을 남겼어요');
 }
 const memoryCanvas=document.createElement('canvas');memoryCanvas.width=512;memoryCanvas.height=448;const memoryTexture=new THREE.CanvasTexture(memoryCanvas);memoryTexture.colorSpace=THREE.SRGBColorSpace;
@@ -3908,7 +3908,7 @@ function animatePose(dt,moving,actor=character,state=mode,phase=elapsed,actionTi
  actor.body.position.y=lerp(actor.body.position.y,y,1-Math.exp(-dt*12));actor.body.rotation.x=lerp(actor.body.rotation.x,pitch,1-Math.exp(-dt*10));actor.head.rotation.z=Math.sin(phase*.8)*.018;
  if(state==='cat'){actor.legs.forEach(leg=>leg.position.y=.47-actor.body.position.y);fitCatVisitorHand(actor,catType,actionTime);}
 }
-function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||!$('memory-modal').hidden||!$('cat-modal').hidden||!$('book-picker').hidden||residentGuide.isOpen()||creatureBook.isOpen()||villageNotes.isOpen()||villageMarket.isOpen();}
+function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||!$('memory-modal').hidden||!$('cat-modal').hidden||!$('book-picker').hidden||residentGuide.isOpen()||creatureBook.isOpen()||villageNotes.isOpen()||villageMarket.isOpen()||villageJournal.isOpen();}
 function closeHelp(){$('help-modal').hidden=true;$('help').focus();}
 $('help').addEventListener('click',()=>{$('help-modal').hidden=false;keys.clear();$('close-help').focus();});$('close-help').addEventListener('click',closeHelp);$('return-village').addEventListener('click',closeHelp);$('help-modal').addEventListener('click',e=>{if(e.target===$('help-modal'))closeHelp();});
 $('memory-action').addEventListener('click',openMemories);$('close-memories').addEventListener('click',closeMemories);$('memory-modal').addEventListener('click',e=>{if(e.target===$('memory-modal'))closeMemories();});
@@ -4490,7 +4490,7 @@ function createCreatureBook(){
  let entries=load();
  function save(){try{localStorage.setItem(KEY,JSON.stringify({v:1,entries}));}catch{}}
  // Returns true for a first meeting so the world can celebrate it.
- function record(id,detail={}){const known=ENTRIES.find(e=>e.id===id);if(!known)return false;entries=load();const old=entries[id],sky=typeof skyWeather==='object'&&skyWeather?skyWeather.state:null;entries[id]={first:old?old.first:Date.now(),count:(old?old.count:0)+1,best:Math.max(old&&old.best||0,detail.cm||0),phase:old?old.phase:(sky?sky.phase:null)};save();if(!old){toast('도감에 새로 기록했어요 · '+known.name);refresh();if(typeof villageMarket==='object')villageMarket.earn(1,'새 친구');}return!old;}
+ function record(id,detail={}){const known=ENTRIES.find(e=>e.id===id);if(!known)return false;entries=load();const old=entries[id],sky=typeof skyWeather==='object'&&skyWeather?skyWeather.state:null;entries[id]={first:old?old.first:Date.now(),count:(old?old.count:0)+1,best:Math.max(old&&old.best||0,detail.cm||0),phase:old?old.phase:(sky?sky.phase:null)};save();if(!old){toast('도감에 새로 기록했어요 · '+known.name);refresh();if(typeof villageMarket==='object')villageMarket.earn(1,'새 친구');if(typeof villageJournal==='object')villageJournal.sync();}return!old;}
  // Tank activities meet one creature each time, preferring ones not yet in the book.
  function observeTank(tank){const sky=typeof skyWeather==='object'&&skyWeather?skyWeather.state:{phase:'day'},pool=ENTRIES.filter(e=>e.tank===tank&&(e.id!=='lantern-jelly'||sky.phase==='night'||sky.phase==='dusk'));if(!pool.length)return null;const fresh=pool.filter(e=>!entries[e.id]),pick=(fresh.length?fresh:pool)[Math.floor(Math.random()*(fresh.length||pool.length))];record(pick.id);return pick.id;}
  function observeWindow(sky){const id=sky.kind==='precip'||sky.kind==='heavy'?'rain-snail':sky.daylight>.4?'sparrow':'moon-moth';record(id);return id;}
@@ -4580,25 +4580,25 @@ function createVillageNotes(){
   send.addEventListener('click',async()=>{const ok=await sendLetter(to.value,text.value,Number(paper.value));if(ok){text.value='';openMailbox();}});
   show('mailbox',el('h2',{textContent:'우편함'}),el('p',{className:'creature-count',textContent:list.length?'받은 편지와 보낸 편지'+sharedNote():'아직 편지가 없어요'+sharedNote()}),el('ul',{},...list.map(l=>el('li',{className:fresh.has(l.id)?'unread':'seen'},el('small',{textContent:(l.f===nickname?'내가 '+(l.to==='*'?'모두':l.to+' 님')+'에게':l.f+' 님이 '+(l.to==='*'?'모두':'나')+'에게')+' · '+STATIONERY[l.s||0]+' · '+when(l.t)}),document.createTextNode(l.b)))),el('h3',{textContent:'편지 쓰기'}),to,paper,text,send);
   writeLocal(readKey,[...new Set([...readLocal(readKey,[]),...list.map(l=>l.id)])].slice(-200));updateFlag();}
- async function sendLetter(to,text,stationery=0){const b=clean(text,LIMITS.letter),target=to==='*'?'*':clean(to,12);if(!b||!target){toast('편지 내용을 적어 주세요');return null;}const t=Date.now(),id=t.toString(36)+Math.random().toString(36).slice(2,7);const result=await villageStore.put('letters',id,{f:nickname,to:target,b,s:Math.max(0,Math.min(4,stationery|0)),u:villageStore.uid(),t});toast('우편함에 편지를 넣었어요'+(result==='shared'?'':' · 이 브라우저에만 보여요'));return result;}
+ async function sendLetter(to,text,stationery=0){const b=clean(text,LIMITS.letter),target=to==='*'?'*':clean(to,12);if(!b||!target){toast('편지 내용을 적어 주세요');return null;}const t=Date.now(),id=t.toString(36)+Math.random().toString(36).slice(2,7);const result=await villageStore.put('letters',id,{f:nickname,to:target,b,s:Math.max(0,Math.min(4,stationery|0)),u:villageStore.uid(),t});if(typeof villageJournal==='object')villageJournal.note('first-letter');toast('우편함에 편지를 넣었어요'+(result==='shared'?'':' · 이 브라우저에만 보여요'));return result;}
  function updateFlag(){if(flag)flag.rotation.z=unread().length?-1.25:0;}
  villageStore.subscribe('letters',v=>{letters=v||{};updateFlag();if(openKind==='mailbox'&&!sheet.hidden)updateFlag();});
  // #8 Board: two of the resident's small requests each Seoul day (no rewards, just thanks) and short friend memos.
  let memos={};const doneKey=()=>'village-requests:'+CURRENT_WORLD+':'+seoulDay();
  function todaysRequests(day=seoulDay()){const all=LAYOUT.requests,skip=((day%3)+3)%3;return all.filter((_,i)=>i!==skip);}
- function villageEventInner(name){const req=todaysRequests().find(r=>r[0]===name);if(!req)return false;const done=readLocal(doneKey(),[]);if(done.includes(name))return false;writeLocal(doneKey(),[...done,name]);toast(LAYOUT.resident+': 부탁 들어줘서 고마워요!');if(typeof villageMarket==='object')villageMarket.earn(2,'오늘의 부탁');return true;}
+ function villageEventInner(name){const req=todaysRequests().find(r=>r[0]===name);if(!req)return false;const done=readLocal(doneKey(),[]);if(done.includes(name))return false;writeLocal(doneKey(),[...done,name]);if(typeof villageJournal==='object')villageJournal.note('first-request');toast(LAYOUT.resident+': 부탁 들어줘서 고마워요!');if(typeof villageMarket==='object')villageMarket.earn(2,'오늘의 부탁');return true;}
  function boardMemos(){const cutoff=Date.now()-MEMO_DAYS*86400e3;return Object.entries(memos).map(([id,m])=>({id,...m})).filter(m=>m&&m.t>cutoff).sort((a,b)=>b.t-a.t).slice(0,8);}
  function openBoard(){const done=readLocal(doneKey(),[]),text=el('input',{maxLength:LIMITS.memo,placeholder:'친구에게 짧은 메모 (40자)',ariaLabel:'메모 내용'}),send=el('button',{className:'note-send',textContent:'메모 붙이기'});
   send.addEventListener('click',async()=>{if(await postMemo(text.value)){text.value='';openBoard();}});
   const memoList=boardMemos();show('board',el('h2',{textContent:'마을 게시판'}),el('h3',{textContent:LAYOUT.resident+'의 오늘 부탁'}),el('ul',{},...todaysRequests().map(([id,t])=>el('li',{className:done.includes(id)?'done':'seen',textContent:t}))),el('h3',{textContent:'친구 메모'+sharedNote()}),el('ul',{},...(memoList.length?memoList.map(m=>el('li',{className:'seen'},el('small',{textContent:m.n+' 님 · '+when(m.t)}),document.createTextNode(m.b))):[el('li',{className:'unseen',textContent:'아직 붙은 메모가 없어요'})])),text,send);}
- async function postMemo(text){const b=clean(text,LIMITS.memo);if(!b){toast('메모 내용을 적어 주세요');return null;}const t=Date.now(),id=t.toString(36)+Math.random().toString(36).slice(2,7),result=await villageStore.put('board',id,{n:nickname,b,u:villageStore.uid(),t,w:CURRENT_WORLD});toast('게시판에 메모를 붙였어요'+(result==='shared'?'':' · 이 브라우저에만 보여요'));return result;}
+ async function postMemo(text){const b=clean(text,LIMITS.memo);if(!b){toast('메모 내용을 적어 주세요');return null;}const t=Date.now(),id=t.toString(36)+Math.random().toString(36).slice(2,7),result=await villageStore.put('board',id,{n:nickname,b,u:villageStore.uid(),t,w:CURRENT_WORLD});if(typeof villageJournal==='object')villageJournal.note('first-memo');toast('게시판에 메모를 붙였어요'+(result==='shared'?'':' · 이 브라우저에만 보여요'));return result;}
  villageStore.subscribe('board',v=>{memos=v||{};});
  // #9 Signs: any friend may rewrite a sign; the last words stay until someone writes again.
  let signs={};const signId=i=>CURRENT_WORLD+'-'+i;
  function openSign(i){const current=signs[signId(i)],text=el('input',{maxLength:LIMITS.sign,value:current?current.b:'',placeholder:'표지판에 남길 말 (24자)',ariaLabel:'표지판 문구'}),save=el('button',{className:'note-send',textContent:'표지판에 쓰기'});
   save.addEventListener('click',async()=>{if(await writeSign(i,text.value))close();});
   show('sign',el('h2',{textContent:'표지판'}),el('p',{className:'creature-count',textContent:(current?current.n+' 님이 '+when(current.t)+'에 썼어요':'아직 아무도 쓰지 않았어요')+sharedNote()}),text,save);}
- async function writeSign(i,text){const b=clean(text,LIMITS.sign);if(!b){toast('표지판에 남길 말을 적어 주세요');return null;}const result=await villageStore.put('signs',signId(i),{b,n:nickname,u:villageStore.uid(),t:Date.now()});toast('표지판에 적었어요'+(result==='shared'?'':' · 이 브라우저에만 보여요'));return result;}
+ async function writeSign(i,text){const b=clean(text,LIMITS.sign);if(!b){toast('표지판에 남길 말을 적어 주세요');return null;}const result=await villageStore.put('signs',signId(i),{b,n:nickname,u:villageStore.uid(),t:Date.now()});if(typeof villageJournal==='object')villageJournal.note('first-sign');toast('표지판에 적었어요'+(result==='shared'?'':' · 이 브라우저에만 보여요'));return result;}
  villageStore.subscribe('signs',v=>{signs=v||{};LAYOUT.signs.forEach((_,i)=>paintSign(i,signs[signId(i)]&&signs[signId(i)].b));});
  // World taps: returns true when a note prop was hit so the world does not also walk there.
  function pick(ray){for(const p of picks){p.group.updateWorldMatrix(true,true);const hit=ray.intersectObject(p.hit,false)[0];if(!hit)continue;if(!entered)return true;if(!near(p.spot)){toast('가까이 가서 열어 볼까요?');return false;}if(p.kind==='mailbox')openMailbox();else if(p.kind==='board')openBoard();else openSign(p.spot.index);return true;}return false;}
@@ -4606,7 +4606,7 @@ function createVillageNotes(){
 }
 const villageNotes=createVillageNotes();
 // Worlds report small activities here so the board can thank the visitor for today's requests.
-function villageEvent(name){return villageNotes.event(name);}
+function villageEvent(name){if(typeof villageJournal==='object'){villageJournal.note('did-'+name);villageJournal.sync();}return villageNotes.event(name);}
 
 // Small ways to say something without words: emote bubbles everywhere, and in the winter village a kite by day and sky lanterns by night.
 // Friends see them through fields the deployed rules already accept: emotes as m:'celebrate' with b 0.10–0.35 (the library's cat uses 0.55+),
@@ -4636,9 +4636,9 @@ function createVillagePlay(){
  if(WINTER){kiteButton=document.createElement('button');kiteButton.textContent='연 날리기';kiteButton.addEventListener('click',()=>{toggleKite();palette.hidden=true;});lanternButton=document.createElement('button');lanternButton.textContent='풍등 띄우기';lanternButton.addEventListener('click',()=>{lantern();palette.hidden=true;});palette.append(kiteButton,lanternButton);}
  toggle.addEventListener('click',()=>{if(kiteButton){kiteButton.hidden=!canKite();kiteButton.setAttribute('aria-pressed',String(kiteOn));kiteButton.textContent=kiteOn?'연 거두기':'연 날리기';lanternButton.hidden=!canLantern();}palette.hidden=!palette.hidden;});
  function free(){return entered&&mode==='idle';}
- function say(i){if(!free()){toast('하던 일을 마치고 표현해 볼까요?');return false;}if(now()-emoteAt<2.5)return false;emote=i;emoteAt=now();if(typeof publishState==='function')publishState(true);return true;}
- function toggleKite(){if(!kiteOn&&!canKite()){toast('연은 해가 있을 때 날려요');return false;}kiteOn=!kiteOn;toast(kiteOn?'바람을 타고 연이 올라가요':'연을 거두었어요');if(typeof publishState==='function')publishState(true);return kiteOn;}
- function lantern(){if(!canLantern()){toast('풍등은 해가 진 뒤에 띄워요');return false;}if(now()-lanternAt<4)return false;lanternAt=now();releaseLantern(player.position,typeof villageMarket==='object'?villageMarket.choice('lantern'):null);toast('소원을 담아 풍등을 띄웠어요');if(typeof publishState==='function')publishState(true);return true;}
+ function say(i){if(!free()){toast('하던 일을 마치고 표현해 볼까요?');return false;}if(now()-emoteAt<2.5)return false;emote=i;emoteAt=now();if(typeof villageJournal==='object')villageJournal.note('first-emote');if(typeof publishState==='function')publishState(true);return true;}
+ function toggleKite(){if(!kiteOn&&!canKite()){toast('연은 해가 있을 때 날려요');return false;}kiteOn=!kiteOn;if(kiteOn&&typeof villageJournal==='object')villageJournal.note('first-kite');toast(kiteOn?'바람을 타고 연이 올라가요':'연을 거두었어요');if(typeof publishState==='function')publishState(true);return kiteOn;}
+ function lantern(){if(!canLantern()){toast('풍등은 해가 진 뒤에 띄워요');return false;}if(now()-lanternAt<4)return false;lanternAt=now();if(typeof villageJournal==='object')villageJournal.note('first-lantern');releaseLantern(player.position,typeof villageMarket==='object'?villageMarket.choice('lantern'):null);toast('소원을 담아 풍등을 띄웠어요');if(typeof publishState==='function')publishState(true);return true;}
  return{
   EMOTES,say,toggleKite,lantern,isOpen:()=>!palette.hidden,get kiteOn(){return kiteOn;},lanterns,
   // Applied to the published state; only an idle or walking visitor is ever rewritten.
@@ -4730,11 +4730,11 @@ function createVillageMarket(){
  function settle(p){const d=today();if(p.day!==d){p.day=d;p.earned=0;}if(p.bank<BANK_MIN||!p.bankDay)p.bankDay=d;else if(d>p.bankDay){p.bank+=BANK_DAILY*Math.min(7,d-p.bankDay);p.bankDay=d;}return p;}
  function purse(){return settle(load());}
  function earn(n,why){const p=purse(),room=Math.max(0,DAILY_CAP-p.earned),got=Math.min(room,Math.max(0,Math.floor(n)));if(!got)return 0;p.shells+=got;p.earned+=got;save(p);toast('조개껍데기 '+got+'개를 받았어요'+(why?' · '+why:''));refresh();return got;}
- function buy(id){const item=ITEMS.find(i=>i.id===id),p=purse();if(!item||p.owned.includes(id))return false;if(p.shells<item.price){toast('조개껍데기가 조금 모자라요');return false;}p.shells-=item.price;p.owned.push(id);if(item.kind!=='paper')p.use[item.kind]=id;save(p);toast(item.name+' 마련했어요');refresh();return true;}
+ function buy(id){const item=ITEMS.find(i=>i.id===id),p=purse();if(!item||p.owned.includes(id))return false;if(p.shells<item.price){toast('조개껍데기가 조금 모자라요');return false;}p.shells-=item.price;p.owned.push(id);if(typeof villageJournal==='object')villageJournal.note('first-purchase');if(item.kind!=='paper')p.use[item.kind]=id;save(p);toast(item.name+' 마련했어요');refresh();return true;}
  // Selling gives half back; an item in use is put away first.
  function sell(id){const item=ITEMS.find(i=>i.id===id),p=purse();if(!item||!p.owned.includes(id))return false;p.owned=p.owned.filter(o=>o!==id);if(p.use[item.kind]===id)delete p.use[item.kind];p.shells+=Math.floor(item.price/2);save(p);toast(item.name+' 다시 내놓았어요');refresh();return true;}
  function use(id){const item=ITEMS.find(i=>i.id===id),p=purse();if(!item||item.kind==='paper'||!p.owned.includes(id))return false;p.use[item.kind]=p.use[item.kind]===id?undefined:id;save(p);refresh();return true;}
- function deposit(n){const p=purse(),k=Math.min(p.shells,Math.max(0,Math.floor(n)));if(!k)return 0;p.shells-=k;p.bank+=k;save(p);refresh();return k;}
+ function deposit(n){const p=purse(),k=Math.min(p.shells,Math.max(0,Math.floor(n)));if(!k)return 0;p.shells-=k;p.bank+=k;save(p);if(typeof villageJournal==='object')villageJournal.note('first-saving');refresh();return k;}
  function withdraw(n){const p=purse(),k=Math.min(p.bank,Math.max(0,Math.floor(n)));if(!k)return 0;p.bank-=k;p.shells+=k;save(p);refresh();return k;}
  function owns(id){return purse().owned.includes(id);}
  function choice(kind){const p=purse(),id=p.use[kind],item=ITEMS.find(i=>i.id===id);return item?item.color:null;}
@@ -4750,6 +4750,63 @@ function createVillageMarket(){
  return{ITEMS,DAILY_CAP,earn,buy,sell,use,deposit,withdraw,owns,choice,purse,open,close,isOpen:()=>!sheet.hidden};
 }
 const villageMarket=createVillageMarket();
+
+// A village journal of "things you've done": first times and little completions, dated, with no points or ranks.
+// Some pages are written when they happen; others are read from the creature book and the library's own stamp record.
+function createVillageJournal(){
+ const KEY='village-journal',LIBRARY_KEY='little-lantern-library-v1';
+ const read=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k)||'null');return v===null?f:v;}catch{return f;}};
+ const book=()=>typeof creatureBook==='object'?creatureBook.entries():{},pages=()=>typeof creatureBook==='object'?creatureBook.ENTRIES:[];
+ const metIn=world=>{const met=book();return pages().filter(p=>p.world===world).every(p=>met[p.id]);};
+ const library=()=>{const v=read(LIBRARY_KEY,{});return{done:Array.isArray(v.completedBooks)?v.completedBooks:[],stamps:Array.isArray(v.memories)?v.memories:[]};};
+ // [id, title, hint, derive?] — derived pages are checked whenever the journal is read.
+ const ENTRIES=[
+  ['visit-winter','겨울 마을에 처음 왔어요','눈 내리는 겨울 마을에 가 보기'],
+  ['visit-aquarium','물결 수족관에 처음 왔어요','물결 수족관에 가 보기'],
+  ['visit-library','책숲 도서관에 처음 왔어요','책숲 도서관에 가 보기'],
+  ['did-snowman','처음으로 눈사람을 세웠어요','겨울 눈밭에서 눈덩이 굴리기'],
+  ['did-warm','모닥불에서 손을 녹였어요','겨울 모닥불 옆에 앉기'],
+  ['did-fish','얼음 연못에서 처음 낚았어요','겨울 얼음 연못에서 낚시하기'],
+  ['did-reef','산호 수조 친구들에게 먹이를 줬어요','수족관 산호 정원에서 먹이 주기'],
+  ['did-ocean','바다 수조를 사진에 담았어요','수족관 바다 수조에서 사진 찍기'],
+  ['did-jelly','해파리 쉼터에서 쉬었어요','수족관 해파리 쉼터에서 쉬기'],
+  ['did-read','도서관에서 책을 펼쳤어요','도서관에서 책 고르고 읽기'],
+  ['did-window','도서관 창가에서 하늘을 봤어요','도서관 창가 자리에서 쉬기'],
+  ['did-cat','귤이와 놀았어요','도서관 고양이 귤이와 놀기'],
+  ['first-request','주민의 부탁을 처음 들어줬어요','게시판의 오늘 부탁 하나 들어주기'],
+  ['first-letter','친구에게 편지를 보냈어요','우편함에서 편지 쓰기'],
+  ['first-memo','게시판에 메모를 붙였어요','게시판에 메모 붙이기'],
+  ['first-sign','표지판에 한 줄을 남겼어요','표지판에 문구 쓰기'],
+  ['first-donation','전시 수조에 처음 기증했어요','해리에게 생물 기증하기'],
+  ['first-emote','처음으로 마음을 표현했어요','☺ 버튼으로 표현하기'],
+  ['first-kite','연을 하늘에 띄웠어요','겨울 낮에 연 날리기'],
+  ['first-lantern','풍등을 띄웠어요','겨울 밤에 풍등 띄우기'],
+  ['first-purchase','마을 가게에서 처음 마련했어요','주민의 마을 가게 둘러보기'],
+  ['first-saving','저금통에 조개껍데기를 넣었어요','마을 가게 저금통 쓰기'],
+  ['creatures-5','다섯 생물을 만났어요','도감에서 다섯 쪽 채우기',()=>Object.keys(book()).length>=5],
+  ['pond-all','얼음 연못 물고기를 모두 만났어요','시간과 날씨를 바꿔 가며 낚시하기',()=>pages().length>0&&metIn('winter')],
+  ['tanks-all','수족관 생물을 모두 만났어요','세 수조에서 활동하기 (등불해파리는 밤에)',()=>pages().length>0&&metIn('aquarium')],
+  ['window-all','창가 손님을 모두 만났어요','낮·밤·비 오는 날 창가에서 쉬기',()=>pages().length>0&&metIn('library')],
+  ['book-full','생물 도감을 다 채웠어요','도감 열여덟 쪽 모두 채우기',()=>pages().length>0&&pages().every(p=>book()[p.id])],
+  ['stamp-first','처음으로 완독 스탬프를 남겼어요','도서관 책을 끝까지 읽고 스탬프 남기기',()=>library().stamps.length>0],
+  ['stamp-all','세 권을 모두 끝까지 읽었어요','도서관의 세 권 모두 완독하기',()=>[0,1,2].every(b=>library().done.includes(b))]
+ ];
+ function load(){const v=read(KEY,{});return v&&typeof v==='object'?v:{};}
+ function save(v){try{localStorage.setItem(KEY,JSON.stringify(v));}catch{}}
+ // Writes a page once; returns true for a new page so the world can celebrate it quietly.
+ function note(id){const entry=ENTRIES.find(e=>e[0]===id);if(!entry)return false;const v=load();if(v[id])return false;v[id]=Date.now();save(v);toast('마을 일기에 적었어요 · '+entry[1]);refresh();return true;}
+ function sync(){for(const[id,,,derive]of ENTRIES)if(derive&&derive())note(id);return load();}
+ function done(){return sync();}
+ const sheet=document.createElement('section');sheet.className='creature-book village-notes village-journal';sheet.hidden=true;const card=document.createElement('div');card.className='creature-book-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');const closeButton=document.createElement('button');closeButton.className='creature-book-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','일기 닫기');const body=document.createElement('div');card.append(closeButton,body);sheet.append(card);document.body.append(sheet);
+ function close(){sheet.hidden=true;}closeButton.addEventListener('click',close);sheet.addEventListener('click',e=>{if(e.target===sheet)close();});addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)close();});
+ const when=t=>{const d=new Date(t+9*3600e3);return(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일';};
+ function refresh(){if(sheet.hidden)return;const v=load(),list=document.createElement('ul');for(const[id,title,hint]of ENTRIES){const li=document.createElement('li');li.className=v[id]?'seen':'unseen';const small=document.createElement('small');small.textContent=v[id]?when(v[id]):'아직이에요';li.append(small,document.createTextNode(v[id]?title:hint));list.append(li);}const h=document.createElement('h2');h.textContent='마을 일기';const p=document.createElement('p');p.className='creature-count';p.textContent=Object.keys(v).length+'가지를 해 봤어요 · 이 브라우저에만 적혀요';body.replaceChildren(h,p,list);}
+ function open(){if(!entered)return;sync();sheet.hidden=false;refresh();closeButton.focus();}
+ if(typeof residentGuide==='object'&&residentGuide.addAction)residentGuide.addAction('마을 일기',()=>{residentGuide.close();open();});
+ note('visit-'+CURRENT_WORLD);
+ return{ENTRIES,note,sync,done,open,close,isOpen:()=>!sheet.hidden};
+}
+const villageJournal=createVillageJournal();
 
 // The visitor reports their own confirmed join; the owner's browser is never the notification server.
 const ARRIVAL_SERVICE={"endpoint":"","partyId":"0946f302b9cf8449c6970809"},arrivalRequests=new Map();

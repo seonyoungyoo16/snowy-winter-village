@@ -18,11 +18,11 @@ function createVillageMarket(){
  function settle(p){const d=today();if(p.day!==d){p.day=d;p.earned=0;}if(p.bank<BANK_MIN||!p.bankDay)p.bankDay=d;else if(d>p.bankDay){p.bank+=BANK_DAILY*Math.min(7,d-p.bankDay);p.bankDay=d;}return p;}
  function purse(){return settle(load());}
  function earn(n,why){const p=purse(),room=Math.max(0,DAILY_CAP-p.earned),got=Math.min(room,Math.max(0,Math.floor(n)));if(!got)return 0;p.shells+=got;p.earned+=got;save(p);toast('조개껍데기 '+got+'개를 받았어요'+(why?' · '+why:''));refresh();return got;}
- function buy(id){const item=ITEMS.find(i=>i.id===id),p=purse();if(!item||p.owned.includes(id))return false;if(p.shells<item.price){toast('조개껍데기가 조금 모자라요');return false;}p.shells-=item.price;p.owned.push(id);if(item.kind!=='paper')p.use[item.kind]=id;save(p);toast(item.name+' 마련했어요');refresh();return true;}
+ function buy(id){const item=ITEMS.find(i=>i.id===id),p=purse();if(!item||p.owned.includes(id))return false;if(p.shells<item.price){toast('조개껍데기가 조금 모자라요');return false;}p.shells-=item.price;p.owned.push(id);if(typeof villageJournal==='object')villageJournal.note('first-purchase');if(item.kind!=='paper')p.use[item.kind]=id;save(p);toast(item.name+' 마련했어요');refresh();return true;}
  // Selling gives half back; an item in use is put away first.
  function sell(id){const item=ITEMS.find(i=>i.id===id),p=purse();if(!item||!p.owned.includes(id))return false;p.owned=p.owned.filter(o=>o!==id);if(p.use[item.kind]===id)delete p.use[item.kind];p.shells+=Math.floor(item.price/2);save(p);toast(item.name+' 다시 내놓았어요');refresh();return true;}
  function use(id){const item=ITEMS.find(i=>i.id===id),p=purse();if(!item||item.kind==='paper'||!p.owned.includes(id))return false;p.use[item.kind]=p.use[item.kind]===id?undefined:id;save(p);refresh();return true;}
- function deposit(n){const p=purse(),k=Math.min(p.shells,Math.max(0,Math.floor(n)));if(!k)return 0;p.shells-=k;p.bank+=k;save(p);refresh();return k;}
+ function deposit(n){const p=purse(),k=Math.min(p.shells,Math.max(0,Math.floor(n)));if(!k)return 0;p.shells-=k;p.bank+=k;save(p);if(typeof villageJournal==='object')villageJournal.note('first-saving');refresh();return k;}
  function withdraw(n){const p=purse(),k=Math.min(p.bank,Math.max(0,Math.floor(n)));if(!k)return 0;p.bank-=k;p.shells+=k;save(p);refresh();return k;}
  function owns(id){return purse().owned.includes(id);}
  function choice(kind){const p=purse(),id=p.use[kind],item=ITEMS.find(i=>i.id===id);return item?item.color:null;}
