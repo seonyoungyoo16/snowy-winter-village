@@ -6,6 +6,7 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),esbuild=require('es
   const license=fs.readFileSync(path.join(__dirname,'FONT-LICENSE.txt'),'utf8');
   let source=fs.readFileSync(path.join(__dirname,'multiplayer.html'),'utf8');
   source=source.replace('<!-- THREE_LIBRARY -->',()=>'<script>\n'+lib.replace(/<\/script/gi,'<\\/script')+'\n</script>\n<script>\n'+sdk.outputFiles[0].text.replace(/<\/script/gi,'<\\/script')+'\n</script>');
+  source=source.replace('/* ICE_FISHING_CODE */',()=>fs.readFileSync(path.join(__dirname,'ice-fishing.js'),'utf8'));
   source=source.replace('/* MULTIPLAYER_CODE */',()=>fs.readFileSync(path.join(__dirname,'multiplayer.js'),'utf8'));
   source=source.replace('/* ARRIVAL_CLIENT_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/arrival-client.js'),'utf8').replace('/* ARRIVAL_SERVICE_CONFIG */',JSON.stringify(JSON.parse(fs.readFileSync(path.join(__dirname,'../shared/arrival-config.json'),'utf8')))));
   source=source.replace('/* RESIDENT_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/resident-guide.js'),'utf8'));

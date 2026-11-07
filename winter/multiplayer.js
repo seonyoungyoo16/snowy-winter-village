@@ -83,7 +83,7 @@ function updateNetworkStatus(message){
 }
 function validState(data){return data&&data.v===1&&typeof data.u==='string'&&typeof data.n==='string'&&data.n.length>0&&data.n.length<=12&&Number.isInteger(data.k)&&data.k>=0&&data.k<=2&&['x','y','z','a','p','b','t','j','s'].every(k=>Number.isFinite(data[k]))&&Math.abs(data.x)<=26&&Math.abs(data.z)<=26&&data.y>=-1&&data.y<=10&&Math.abs(data.a)<=3.142&&Math.abs(data.p)<=1.6&&data.b>=0&&data.b<=.7&&Object.hasOwn(activityNames,data.m);}
 function disposeActor(root){root.traverse(o=>{if(!o.isMesh)return;if(!Object.values(geom).includes(o.geometry))o.geometry.dispose();});scene.remove(root);}
-function removePeer(id){const peer=remotePlayers.get(id);if(!peer)return;disposeActor(peer.actor.root);disposeActor(peer.sled);scene.remove(peer.shadow,peer.ball);peer.label.material.map.dispose();peer.label.material.dispose();remotePlayers.delete(id);}
+function removePeer(id){const peer=remotePlayers.get(id);if(!peer)return;iceFishing.drop(peer.actor);disposeActor(peer.actor.root);disposeActor(peer.sled);scene.remove(peer.shadow,peer.ball);peer.label.material.map.dispose();peer.label.material.dispose();remotePlayers.delete(id);}
 function clearPeers(){for(const id of Array.from(remotePlayers.keys()))removePeer(id);}
 function makePeer(id,data){
  const actor=avatar(data.k);actor.root.position.set(data.x,data.y,data.z);actor.root.rotation.set(data.p,data.a,0);scene.add(actor.root);
@@ -107,7 +107,7 @@ function reconcileRoom(){
 }
 function stateBody(){
  const walking=lastNetworkMovement&&!document.hidden;
- return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x),y:roundState(player.position.y),z:roundState(player.position.z),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='idle'&&walking?'walk':mode,b:mode==='rolling'?roundState(ballRadius):0,j:joinedAt};
+ return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x),y:roundState(player.position.y),z:roundState(player.position.z),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='fish'?'warm':mode==='idle'&&walking?'walk':mode,b:mode==='fish'?roundState(iceFishing.wire()):mode==='rolling'?roundState(ballRadius):0,j:joinedAt};
 }
 function publishState(force=false){
  if(!networkJoined||!networkConnected||!selfRef||!networkAuth?.currentUser)return;
@@ -162,7 +162,7 @@ function updatePeers(dt){
   const root=peer.actor.root,distance=root.position.distanceTo(peer.target),blend=1-Math.exp(-dt*12);if(distance>6)root.position.copy(peer.target);else root.position.lerp(peer.target,blend);
   root.rotation.y+=Math.atan2(Math.sin(data.a-root.rotation.y),Math.cos(data.a-root.rotation.y))*blend;root.rotation.x=lerp(root.rotation.x,data.p,blend);
   peer.phase+=dt;peer.celebration+=dt;const moving=data.m==='walk'||data.m==='sled'||(data.m==='rolling'&&distance>.025);
-  animatePose(dt,moving,peer.actor,data.m==='walk'?'idle':data.m,peer.phase,peer.celebration);
+  const peerFishing=iceFishing.fromWire(data.m,data.b);animatePose(dt,moving,peer.actor,peerFishing?'fish':data.m==='walk'?'idle':data.m,peer.phase,peer.celebration);if(peerFishing)iceFishing.pose(peer.actor,peerFishing,peer.phase);iceFishing.show(peer.actor,peerFishing,peer.phase);
   peer.shadow.position.set(root.position.x,groundHeight(root.position.x,root.position.z)+.025,root.position.z);peer.shadow.visible=data.m!=='sled';
   peer.ball.visible=data.m==='rolling';if(peer.ball.visible){const r=clamp(data.b,.22,.65),x=root.position.x+Math.sin(root.rotation.y)*(r+.6),z=root.position.z+Math.cos(root.rotation.y)*(r+.6);peer.ball.position.set(x,groundHeight(x,z)+r,z);peer.ball.scale.setScalar(r);if(moving)peer.ball.rotation.x+=dt*2;}
   peer.sled.visible=data.m==='sled';if(peer.sled.visible){peer.sled.position.copy(root.position);peer.sled.position.y-=.405;peer.sled.rotation.set(root.rotation.x,root.rotation.y,Math.sin(peer.phase*7)*.025);}
