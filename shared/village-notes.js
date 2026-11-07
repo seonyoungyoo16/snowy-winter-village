@@ -2,7 +2,7 @@
 // All friend text is shown with textContent only, trimmed and length-limited before it is stored.
 function createVillageNotes(){
  const LAYOUT={
-  winter:{mailbox:{x:-3,z:9.8},board:{x:3.5,z:10.3},signs:[{x:-4,z:4},{x:5,z:3}],resident:'밤이',requests:[['snowman','눈사람 하나 세워 주세요'],['warm','모닥불에서 손 좀 녹이고 가요'],['fish','얼음 연못에서 한 마리 낚아 봐요']]},
+  winter:{mailbox:{x:-2.4,z:4.6},board:{x:-2.8,z:1.8},signs:[{x:-4,z:4},{x:-5.4,z:5.2}],resident:'밤이',requests:[['snowman','눈사람 하나 세워 주세요'],['warm','모닥불에서 손 좀 녹이고 가요'],['fish','얼음 연못에서 한 마리 낚아 봐요']]},
   aquarium:{mailbox:{x:-3,z:8.2},board:{x:3.5,z:8.5},signs:[{x:-6,z:6},{x:6,z:6}],resident:'해리',requests:[['reef','산호 수조 친구들에게 먹이를 주세요'],['ocean','바다 수조 사진을 한 장 찍어 주세요'],['jelly','해파리 쉼터에서 잠깐 쉬어 가요']]},
   library:{mailbox:{x:-3,z:10},board:{x:3.5,z:10.5},signs:[{x:-6,z:8},{x:6,z:8}],resident:'소담',requests:[['read','책 한 권 펼쳐 읽어 주세요'],['window','창가에서 하늘 구경해요'],['cat','귤이랑 놀아 주세요']]}
  }[CURRENT_WORLD];

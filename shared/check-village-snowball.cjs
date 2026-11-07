@@ -13,7 +13,7 @@ const names={winter:'눈덩이',aquarium:'비눗방울',library:'종이비행기
 // The band must stay inside what the existing rules accept for b, and clear of kite (.41), lantern (.45) and the library's seats (.6+).
 assert(/"b": \{\s*".validate": "newData.isNumber\(\) && newData.val\(\) >= 0 && newData.val\(\) <= 0.7"/.test(rules),'the player b rule changed; recheck the throw band');
 for(const world of['winter','aquarium','library']){
- const{a,S,toast}=load(world),P=a.player;assert.equal(S.KIND.name,names[world]);assert(a.radialMenu.items().some(i=>i.label===S.KIND.verb&&i.label.startsWith(names[world])),'no throw choice in the radial menu');
+ const{a,S,toast}=load(world),P=a.player;assert.equal(S.KIND.name,names[world]);assert(S.KIND.verb.startsWith(names[world]));assert(!a.radialMenu.items().some(i=>i.label===S.KIND.verb),'the throwable belongs to the hotbar, not the ring');
  for(let d=S.MIN;d<=S.MAX;d++){const b=S.wireOf(d);assert(b>=.47&&b<=.54,'band leaves .47–.54: '+b);assert.equal(S.decode('walk',b),d);}
  assert.equal(S.decode('idle',.41),null);assert.equal(S.decode('idle',.45),null);assert.equal(S.decode('celebrate',.5),null);assert.equal(S.decode('walk',.6),null);assert.equal(S.decode('idle',0),null);
  // Pick up only inside the village and when free; tap throws once, then it must be picked up again.

@@ -38,7 +38,6 @@ function createVillageSnowball(){
   const r=renderer.domElement.getBoundingClientRect(),ray=new THREE.Raycaster(),hit=new THREE.Vector3();ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1),camera);
   if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-player.position.y),hit))throwAt(hit.x,hit.z);},true);
  addEventListener('keydown',e=>{if(e.key==='Escape'&&armed){armed=false;hand.visible=false;}});
- if(typeof radialMenu==='object'&&radialMenu)radialMenu.addItem({icon:CURRENT_WORLD==='library'?'✈':'○',label:KIND.verb,run:arm});
  return{KIND,MIN,MAX,WIRE,arm,aim,throwAt,decode,wireOf,get armed(){return armed;},flights,splashes,hand,
   wire(body){if((body.m!=='idle'&&body.m!=='walk')||clock>=sendUntil)return body;if(Math.abs(body.b-.41)<.005||Math.abs(body.b-.45)<.005)return body;return{...body,b:Math.round((WIRE+sendStep*.01)*1000)/1000};},
   // A friend's throw appears once per signal, from where they stand along the way they face.

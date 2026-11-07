@@ -205,6 +205,7 @@ setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 /* SNOWBALL_CODE */
 /* TOGETHER_CODE */
 /* HOTBAR_CODE */
+/* TIDY_CODE */
 /* EXPEDITION_CODE */
 /* EXHIBIT_CODE */
 /* ARRIVAL_CLIENT_CODE */

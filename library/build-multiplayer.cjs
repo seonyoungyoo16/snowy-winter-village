@@ -32,6 +32,7 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),esbuild=require('es
   source=source.replace('/* SNOWBALL_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-snowball.js'),'utf8'));
   source=source.replace('/* TOGETHER_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-together.js'),'utf8'));
   source=source.replace('/* HOTBAR_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-hotbar.js'),'utf8'));
+  source=source.replace('/* TIDY_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-tidy.js'),'utf8'));
   source=source.replace('/* EXPEDITION_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-expedition.js'),'utf8'));
   source=source.replace('/* WORLD_TRAVEL_CODE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.js'),'utf8').replace('/* WORLD_CONFIG */',JSON.stringify({current:'library',winterPath:'/snowy-winter-village/',aquariumPath:'/snowy-winter-village/aquarium/',libraryPath:'/snowy-winter-village/library/',publicOrigin:'https://seonyoungyoo16.github.io'})));
   source=source.replace('/* WORLD_TRAVEL_STYLE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.css'),'utf8'));

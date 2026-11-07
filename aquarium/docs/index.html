@@ -3850,7 +3850,7 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
   }
  }
  networkTick(dt,moving);animatePose(dt,moving);animateWater(dt);playerShadow.position.set(player.position.x,.035,player.position.z);if(ringTimer>0){ringTimer-=dt;targetRing.scale.setScalar(1+Math.sin(elapsed*5)*.08);targetRing.material.opacity=clamp(ringTimer,0,.75);if(ringTimer<=0)targetRing.visible=false;}
- residentGuide.tick(dt);skyWeather.tick(dt);villagePlay.tick(dt);seasonalEvents.tick(dt);avatarLife.tick(dt);residentGifts.tick();villageRadio.tick();villageCompanions.tick(dt);radialMenu.tick(dt);villageMinigames.tick(dt);villageSnowball.tick(dt);villageTogether.tick(dt);villageHotbar.tick();villageExpedition.tick(dt);exhibit.tick(elapsed);updateCamera(dt);if(frameCount++%5===0){label('label-ocean',0,7.8,-10);label('label-reef',-10,2.8,-2);label('label-jelly',10,6.6,-2);if(entered)updateUI();}renderer.render(scene,camera);
+ residentGuide.tick(dt);skyWeather.tick(dt);villagePlay.tick(dt);seasonalEvents.tick(dt);avatarLife.tick(dt);residentGifts.tick();villageRadio.tick();villageCompanions.tick(dt);radialMenu.tick(dt);villageMinigames.tick(dt);villageSnowball.tick(dt);villageTogether.tick(dt);villageHotbar.tick();villageTidy.tick(dt);villageExpedition.tick(dt);exhibit.tick(elapsed);updateCamera(dt);if(frameCount++%5===0){label('label-ocean',0,7.8,-10);label('label-reef',-10,2.8,-2);label('label-jelly',10,6.6,-2);if(entered)updateUI();}renderer.render(scene,camera);
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();$('error').hidden=false;$('error-text').textContent='수족관이 잠깐 쉬고 있어요. 페이지를 다시 열어주세요.';});
 // Only virtual visitor state leaves this browser. The aq_ room prefix separates aquarium coordinates within the same party.
@@ -4159,13 +4159,17 @@ function createResidentGuide(){
  function place(spot){hereY=typeof groundHeight==='function'?groundHeight(spot.x,spot.z):0;root.position.set(spot.x,hereY,spot.z);root.rotation.y=spot.yaw;footprint.x=spot.x;footprint.z=spot.z;shade.position.x=spot.x;shade.position.z=spot.z;here=spot;}
  place(spotFor(slot.at));
  const moodText=()=>slot.mood==='work'?role:routines.moods[slot.mood];const pick=mesh(new THREE.SphereGeometry(.66,8,6),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}),root,0,1,0,1,1.55,1);
- const style=document.createElement('style');style.textContent='.resident-bubble{position:fixed;white-space:nowrap;z-index:3;transform:translate(-50%,-100%);padding:8px 12px;border:0;border-radius:17px;background:#f1dfbfee;color:#655346;font:inherit;font-size:11px;min-height:36px;box-shadow:0 3px 12px #302c3326;cursor:pointer}.resident-dialog{position:fixed;inset:0;z-index:12;display:grid;align-items:end;justify-items:center;padding:18px;background:linear-gradient(0deg,#29213266,transparent 65%)}.resident-card{position:relative;width:min(360px,100%);padding:25px 23px 20px;border-radius:25px;background:#fff3e3f5;color:#69534f;text-align:center}.resident-card h2{margin:0 0 12px;font-size:21px}.resident-card p{font-size:13px;line-height:1.8;margin:0 0 16px}.resident-card small{font-size:10px;color:#a18c78}.resident-card button{font:inherit;min-height:44px;border:0;border-radius:14px;cursor:pointer}.resident-card .resident-close{position:absolute;right:8px;top:7px;width:40px;background:transparent;color:#a18b7d;font-size:24px}.resident-next{display:block;width:100%;margin-bottom:14px;padding:12px;background:#8e9d83;color:#fff8e8}';document.body.append(style);
- const titleText=role.title+' '+role.name,bubble=document.createElement('button');bubble.className='resident-bubble';bubble.textContent=titleText;bubble.setAttribute('aria-label',titleText+'에게 말 걸기');bubble.hidden=true;document.body.append(bubble);const dialog=document.createElement('section');dialog.className='resident-dialog';dialog.setAttribute('aria-label',titleText);dialog.hidden=true;const card=document.createElement('div');card.className='resident-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label',titleText);const closeButton=document.createElement('button');closeButton.className='resident-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','주민 이야기 닫기');const title=document.createElement('h2');title.textContent=titleText;const line=document.createElement('p'),next=document.createElement('button');next.className='resident-next';next.textContent='이야기 더 듣기';const note=document.createElement('small');note.textContent=role.note;card.append(closeButton,title,line,next,note);dialog.append(card);
- // Worlds can add their own conversation choices (e.g. the aquarium's donations) above the note.
- function addAction(label,run){const b=document.createElement('button');b.className='resident-next';b.textContent=label;b.addEventListener('click',run);if(card.insertBefore)card.insertBefore(b,note);else card.append(b);return b;}document.body.append(dialog);
+ const style=document.createElement('style');style.textContent='.resident-bubble{position:fixed;white-space:nowrap;z-index:3;transform:translate(-50%,-100%);padding:8px 12px;border:0;border-radius:17px;background:#f1dfbfee;color:#655346;font:inherit;font-size:11px;min-height:36px;box-shadow:0 3px 12px #302c3326;cursor:pointer}.resident-dialog{position:fixed;inset:0;z-index:12;display:grid;align-items:end;justify-items:center;padding:18px;background:linear-gradient(0deg,#29213266,transparent 65%)}.resident-card{position:relative;width:min(360px,100%);padding:25px 23px 20px;border-radius:25px;background:#fff3e3;color:#69534f;box-shadow:0 8px 30px #2a223326;text-align:center}.resident-card h2{margin:0 0 12px;font-size:21px}.resident-card p{font-size:13px;line-height:1.8;margin:0 0 16px}.resident-card small{font-size:10px;color:#a18c78}.resident-card button{font:inherit;min-height:44px;border:0;border-radius:14px;cursor:pointer}.resident-card .resident-close{position:absolute;right:8px;top:7px;width:40px;background:transparent;color:#a18b7d;font-size:24px}.resident-next{display:block;width:100%;margin-bottom:10px;padding:12px;background:#8e9d83;color:#fff8e8}.resident-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}.resident-actions:empty{display:none}.resident-actions .resident-next{margin:0;padding:9px 6px;font-size:12px;background:#efe1cb;color:#6a5350}.resident-actions .resident-next:only-child{grid-column:1/-1}.resident-card .resident-more{display:block;width:100%;margin-bottom:10px;padding:9px;background:transparent;color:#8a7468;font-size:12px;border:1px solid #e3d2bb}.resident-more-list[hidden],.resident-card .resident-more[hidden]{display:none}';document.body.append(style);
+ const titleText=role.title+' '+role.name,bubble=document.createElement('button');bubble.className='resident-bubble';bubble.textContent=titleText;bubble.setAttribute('aria-label',titleText+'에게 말 걸기');bubble.hidden=true;document.body.append(bubble);const dialog=document.createElement('section');dialog.className='resident-dialog';dialog.setAttribute('aria-label',titleText);dialog.hidden=true;const card=document.createElement('div');card.className='resident-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label',titleText);const closeButton=document.createElement('button');closeButton.className='resident-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','주민 이야기 닫기');const title=document.createElement('h2');title.textContent=titleText;const line=document.createElement('p'),next=document.createElement('button');next.className='resident-next';next.textContent='이야기 더 듣기';const note=document.createElement('small');note.textContent=role.note;const actions=document.createElement('div');actions.className='resident-actions';const more=document.createElement('button');more.className='resident-more';more.textContent='마을 일 더 보기';more.setAttribute('aria-expanded','false');more.hidden=true;const moreList=document.createElement('div');moreList.className='resident-actions resident-more-list';moreList.hidden=true;
+ more.addEventListener('click',()=>setMore(moreList.hidden));card.append(closeButton,title,line,next,actions,more,moreList,note);dialog.append(card);
+ function setMore(open){moreList.hidden=!open;more.setAttribute('aria-expanded',String(open));more.textContent=open?'마을 일 접기':'마을 일 더 보기';}
+ // Worlds and shared modules add their own conversation choices. A few sit in front; the rest (shop, journal, goals,
+ // paper, radio, companions, trips) fold under one "마을 일" button so the card stays short.
+ const FRONT=['선물 주기','함께 놀기','전시 수조에 기증하기'];
+ function addAction(label,run){const b=document.createElement('button');b.className='resident-next';b.textContent=label;b.addEventListener('click',run);if(FRONT.includes(label))actions.append(b);else{moreList.append(b);more.hidden=false;}return b;}document.body.append(dialog);
  let lineIndex=0,nodUntil=0,lastSight=-Infinity,occluded=false;const project=new THREE.Vector3(),screenRay=new THREE.Raycaster(),viewDirection=new THREE.Vector3(),clockNow=()=>((Date.now()+serverOffset)/1000),distanceToResident=()=>Math.hypot(player.position.x-here.x,player.position.z-here.z);
  function close(){dialog.hidden=true;renderer.domElement.focus({preventScroll:true});}
- function open(){if(!entered||mode!=='idle'||helpOpen())return;if(distanceToResident()>talkRange){toast(role.name+' 가까이에서 이야기해요.');return;}path=[];keys.clear();line.textContent=moodText().intro+(typeof seasonalEvents==='object'&&seasonalEvents.residentLine()?' '+seasonalEvents.residentLine():'');note.textContent=moodText().note;lineIndex=0;nodUntil=clockNow()+1.3;dialog.hidden=false;closeButton.focus();}
+ function open(){if(!entered||mode!=='idle'||helpOpen())return;if(distanceToResident()>talkRange){toast(role.name+' 가까이에서 이야기해요.');return;}path=[];keys.clear();line.textContent=moodText().intro+(typeof seasonalEvents==='object'&&seasonalEvents.residentLine()?' '+seasonalEvents.residentLine():'');note.textContent=moodText().note;lineIndex=0;nodUntil=clockNow()+1.3;dialog.hidden=false;setMore(false);closeButton.focus();}
  closeButton.addEventListener('click',close);bubble.addEventListener('click',open);dialog.addEventListener('click',e=>{if(e.target===dialog)close();});next.addEventListener('click',()=>{const words=moodText().words;line.textContent=words[lineIndex++%words.length];nodUntil=clockNow()+.8;});addEventListener('keydown',e=>{if(e.key==='Escape'&&!dialog.hidden)close();});
  function tick(dt){
   const clock=clockNow(),phase=clock%24,talking=!dialog.hidden;
@@ -4323,7 +4327,7 @@ const villageStore=createVillageStore();
 // All friend text is shown with textContent only, trimmed and length-limited before it is stored.
 function createVillageNotes(){
  const LAYOUT={
-  winter:{mailbox:{x:-3,z:9.8},board:{x:3.5,z:10.3},signs:[{x:-4,z:4},{x:5,z:3}],resident:'밤이',requests:[['snowman','눈사람 하나 세워 주세요'],['warm','모닥불에서 손 좀 녹이고 가요'],['fish','얼음 연못에서 한 마리 낚아 봐요']]},
+  winter:{mailbox:{x:-2.4,z:4.6},board:{x:-2.8,z:1.8},signs:[{x:-4,z:4},{x:-5.4,z:5.2}],resident:'밤이',requests:[['snowman','눈사람 하나 세워 주세요'],['warm','모닥불에서 손 좀 녹이고 가요'],['fish','얼음 연못에서 한 마리 낚아 봐요']]},
   aquarium:{mailbox:{x:-3,z:8.2},board:{x:3.5,z:8.5},signs:[{x:-6,z:6},{x:6,z:6}],resident:'해리',requests:[['reef','산호 수조 친구들에게 먹이를 주세요'],['ocean','바다 수조 사진을 한 장 찍어 주세요'],['jelly','해파리 쉼터에서 잠깐 쉬어 가요']]},
   library:{mailbox:{x:-3,z:10},board:{x:3.5,z:10.5},signs:[{x:-6,z:8},{x:6,z:8}],resident:'소담',requests:[['read','책 한 권 펼쳐 읽어 주세요'],['window','창가에서 하늘 구경해요'],['cat','귤이랑 놀아 주세요']]}
  }[CURRENT_WORLD];
@@ -4405,13 +4409,12 @@ function createVillagePlay(){
  function lanternsTick(dt){for(let i=lanterns.length-1;i>=0;i--){const l=lanterns[i];l.age+=dt;const w=skyWeather.state.wind;l.mesh.position.y+=dt*.55;l.mesh.position.x+=(w.x*.25+Math.sin(l.age*.7+l.seed)*.08)*dt;l.mesh.position.z+=(w.z*.25+Math.cos(l.age*.6+l.seed)*.08)*dt;const fade=Math.max(0,Math.min(1,(28-l.age)/6));for(const m of l.mesh.children)m.material.opacity=.95*fade;if(fade<=0){scene.remove(l.mesh);lanterns.splice(i,1);}}}
  function decode(m,b){if(m==='celebrate'&&b>=.09&&b<=.36)return{emote:Math.round((b-.1)/.05)};if((m==='idle'||m==='walk')&&Math.abs(b-.41)<.005)return{kite:true};if((m==='idle'||m==='walk')&&Math.abs(b-.45)<.005)return{lantern:true};return null;}
  const canKite=()=>WINTER&&skyWeather.state.daylight>.25,canLantern=()=>WINTER&&skyWeather.state.daylight<.35;
- // Palette: a round button at the lower right opens the emotes (and, in winter, the kite or a lantern for the hour).
- const style=document.createElement('style');style.textContent='.play-toggle{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 132px);z-index:4;width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,247,232,.88);color:#8f5a54;font:700 21px/1 "Winter Jua",sans-serif;box-shadow:0 3px 12px rgba(40,40,70,.18);cursor:pointer}.play-palette{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 186px);z-index:4;display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:18px;background:rgba(255,247,232,.94);box-shadow:0 3px 14px rgba(40,40,70,.2)}.play-palette button{min-width:44px;min-height:40px;border:0;border-radius:12px;background:#f3e6d1;color:#6a5050;font:700 13px "Winter Jua",sans-serif;cursor:pointer;white-space:nowrap}.play-palette button[aria-pressed=true]{background:#d9b98d}';(document.head||document.body).append(style);
- const toggle=document.createElement('button');toggle.className='play-toggle';toggle.textContent='☺';toggle.setAttribute('aria-label','표현하기');toggle.hidden=true;const palette=document.createElement('div');palette.className='play-palette';palette.hidden=true;palette.setAttribute('aria-label','표현 고르기');document.body.append(toggle,palette);
- let kiteButton=null,lanternButton=null;
+ // A round button at the lower right opens the quick ring (emotes and friends' choices); the palette below is the
+ // fallback when the ring is missing. The kite and lantern live in the hotbar.
+ const style=document.createElement('style');style.textContent='.play-toggle{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 132px);z-index:4;width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,247,232,.88);color:#8f5a54;font:700 21px/1 "Winter Jua",sans-serif;box-shadow:0 3px 12px rgba(40,40,70,.18);cursor:pointer;display:grid;place-items:center}.play-toggle[hidden]{display:none}.play-toggle svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.play-palette{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 186px);z-index:4;display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:18px;background:rgba(255,247,232,.94);box-shadow:0 3px 14px rgba(40,40,70,.2)}.play-palette button{min-width:44px;min-height:40px;border:0;border-radius:12px;background:#f3e6d1;color:#6a5050;font:700 13px "Winter Jua",sans-serif;cursor:pointer;white-space:nowrap}.play-palette button[aria-pressed=true]{background:#d9b98d}';(document.head||document.body).append(style);
+ const toggle=document.createElement('button');toggle.className='play-toggle';toggle.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 14a4.5 4.5 0 0 0 8 0M9 9.5h.01M15 9.5h.01"/></svg>';toggle.setAttribute('aria-label','표현하기');toggle.hidden=true;const palette=document.createElement('div');palette.className='play-palette';palette.hidden=true;palette.setAttribute('aria-label','표현 고르기');document.body.append(toggle,palette);
  for(const[i,[glyph,label]]of EMOTES.entries()){const b=document.createElement('button');b.textContent=glyph+' '+label;b.setAttribute('aria-label',label);b.addEventListener('click',()=>{say(i);palette.hidden=true;});palette.append(b);}
- if(WINTER){kiteButton=document.createElement('button');kiteButton.textContent='연 날리기';kiteButton.addEventListener('click',()=>{toggleKite();palette.hidden=true;});lanternButton=document.createElement('button');lanternButton.textContent='풍등 띄우기';lanternButton.addEventListener('click',()=>{lantern();palette.hidden=true;});palette.append(kiteButton,lanternButton);}
- toggle.addEventListener('click',()=>{if(kiteButton){kiteButton.hidden=!canKite();kiteButton.setAttribute('aria-pressed',String(kiteOn));kiteButton.textContent=kiteOn?'연 거두기':'연 날리기';lanternButton.hidden=!canLantern();}palette.hidden=!palette.hidden;});
+ toggle.addEventListener('click',()=>{if(typeof radialMenu==='object'&&radialMenu){palette.hidden=true;radialMenu.open();return;}palette.hidden=!palette.hidden;});
  function free(){return entered&&mode==='idle';}
  function say(i){if(!free()){toast('하던 일을 마치고 표현해 볼까요?');return false;}if(now()-emoteAt<2.5)return false;emote=i;emoteAt=now();if(typeof villageJournal==='object')villageJournal.note('first-emote');if(typeof publishState==='function')publishState(true);return true;}
  function toggleKite(){if(!kiteOn&&!canKite()){toast('연은 해가 있을 때 날려요');return false;}kiteOn=!kiteOn;if(kiteOn&&typeof villageJournal==='object')villageJournal.note('first-kite');toast(kiteOn?'바람을 타고 연이 올라가요':'연을 거두었어요');if(typeof publishState==='function')publishState(true);return kiteOn;}
@@ -4696,7 +4699,7 @@ function lookDress(head,look,p){
  const color=look.a==='glasses'?0x4d4552:look.a==='flower'?0xf2c1cf:p.scarf,mesh=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color}));mesh.name='look-accessory-'+look.a;head.add(mesh);return mesh;
 }
 function createVillageLooks(){
- const KEY='village-look',SETS='village-look-sets',MIRROR={x:-6.5,z:10},REACH=3.4,DEFAULT={c:0,s:0,a:'none'};
+ const KEY='village-look',SETS='village-look-sets',MIRROR=CURRENT_WORLD==='winter'?{x:-13.2,z:8.6}:{x:-6.5,z:10},REACH=3.4,DEFAULT={c:0,s:0,a:'none'};
  const valid=l=>Boolean(l)&&Number.isInteger(l.c)&&l.c>=0&&l.c<LOOK_COATS.length&&Number.isInteger(l.s)&&l.s>=0&&l.s<LOOK_SCARVES.length&&LOOK_ACCESSORIES.includes(l.a);
  const clean=l=>valid(l)?{c:l.c,s:l.s,a:l.a}:{...DEFAULT};
  function read(key,fallback){try{const v=JSON.parse(localStorage.getItem(key)||'null');return v===null?fallback:v;}catch{return fallback;}}
@@ -4842,7 +4845,7 @@ function createPhotoMode(){
  // When storage is full the oldest pictures give way; false means not even the new one fits.
  function store(list){while(list.length){try{localStorage.setItem(KEY,JSON.stringify(list));return true;}catch{list=list.slice(1);}}return false;}
  const bar=document.createElement('div');bar.className='photo-bar';bar.hidden=true;bar.setAttribute('aria-label','사진 모드');
- const style=document.createElement('style');style.textContent='body.photo-mode>*:not(#world):not(.photo-bar):not(.village-album):not(#toast):not(style):not(script){display:none!important}.photo-bar{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);z-index:20;display:flex;gap:8px;padding:8px;border-radius:20px;background:rgba(255,247,232,.92);box-shadow:0 3px 14px rgba(40,40,70,.25)}.photo-bar button{min-width:52px;min-height:44px;border:0;border-radius:14px;background:#f1e5d2;color:#5f5050;font:700 13px "Winter Jua",sans-serif;cursor:pointer}.photo-bar .shutter{background:#8e9d83;color:#fff8e8}.photo-toggle{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 188px);z-index:4;width:46px;height:46px;border-radius:50%;border:0;display:grid;place-items:center;background:rgba(255,247,232,.88);color:#5f6f73;box-shadow:0 3px 12px rgba(40,40,70,.18);cursor:pointer}.photo-toggle svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}.village-album img{width:100%;border-radius:12px;display:block}.village-album li{list-style:none}';(document.head||document.body).append(style);
+ const style=document.createElement('style');style.textContent='body.photo-mode>*:not(#world):not(.photo-bar):not(.village-album):not(#toast):not(style):not(script){display:none!important}.photo-bar{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);z-index:20;display:flex;gap:8px;padding:8px;border-radius:20px;background:rgba(255,247,232,.92);box-shadow:0 3px 14px rgba(40,40,70,.25)}.photo-bar button{min-width:52px;min-height:44px;border:0;border-radius:14px;background:#f1e5d2;color:#5f5050;font:700 13px "Winter Jua",sans-serif;cursor:pointer}.photo-bar .shutter{background:#8e9d83;color:#fff8e8}.village-album img{width:100%;border-radius:12px;display:block}.village-album li{list-style:none}';(document.head||document.body).append(style);
  const mk=(text,label,fn,cls)=>{const b=document.createElement('button');b.textContent=text;b.setAttribute('aria-label',label);if(cls)b.className=cls;b.addEventListener('click',fn);bar.append(b);return b;};
  mk('−','멀리 보기',()=>zoom(1));mk('찰칵','사진 찍기',()=>shoot(),'shutter');mk('+','가까이 보기',()=>zoom(-1));mk('앨범','앨범 보기',()=>openAlbum());mk('닫기','사진 모드 끝내기',()=>exit());document.body.append(bar);
  function enter(){if(on||!entered)return false;on=true;document.body.classList.add('photo-mode');bar.hidden=false;baseFov=camera.fov;return true;}
@@ -4857,12 +4860,8 @@ function createPhotoMode(){
  function openAlbum(){const list=album().reverse(),title=document.createElement('h2'),note=document.createElement('p'),ul=document.createElement('ul');title.textContent='앨범';note.className='creature-count';note.textContent=list.length?'최근 '+list.length+'장 · 이 브라우저에만 있어요':'아직 찍은 사진이 없어요';
   ul.replaceChildren(...list.map((p,i)=>{const li=document.createElement('li'),img=document.createElement('img'),a=document.createElement('a');img.src=p.src;img.alt='마을 사진 '+(i+1);a.href=p.src;a.download='village-'+p.t+'.jpg';a.textContent='파일로 저장';li.append(img,a);return li;}));body.replaceChildren(title,note,ul);sheet.hidden=false;closeButton.focus();}
  addEventListener('keydown',e=>{if(e.key==='Escape'){if(!sheet.hidden)closeAlbum();else if(on)exit();}});
- // The camera floats just above the emote button; the top bar is already full on phones.
- const button=document.createElement('button');button.id='photo';button.className='photo-toggle';button.setAttribute('aria-label','사진 모드');button.title='사진 모드';const ns='http://www.w3.org/2000/svg';
- if(document.createElementNS){const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 24 24');for(const[tag,attrs]of[['path',{d:'M4 8h3l2-2.5h6L17 8h3v11H4Z'}],['circle',{cx:12,cy:13,r:3.5}]]){const el=document.createElementNS(ns,tag);for(const k in attrs)el.setAttribute(k,attrs[k]);svg.append(el);}button.append(svg);}else button.textContent='📷';
- button.addEventListener('click',()=>{if(!enter()&&!entered)toast('마을에 들어간 뒤 찍을 수 있어요');});
- document.body.append(button);
- return{MAX,FOV,enter,exit,zoom,shoot,album,openAlbum,closeAlbum,button,get on(){return on;},isOpen:()=>!sheet.hidden};
+ // Photo mode opens from the camera slot of the hotbar, so there is no separate floating button.
+ return{MAX,FOV,enter,exit,zoom,shoot,album,openAlbum,closeAlbum,get on(){return on;},isOpen:()=>!sheet.hidden};
 }
 const photoMode=createPhotoMode();
 
@@ -4933,22 +4932,45 @@ function createVillageCompanions(){
 }
 const villageCompanions=createVillageCompanions();
 
+// Line icons shared by the ring, the hotbar and the emote button, drawn on a 24-unit grid like the top bar icons.
+const villageIcons={
+ snowball:'<circle cx="12" cy="12" r="7"/><path d="M9.5 10h.01M14 9.5h.01M11.5 14h.01"/>',
+ bubble:'<circle cx="10" cy="13" r="6"/><circle cx="17.5" cy="6.5" r="2.5"/><path d="M7.5 11.5a3 3 0 0 1 2.5-2.5"/>',
+ plane:'<path d="M3 11 21 4l-6 16-3.5-6.5Z"/><path d="m11.5 13.5 4-4"/>',
+ kite:'<path d="M12 3l6 7-6 7-6-7Z"/><path d="M6 10h12M12 3v14M12 17c0 2-2 2-2 4"/>',
+ lantern:'<path d="M9 4h6M8 7h8l-1 10H9Z"/><path d="M10 20h4M12 17v3"/>',
+ cocoa:'<path d="M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5Z"/><path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16M8.5 3.5c0 1.5 1.5 1.5 1.5 3M12.5 3.5c0 1.5 1.5 1.5 1.5 3"/>',
+ camera:'<path d="M4 8h3l1.5-2h7L17 8h3v11H4Z"/><circle cx="12" cy="13" r="3.5"/>',
+ heart:'<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10Z"/>',
+ smile:'<circle cx="12" cy="12" r="9"/><path d="M8 14a4.5 4.5 0 0 0 8 0M9 9.5h.01M15 9.5h.01"/>',
+ wave:'<path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V11m0-6a1.5 1.5 0 0 1 3 0v6m0-4.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.5A6 6 0 0 1 5 18l-1.5-3a1.5 1.5 0 0 1 2.6-1.5L8 16"/>',
+ moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/>',
+ surprise:'<path d="M12 4v10M12 19h.01"/>',
+ clap:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>',
+ pin:'<path d="M12 21s6-6 6-11a6 6 0 0 0-12 0c0 5 6 11 6 11Z"/><circle cx="12" cy="10" r="2"/>',
+ paw:'<circle cx="7" cy="10" r="1.6"/><circle cx="10.5" cy="6.5" r="1.6"/><circle cx="14.5" cy="6.5" r="1.6"/><circle cx="18" cy="10" r="1.6"/><path d="M12 12c-3 0-5 3.5-5 5.5S9 20 12 19s5 .5 5-1.5S15 12 12 12Z"/>',
+ dice:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h.01M15 15h.01M12 12h.01"/>',
+ carry:'<path d="M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4"/>',
+ close:'<path d="M6 6l12 12M18 6 6 18"/>'
+};
+// An icon as markup; an unknown name falls back to its own text so an older caller still reads.
+function villageIcon(name){return villageIcons[name]?'<svg viewBox="0 0 24 24" aria-hidden="true">'+villageIcons[name]+'</svg>':'<span aria-hidden="true">'+String(name||'')+'</span>';}
+const EMOTE_ICONS=['heart','smile','wave','moon','surprise','clap'];
 // A ring menu for one-finger choices: hold the scene still for half a second (or press Q) and pick an emote,
-// sky play, the camera or a companion. Arrow keys move around the ring, Enter picks, Esc closes.
+// a ping, a companion or a game. Things to hold (the throwable, kite, lantern, cocoa, camera) live in the hotbar. Arrow keys move around the ring, Enter picks, Esc closes.
 function createRadialMenu(){
- const HOLD=.48,SLOP=10,RADIUS=104,extra=[];
+ const HOLD=.48,SLOP=10,RADIUS=112,extra=[];
  const ring=document.createElement('div');ring.className='radial-menu';ring.hidden=true;ring.setAttribute('role','menu');ring.setAttribute('aria-label','빠른 메뉴');
- const style=document.createElement('style');style.textContent='.radial-menu{position:fixed;inset:0;z-index:30;background:rgba(40,40,70,.12)}.radial-menu button{position:absolute;width:52px;height:52px;margin:-26px 0 0 -26px;border:0;border-radius:50%;background:rgba(255,247,232,.95);color:#5f5050;font:700 19px/1 "Winter Jua",sans-serif;box-shadow:0 3px 12px rgba(40,40,70,.22);cursor:pointer;display:grid;place-items:center}.radial-menu button small{display:none;position:absolute;top:56px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;color:#fff8e8;text-shadow:0 1px 3px rgba(0,0,0,.6)}.radial-menu button:focus small,.radial-menu button:hover small{display:block}.radial-menu button:focus-visible{outline:3px solid #8e9d83;outline-offset:2px}.radial-menu .radial-close{background:#8e9d83;color:#fff8e8;width:44px;height:44px;margin:-22px 0 0 -22px}';(document.head||document.body).append(style);document.body.append(ring);
+ const style=document.createElement('style');style.textContent='.radial-menu{position:fixed;inset:0;z-index:30;background:rgba(40,40,70,.28)}.radial-menu button{position:absolute;width:52px;height:52px;margin:-26px 0 0 -26px;border:0;border-radius:50%;background:rgba(255,247,232,.95);color:#5f5050;font:700 19px/1 "Winter Jua",sans-serif;box-shadow:0 3px 12px rgba(40,40,70,.22);cursor:pointer;display:grid;place-items:center}.radial-menu button svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.radial-menu button small{position:absolute;top:55px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:700;color:#fff8e8;text-shadow:0 1px 3px rgba(0,0,0,.65);pointer-events:none}.radial-menu button:focus-visible{outline:3px solid #8e9d83;outline-offset:2px}.radial-menu .radial-close{background:#8e9d83;color:#fff8e8;width:44px;height:44px;margin:-22px 0 0 -22px}';(document.head||document.body).append(style);document.body.append(ring);
  // Built fresh each time so a winter-only or newly hatched choice shows up when it applies.
- function items(){const out=[];if(typeof villagePlay==='object'&&villagePlay){villagePlay.EMOTES.forEach((e,i)=>out.push({icon:e[0],label:e[1],run:()=>villagePlay.say(i)}));if(CURRENT_WORLD==='winter'){out.push({icon:'◇',label:villagePlay.kiteOn?'연 내리기':'연',run:()=>villagePlay.toggleKite()});out.push({icon:'✦',label:'풍등',run:()=>villagePlay.lantern()});}}
-  if(typeof photoMode==='object'&&photoMode)out.push({icon:'▣',label:'사진',run:()=>photoMode.enter()});
-  if(typeof villageCompanions==='object'&&villageCompanions&&villageCompanions.state.owned.length)out.push({icon:'✿',label:'동반 친구',run:()=>villageCompanions.cycle()});
+ function items(){const out=[];if(typeof villagePlay==='object'&&villagePlay)villagePlay.EMOTES.forEach((e,i)=>out.push({icon:EMOTE_ICONS[i]||e[0],label:e[1],run:()=>villagePlay.say(i)}));
+  if(typeof villageCompanions==='object'&&villageCompanions&&villageCompanions.state.owned.length)out.push({icon:'paw',label:'동반 친구',run:()=>villageCompanions.cycle()});
   for(const it of extra)if(!it.when||it.when())out.push(typeof it.label==='function'?{...it,label:it.label()}:it);return out;}
  let buttons=[],shown=[],press=null,suppress=false,restore=null,at=null;
  function busy(){return!entered||(typeof photoMode==='object'&&photoMode&&photoMode.on)||[...document.querySelectorAll('.creature-book')].some(s=>!s.hidden)||(typeof helpOpen==='function'&&helpOpen());}
  function open(x=innerWidth/2,y=innerHeight/2,held=false){if(busy())return false;at={x,y,held};shown=items();const r=shown.length>8?RADIUS+16:RADIUS,cx=Math.max(r+30,Math.min(innerWidth-r-30,x)),cy=Math.max(r+30,Math.min(innerHeight-r-40,y));
-  buttons=shown.map((it,i)=>{const a=-Math.PI/2+i*Math.PI*2/shown.length,b=document.createElement('button'),label=document.createElement('small');b.setAttribute('role','menuitem');b.setAttribute('aria-label',it.label);b.textContent=it.icon;label.textContent=it.label;b.append(label);b.style.left=(cx+Math.cos(a)*r)+'px';b.style.top=(cy+Math.sin(a)*r)+'px';b.addEventListener('click',()=>pick(i));return b;});
-  const x0=document.createElement('button');x0.className='radial-close';x0.textContent='×';x0.setAttribute('aria-label','빠른 메뉴 닫기');x0.style.left=cx+'px';x0.style.top=cy+'px';x0.addEventListener('click',close);
+  buttons=shown.map((it,i)=>{const a=-Math.PI/2+i*Math.PI*2/shown.length,b=document.createElement('button'),label=document.createElement('small');b.setAttribute('role','menuitem');b.setAttribute('aria-label',it.label);b.innerHTML=villageIcon(it.icon);label.textContent=it.label;b.append(label);b.style.left=(cx+Math.cos(a)*r)+'px';b.style.top=(cy+Math.sin(a)*r)+'px';b.addEventListener('click',()=>pick(i));return b;});
+  const x0=document.createElement('button');x0.className='radial-close';x0.innerHTML=villageIcon('close');x0.setAttribute('aria-label','빠른 메뉴 닫기');x0.style.left=cx+'px';x0.style.top=cy+'px';x0.addEventListener('click',close);
   restore=document.activeElement;ring.replaceChildren(...buttons,x0);ring.hidden=false;if(buttons[0])buttons[0].focus();return true;}
  function close(){if(ring.hidden)return;ring.hidden=true;ring.replaceChildren();buttons=[];if(restore&&restore.focus)restore.focus({preventScroll:true});restore=null;}
  // Each choice hears where the ring was opened ({x,y,held}); a long press marks a spot on the scene.
@@ -5014,7 +5036,7 @@ function createVillageMinigames(){
  function render(){const title=el('h2','',GAME.title),hint=el('p','creature-count',GAME.hint);status=sig();body.replaceChildren(title,hint,...view());}
  function open(){if(CURRENT_WORLD==='library'&&!memory.cards.length)memory.deal();if(CURRENT_WORLD==='winter'&&!dice.target.length)dice.deal();render();sheet.hidden=false;closeButton.focus();if(typeof villageJournal==='object'&&villageJournal&&villageJournal.note)villageJournal.note('first-minigame');}
  if(residentGuide.addAction)residentGuide.addAction('함께 놀기',()=>{residentGuide.close();open();});
- if(typeof radialMenu==='object'&&radialMenu)radialMenu.addItem({icon:'⚄',label:'놀이',run:open});
+ if(typeof radialMenu==='object'&&radialMenu)radialMenu.addItem({icon:'dice',label:'놀이',run:open});
  return{GAME,BOOKS,FACES,ARCADE,memory,dice,arcade,open,close,isOpen:()=>!sheet.hidden,
   // The arcade redraws only when what it shows changes.
   tick(dt){if(!arcade.running)return;arcade.step(dt);if(!sheet.hidden&&status!==sig())render();}};
@@ -5061,7 +5083,6 @@ function createVillageSnowball(){
   const r=renderer.domElement.getBoundingClientRect(),ray=new THREE.Raycaster(),hit=new THREE.Vector3();ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1),camera);
   if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-player.position.y),hit))throwAt(hit.x,hit.z);},true);
  addEventListener('keydown',e=>{if(e.key==='Escape'&&armed){armed=false;hand.visible=false;}});
- if(typeof radialMenu==='object'&&radialMenu)radialMenu.addItem({icon:CURRENT_WORLD==='library'?'✈':'○',label:KIND.verb,run:arm});
  return{KIND,MIN,MAX,WIRE,arm,aim,throwAt,decode,wireOf,get armed(){return armed;},flights,splashes,hand,
   wire(body){if((body.m!=='idle'&&body.m!=='walk')||clock>=sendUntil)return body;if(Math.abs(body.b-.41)<.005||Math.abs(body.b-.45)<.005)return body;return{...body,b:Math.round((WIRE+sendStep*.01)*1000)/1000};},
   // A friend's throw appears once per signal, from where they stand along the way they face.
@@ -5077,7 +5098,7 @@ const villageSnowball=createVillageSnowball();
 // idle/walk b values: ping .05–.25 (0–20 m ahead along the facing), carrying .30, cocoa .33. b is claimed only when it is 0.
 function createVillageTogether(){
  const PING={wire:.05,max:20,show:10,hold:1.5,gap:4},CARRY_B=.30,COCOA_B=.33,COCOA={reach:3,hold:1.5,gap:5},
-  BIG={winter:{name:'큰 눈덩이',x:3,z:4,r:.75,color:0xf4f8ff},aquarium:{name:'커다란 물놀이 공',x:2,z:4,r:.6,color:0x9fd3e3},library:{name:'책 수레',x:2,z:4,r:.6,color:0xb08a68}}[CURRENT_WORLD],
+  BIG={winter:{name:'큰 눈덩이',x:6.4,z:5.6,r:.75,color:0xf4f8ff},aquarium:{name:'커다란 물놀이 공',x:4.5,z:5.5,r:.6,color:0x9fd3e3},library:{name:'책 수레',x:4.5,z:5.5,r:.6,color:0xb08a68}}[CURRENT_WORLD],
   SOLO=.8,PAIR=4,GRAB=2.2,KEY='village-carry:'+CURRENT_WORLD;
  let clock=0,pingUntil=-9,pingStep=0,lastPing=-9,cocoaUntil=-9,lastCocoa=-9,carrying=false;
  const pings=[],q=(b,v)=>Math.abs(b-v)<.003;
@@ -5112,9 +5133,8 @@ function createVillageTogether(){
  function nearestPeer(from,reach){let best=null,bd=reach;for(const peer of remotePlayers.values()){const r=peer.actor.root.position,d=Math.hypot(r.x-from.x,r.z-from.z);if(d<=bd){bd=d;best=peer;}}return best;}
  function cocoa(){if(!entered)return false;const peer=nearestPeer(player.position,COCOA.reach);if(!peer){toast('가까이 있는 친구에게 건넬 수 있어요');return false;}if(clock-lastCocoa<COCOA.gap)return false;lastCocoa=clock;cocoaUntil=clock+COCOA.hold;
   player.rotation.y=Math.atan2(peer.actor.root.position.x-player.position.x,peer.actor.root.position.z-player.position.z);toast(peer.data.n+' 님에게 따뜻한 코코아를 건넸어요');return peer;}
- if(typeof radialMenu==='object'&&radialMenu){radialMenu.addItem({icon:'◎',label:'여기!',run(at){const spot=at&&at.held?groundAt(at.x,at.y):null;spot?ping(spot.x,spot.z):ping();}});
-  radialMenu.addItem({icon:'⇆',label:()=>carrying?BIG.name+' 놓기':BIG.name+' 잡기',when:()=>carrying||near(player.position,GRAB),run:grab});
-  radialMenu.addItem({icon:'☕',label:'코코아 건네기',when:()=>Boolean(nearestPeer(player.position,COCOA.reach)),run:cocoa});}
+ if(typeof radialMenu==='object'&&radialMenu){radialMenu.addItem({icon:'pin',label:'여기!',run(at){const spot=at&&at.held?groundAt(at.x,at.y):null;spot?ping(spot.x,spot.z):ping();}});
+  radialMenu.addItem({icon:'carry',label:()=>carrying?BIG.name+' 놓기':BIG.name+' 잡기',when:()=>carrying||near(player.position,GRAB),run:grab});}
  return{PING,BIG,CARRY_B,COCOA_B,decode,ping,grab,cocoa,carriers,groundAt,pings,big,get carrying(){return carrying;},
   wire(body){if((body.m!=='idle'&&body.m!=='walk')||body.b!==0)return body;if(clock<pingUntil)return{...body,b:Math.round((PING.wire+pingStep*.01)*1000)/1000};if(clock<cocoaUntil)return{...body,b:COCOA_B};if(carrying)return{...body,b:CARRY_B};return body;},
   // A friend's ping or cocoa happens once per signal; carrying is read every frame from their state.
@@ -5135,15 +5155,15 @@ const villageTogether=createVillageTogether();
 function createVillageHotbar(){
  const WINTER=CURRENT_WORLD==='winter',SHOP=kind=>typeof villageMarket==='object'&&villageMarket&&villageMarket.choice?villageMarket.choice(kind):null;
  const SLOTS=[
-  {id:'toss',icon:CURRENT_WORLD==='library'?'✈':'○',name:()=>villageSnowball.KIND.name,use:()=>{if(villageSnowball.armed)villageSnowball.arm();return true;},arms:true},
-  ...(WINTER?[{id:'kite',icon:'◇',name:()=>'연',use:()=>villagePlay.toggleKite(),shop:'kite'},{id:'lantern',icon:'✦',name:()=>'풍등',use:()=>villagePlay.lantern(),shop:'lantern'}]:[]),
-  {id:'cocoa',icon:'☕',name:()=>'코코아',use:()=>villageTogether.cocoa()},
-  {id:'camera',icon:'▣',name:()=>'카메라',use:()=>photoMode.enter()}
+  {id:'toss',icon:CURRENT_WORLD==='library'?'plane':CURRENT_WORLD==='aquarium'?'bubble':'snowball',name:()=>villageSnowball.KIND.name,short:CURRENT_WORLD==='library'?'비행기':null,use:()=>{if(villageSnowball.armed)villageSnowball.arm();return true;},arms:true},
+  ...(WINTER?[{id:'kite',icon:'kite',name:()=>'연',use:()=>villagePlay.toggleKite(),shop:'kite'},{id:'lantern',icon:'lantern',name:()=>'풍등',use:()=>villagePlay.lantern(),shop:'lantern'}]:[]),
+  {id:'cocoa',icon:'cocoa',name:()=>'코코아',use:()=>villageTogether.cocoa()},
+  {id:'camera',icon:'camera',name:()=>'카메라',use:()=>photoMode.enter()}
  ];
  let held=null,dots=null;const hands=new Map();
  const bar=document.createElement('div');bar.className='village-hotbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','들고 다니는 물건');bar.hidden=true;
- const style=document.createElement('style');style.textContent='.village-hotbar{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 190px);transform:translateX(-50%);z-index:4;display:flex;gap:6px;padding:5px;border-radius:18px;background:rgba(255,247,232,.62);backdrop-filter:blur(8px)}.village-hotbar button{position:relative;width:44px;height:44px;border:0;border-radius:13px;background:rgba(255,247,232,.92);color:#5f5050;font:700 18px/1 "Winter Jua",sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(40,40,70,.15)}.village-hotbar button[aria-pressed="true"]{background:#8e9d83;color:#fff8e8}.village-hotbar button small{position:absolute;left:4px;top:3px;font-size:9px;opacity:.7}.village-hotbar button i{position:absolute;right:5px;bottom:5px;width:7px;height:7px;border-radius:50%}';(document.head||document.body).append(style);
- const buttons=SLOTS.map((s,i)=>{const b=document.createElement('button'),n=document.createElement('small'),icon=document.createElement('span'),dot=document.createElement('i');n.textContent=String(i+1);icon.textContent=s.icon;b.append(n,icon,dot);b.addEventListener('click',()=>press(i));bar.append(b);return{b,dot};});document.body.append(bar);
+ const style=document.createElement('style');style.textContent='.village-hotbar{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 190px);transform:translateX(-50%);z-index:4;display:flex;gap:5px;padding:4px;border-radius:17px;background:rgba(255,247,232,.5);backdrop-filter:blur(8px)}.village-hotbar[hidden]{display:none}.village-hotbar button{position:relative;width:50px;height:46px;border:0;border-radius:13px;background:rgba(255,247,232,.92);color:#5f5050;font:700 9.5px/1 "Winter Jua",sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(40,40,70,.12);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0}.village-hotbar button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.village-hotbar button[aria-pressed="true"]{background:#8e9d83;color:#fff8e8}.village-hotbar button small{position:absolute;left:5px;top:4px;font-size:8px;opacity:.55}.village-hotbar button b{font-weight:700;white-space:nowrap}.village-hotbar button i{position:absolute;right:5px;top:5px;width:6px;height:6px;border-radius:50%}';(document.head||document.body).append(style);
+ const buttons=SLOTS.map((s,i)=>{const b=document.createElement('button'),n=document.createElement('small'),icon=document.createElement('span'),name=document.createElement('b'),dot=document.createElement('i');n.textContent=String(i+1);icon.innerHTML=typeof villageIcon==='function'?villageIcon(s.icon):s.icon;icon.style.display='contents';name.textContent=s.short||s.name();b.title=s.name();b.append(n,icon,name,dot);b.addEventListener('click',()=>press(i));bar.append(b);return{b,dot};});document.body.append(bar);
  // Hand-held models, made once per kind from a few basic shapes.
  function handFor(id){if(id==='toss')return null;if(hands.has(id))return hands.get(id);const color=id==='kite'?SHOP('kite')||0xe4a28e:id==='lantern'?SHOP('lantern')||0xffd49a:id==='cocoa'?0xc98b6b:0x5f6f73,g=new THREE.Group(),m=new THREE.MeshLambertMaterial({color});
   if(id==='kite'){const k=new THREE.Mesh(new THREE.OctahedronGeometry(.16,0),m);k.scale.set(1,1.3,.2);g.add(k);}else if(id==='lantern'){const l=new THREE.Mesh(new THREE.CylinderGeometry(.09,.11,.2,8),new THREE.MeshBasicMaterial({color}));g.add(l);}
@@ -5162,6 +5182,32 @@ function createVillageHotbar(){
   tick(){bar.hidden=!entered;if(held==='toss'&&!villageSnowball.armed){held=null;show();}const sig=SLOTS.map(x=>x.shop?SHOP(x.shop):'').join();if(sig!==dots){dots=sig;buttons.forEach(({dot},i)=>{const c=SLOTS[i].shop?SHOP(SLOTS[i].shop):null;dot.style.background=c===null?'transparent':'#'+c.toString(16).padStart(6,'0');});}}};
 }
 const villageHotbar=createVillageHotbar();
+
+// Keeps the screen quiet once you know your way around: the walking hint steps aside after the first walk, the corner
+// notes (already in the help window) fade after a few seconds, the hotbar sits in line with the other bottom controls
+// with the emote button at its end, and on a phone the walk buttons shrink and the two world-travel buttons fold into one.
+function createVillageTidy(){
+ const NOTE_TIME=8,WALKED=1.5,hint=document.getElementById('hint'),controls=document.getElementById('controls'),idleHint=hint?hint.textContent:'';
+ const style=document.createElement('style');style.textContent='.hint[data-quiet="1"]{display:none}.keyboard.tidy-faded,.saved-note.tidy-faded{opacity:0;transition:opacity .8s}.village-hotbar.in-controls{position:static;transform:none;pointer-events:auto}.play-toggle.in-hotbar{position:static;width:46px;height:46px;margin-left:3px;box-shadow:none;background:#f1dfbf}.world-fold{display:none}@media(max-width:600px){.topbar .brand p{display:none}.travel{gap:5px}.travel button{font-size:11px;padding:6px 10px;min-height:38px}.travel button span{font-size:12px;margin-right:3px}.world-fold{display:inline-flex;align-items:center;gap:6px}.world-travel:not(.unfolded) .world-switch-row .world-switch{display:none}.world-travel.unfolded .world-fold{display:none}}';(document.head||document.body).append(style);
+ let start=null,walked=false,noteLeft=NOTE_TIME;
+ // The hotbar joins the bottom column just above the hint, so the rows stack evenly instead of overlapping.
+ const bar=typeof villageHotbar==='object'&&villageHotbar?villageHotbar.bar:null;
+ if(bar&&controls&&hint&&typeof controls.insertBefore==='function'&&hint.parentNode===controls){controls.insertBefore(bar,hint);bar.classList.add('in-controls');}
+ const toggle=bar&&document.querySelector?document.querySelector('.play-toggle'):null;if(toggle){bar.append(toggle);toggle.classList.add('in-hotbar');}
+ // Phone: one "다른 공간" button opens the two destinations; picking one or tapping elsewhere folds them back.
+ const travel=document.getElementById('world-travel'),row=travel&&travel.querySelector?travel.querySelector('.world-switch-row'):null;let fold=null;
+ if(travel&&row&&typeof travel.insertBefore==='function'){fold=document.createElement('button');fold.className='world-switch world-fold';fold.setAttribute('aria-expanded','false');fold.innerHTML='<span>다른 공간</span><span class="world-arrow" aria-hidden="true">↗</span>';
+  fold.addEventListener('click',e=>{e.stopPropagation();setFold(true);});travel.insertBefore(fold,row);
+  row.addEventListener('click',()=>setFold(false));addEventListener('pointerdown',e=>{if(travel.classList.contains('unfolded')&&!travel.contains(e.target))setFold(false);});}
+ function setFold(open){if(!travel||!fold)return;travel.classList.toggle('unfolded',open);fold.setAttribute('aria-expanded',String(open));if(open){const first=row.querySelector('.world-switch:not([hidden])');if(first)first.focus();}}
+ return{NOTE_TIME,WALKED,get walked(){return walked;},fold:()=>fold,setFold,
+  tick(dt){if(!entered){start=null;return;}
+   if(!start)start={x:player.position.x,z:player.position.z};else if(!walked&&Math.hypot(player.position.x-start.x,player.position.z-start.z)>WALKED)walked=true;
+   // The hint stays for anything new it has to say; only the opening "tap where to go" line goes quiet.
+   if(hint)hint.dataset.quiet=walked&&hint.textContent===idleHint?'1':'0';
+   if(noteLeft>0){noteLeft-=dt;if(noteLeft<=0)for(const id of['keyboard','saved-note']){const n=document.getElementById(id);if(n&&n.classList)n.classList.add('tidy-faded');}}}};
+}
+const villageTidy=createVillageTidy();
 
 // Short expeditions: send the companion walking with you (or the resident's paper crane when there is none) to one of
 // three places for 1, 3 or 6 hours. Time passes while the page is closed; nothing can go wrong. Coming home brings a

@@ -3,7 +3,7 @@
 // idle/walk b values: ping .05–.25 (0–20 m ahead along the facing), carrying .30, cocoa .33. b is claimed only when it is 0.
 function createVillageTogether(){
  const PING={wire:.05,max:20,show:10,hold:1.5,gap:4},CARRY_B=.30,COCOA_B=.33,COCOA={reach:3,hold:1.5,gap:5},
-  BIG={winter:{name:'큰 눈덩이',x:3,z:4,r:.75,color:0xf4f8ff},aquarium:{name:'커다란 물놀이 공',x:2,z:4,r:.6,color:0x9fd3e3},library:{name:'책 수레',x:2,z:4,r:.6,color:0xb08a68}}[CURRENT_WORLD],
+  BIG={winter:{name:'큰 눈덩이',x:6.4,z:5.6,r:.75,color:0xf4f8ff},aquarium:{name:'커다란 물놀이 공',x:4.5,z:5.5,r:.6,color:0x9fd3e3},library:{name:'책 수레',x:4.5,z:5.5,r:.6,color:0xb08a68}}[CURRENT_WORLD],
   SOLO=.8,PAIR=4,GRAB=2.2,KEY='village-carry:'+CURRENT_WORLD;
  let clock=0,pingUntil=-9,pingStep=0,lastPing=-9,cocoaUntil=-9,lastCocoa=-9,carrying=false;
  const pings=[],q=(b,v)=>Math.abs(b-v)<.003;
@@ -38,9 +38,8 @@ function createVillageTogether(){
  function nearestPeer(from,reach){let best=null,bd=reach;for(const peer of remotePlayers.values()){const r=peer.actor.root.position,d=Math.hypot(r.x-from.x,r.z-from.z);if(d<=bd){bd=d;best=peer;}}return best;}
  function cocoa(){if(!entered)return false;const peer=nearestPeer(player.position,COCOA.reach);if(!peer){toast('가까이 있는 친구에게 건넬 수 있어요');return false;}if(clock-lastCocoa<COCOA.gap)return false;lastCocoa=clock;cocoaUntil=clock+COCOA.hold;
   player.rotation.y=Math.atan2(peer.actor.root.position.x-player.position.x,peer.actor.root.position.z-player.position.z);toast(peer.data.n+' 님에게 따뜻한 코코아를 건넸어요');return peer;}
- if(typeof radialMenu==='object'&&radialMenu){radialMenu.addItem({icon:'◎',label:'여기!',run(at){const spot=at&&at.held?groundAt(at.x,at.y):null;spot?ping(spot.x,spot.z):ping();}});
-  radialMenu.addItem({icon:'⇆',label:()=>carrying?BIG.name+' 놓기':BIG.name+' 잡기',when:()=>carrying||near(player.position,GRAB),run:grab});
-  radialMenu.addItem({icon:'☕',label:'코코아 건네기',when:()=>Boolean(nearestPeer(player.position,COCOA.reach)),run:cocoa});}
+ if(typeof radialMenu==='object'&&radialMenu){radialMenu.addItem({icon:'pin',label:'여기!',run(at){const spot=at&&at.held?groundAt(at.x,at.y):null;spot?ping(spot.x,spot.z):ping();}});
+  radialMenu.addItem({icon:'carry',label:()=>carrying?BIG.name+' 놓기':BIG.name+' 잡기',when:()=>carrying||near(player.position,GRAB),run:grab});}
  return{PING,BIG,CARRY_B,COCOA_B,decode,ping,grab,cocoa,carriers,groundAt,pings,big,get carrying(){return carrying;},
   wire(body){if((body.m!=='idle'&&body.m!=='walk')||body.b!==0)return body;if(clock<pingUntil)return{...body,b:Math.round((PING.wire+pingStep*.01)*1000)/1000};if(clock<cocoaUntil)return{...body,b:COCOA_B};if(carrying)return{...body,b:CARRY_B};return body;},
   // A friend's ping or cocoa happens once per signal; carrying is read every frame from their state.
