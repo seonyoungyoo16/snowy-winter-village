@@ -3844,13 +3844,13 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
   else if(mode==='celebrate'){celebrateTime+=dt;if(celebrateTime>2.3){mode='idle';uiKey='';}}
   else if(mode==='rolling'){feedTime+=dt;const beat=Math.floor(feedTime/1.9);if(beat!==feedBeat){feedBeat=beat;tossFood(player.position,player.rotation.y);}if(feedTime>9){stopActivity();toast('잘 먹었어! 고마운 마음이 전해져요');}}
   else if(mode==='idle'){
-   let vx=0,vz=0;const speed=3.55;if(keys.has('w')||keys.has('arrowup'))vz--;if(keys.has('s')||keys.has('arrowdown'))vz++;if(keys.has('a')||keys.has('arrowleft'))vx--;if(keys.has('d')||keys.has('arrowright'))vx++;
+   let vx=0,vz=0;const speed=3.55*villageRun.factor(mode);if(keys.has('w')||keys.has('arrowup'))vz--;if(keys.has('s')||keys.has('arrowdown'))vz++;if(keys.has('a')||keys.has('arrowleft'))vx--;if(keys.has('d')||keys.has('arrowright'))vx++;
    if(vx||vz){path=[];const v=new THREE.Vector3(vx,0,vz).normalize().applyAxisAngle(new THREE.Vector3(0,1,0),cameraYaw),nx=player.position.x+v.x*speed*dt,nz=player.position.z+v.z*speed*dt;if(!blocked(nx,nz)){player.position.x=nx;player.position.z=nz;moving=true;}else{if(!blocked(nx,player.position.z)){player.position.x=nx;moving=true;}if(!blocked(player.position.x,nz)){player.position.z=nz;moving=true;}}if(moving){const desired=Math.atan2(v.x,v.z);player.rotation.y+=Math.atan2(Math.sin(desired-player.rotation.y),Math.cos(desired-player.rotation.y))*(1-Math.exp(-dt*12));}}
    else if(path.length){const p=path[0],dx=p.x-player.position.x,dz=p.z-player.position.z,d=Math.hypot(dx,dz),step=Math.min(speed*dt,d);if(d<.07)path.shift();else{player.position.x+=dx/d*step;player.position.z+=dz/d*step;const desired=Math.atan2(dx,dz);player.rotation.y+=Math.atan2(Math.sin(desired-player.rotation.y),Math.cos(desired-player.rotation.y))*(1-Math.exp(-dt*13));moving=true;}}
   }
  }
- networkTick(dt,moving);animatePose(dt,moving);animateWater(dt);playerShadow.position.set(player.position.x,.035,player.position.z);if(ringTimer>0){ringTimer-=dt;targetRing.scale.setScalar(1+Math.sin(elapsed*5)*.08);targetRing.material.opacity=clamp(ringTimer,0,.75);if(ringTimer<=0)targetRing.visible=false;}
- residentGuide.tick(dt);skyWeather.tick(dt);villagePlay.tick(dt);seasonalEvents.tick(dt);avatarLife.tick(dt);residentGifts.tick();villageRadio.tick();villageCompanions.tick(dt);radialMenu.tick(dt);villageMinigames.tick(dt);villageSnowball.tick(dt);villageTogether.tick(dt);villageHotbar.tick();villageTidy.tick(dt);villageExpedition.tick(dt);villageFolk.tick(dt);exhibit.tick(elapsed);updateCamera(dt);if(frameCount++%5===0){label('label-ocean',0,7.8,-10);label('label-reef',-10,2.8,-2);label('label-jelly',10,6.6,-2);if(entered)updateUI();}renderer.render(scene,camera);
+ networkTick(dt,moving);animatePose(dt,moving,character,mode,villageRun.phase(dt,moving));animateWater(dt);playerShadow.position.set(player.position.x,.035,player.position.z);if(ringTimer>0){ringTimer-=dt;targetRing.scale.setScalar(1+Math.sin(elapsed*5)*.08);targetRing.material.opacity=clamp(ringTimer,0,.75);if(ringTimer<=0)targetRing.visible=false;}
+ residentGuide.tick(dt);skyWeather.tick(dt);villagePlay.tick(dt);seasonalEvents.tick(dt);avatarLife.tick(dt);residentGifts.tick();villageRadio.tick();villageCompanions.tick(dt);radialMenu.tick(dt);villageMinigames.tick(dt);villageSnowball.tick(dt);villageTogether.tick(dt);villageHotbar.tick();villageTidy.tick(dt);villageRun.tick();villageExpedition.tick(dt);villageFolk.tick(dt);exhibit.tick(elapsed);updateCamera(dt);if(frameCount++%5===0){label('label-ocean',0,7.8,-10);label('label-reef',-10,2.8,-2);label('label-jelly',10,6.6,-2);if(entered)updateUI();}renderer.render(scene,camera);
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();$('error').hidden=false;$('error-text').textContent='수족관이 잠깐 쉬고 있어요. 페이지를 다시 열어주세요.';});
 // Only virtual visitor state leaves this browser. The aq_ room prefix separates aquarium coordinates within the same party.
@@ -4556,6 +4556,7 @@ function createVillageJournal(){
   ['did-window','도서관 창가에서 하늘을 봤어요','도서관 창가 자리에서 쉬기'],
   ['did-cat','귤이와 놀았어요','도서관 고양이 귤이와 놀기'],
   ['first-request','주민의 부탁을 처음 들어줬어요','게시판의 오늘 부탁 하나 들어주기'],
+  ['first-run','눈길을 신나게 달려 봤어요','Shift를 누르거나 달리기 버튼으로 달리기'],
   ['first-folk','마을 이웃과 처음 이야기를 나눴어요','돌아다니는 이웃에게 말 걸기'],
   ['first-beacon','마을 끝의 등불 표지를 밝혔어요','겨울 마을의 새 지역에서 등불 표지 만지기'],
   ['first-letter','친구에게 편지를 보냈어요','우편함에서 편지 쓰기'],
@@ -5210,6 +5211,29 @@ function createVillageTidy(){
    if(noteLeft>0){noteLeft-=dt;if(noteLeft<=0)for(const id of['keyboard','saved-note']){const n=document.getElementById(id);if(n&&n.classList)n.classList.add('tidy-faded');}}}};
 }
 const villageTidy=createVillageTidy();
+
+// Running: hold Shift on a keyboard, or tap the running shoe at the end of the hotbar on a phone, to move about 1.8×
+// faster while walking. Only plain walking speeds up (not rolling a snowball, sledding or sitting), and the legs swing
+// faster to match. There is no stamina to watch; it is just quicker across the wider village.
+function createVillageRun(){
+ const FACTOR=1.8,STRIDE=1.7;let held=false,toggled=false,phase=0;
+ const button=document.createElement('button');button.className='run-toggle';button.setAttribute('aria-pressed','false');button.setAttribute('aria-label','달리기');button.title='달리기 (Shift)';button.hidden=true;
+ button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="14.5" cy="4.5" r="2"/><path d="M8 21l3-6 3 2v5M6 12l3-4h5l3 4 3 1M11 8l-1 5 4 2"/></svg><b>달리기</b>';
+ const style=document.createElement('style');style.textContent='.run-toggle{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 186px);z-index:4;width:50px;height:46px;border:0;border-radius:13px;background:rgba(255,247,232,.92);color:#5f5050;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:700 9.5px/1 "Winter Jua",sans-serif;cursor:pointer}.run-toggle[hidden]{display:none}.run-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.run-toggle[aria-pressed="true"]{background:#d98c7a;color:#fff8e8}.village-hotbar .run-toggle{position:static;margin-left:3px;box-shadow:none}@media(max-width:420px){.village-hotbar{gap:4px;padding:3px}.village-hotbar button,.village-hotbar .play-toggle,.village-hotbar .run-toggle{width:42px;margin-left:0}}';(document.head||document.body).append(style);
+ // It sits at the end of the hotbar when there is one, beside the emote button.
+ const bar=typeof villageHotbar==='object'&&villageHotbar?villageHotbar.bar:null;(bar||document.body).append(button);
+ function set(v){toggled=Boolean(v);button.setAttribute('aria-pressed',String(toggled));if(toggled&&typeof villageJournal==='object'&&villageJournal&&villageJournal.note)villageJournal.note('first-run');return toggled;}
+ button.addEventListener('click',()=>set(!toggled));
+ addEventListener('keydown',e=>{if(e.key==='Shift')held=true;});addEventListener('keyup',e=>{if(e.key==='Shift')held=false;});addEventListener('blur',()=>{held=false;});
+ const on=()=>Boolean(entered)&&(held||toggled);
+ return{FACTOR,button,on,set,get toggled(){return toggled;},
+  // Speed factor for the current activity: only idle walking runs.
+  factor(state){return on()&&(state==='idle'||state==='walk')?FACTOR:1;},
+  // A walk-cycle clock that ticks faster while running, so the stride matches the speed without a jump when switching.
+  phase(dt,moving){phase+=dt*(moving&&on()?STRIDE:1);return phase;},
+  tick(){button.hidden=!entered;}};
+}
+const villageRun=createVillageRun();
 
 // Short expeditions: send the companion walking with you (or the resident's paper crane when there is none) to one of
 // three places for 1, 3 or 6 hours. Time passes while the page is closed; nothing can go wrong. Coming home brings a

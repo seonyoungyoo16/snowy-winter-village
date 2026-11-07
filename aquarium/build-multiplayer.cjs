@@ -33,6 +33,7 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),esbuild=require('es
   source=source.replace('/* TOGETHER_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-together.js'),'utf8'));
   source=source.replace('/* HOTBAR_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-hotbar.js'),'utf8'));
   source=source.replace('/* TIDY_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-tidy.js'),'utf8'));
+  source=source.replace('/* RUN_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-run.js'),'utf8'));
   source=source.replace('/* EXPEDITION_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-expedition.js'),'utf8'));
   source=source.replace('/* FOLK_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-folk.js'),'utf8'));
   source=source.replace('/* EXHIBIT_CODE */',()=>fs.readFileSync(path.join(__dirname,'exhibit.js'),'utf8'));

@@ -206,6 +206,7 @@ setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 /* TOGETHER_CODE */
 /* HOTBAR_CODE */
 /* TIDY_CODE */
+/* RUN_CODE */
 /* EXPEDITION_CODE */
 /* EXHIBIT_CODE */
 /* FOLK_CODE */
