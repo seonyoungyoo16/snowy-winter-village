@@ -3678,20 +3678,41 @@ for(const x of[-19.5,0,19.5]){box(details,WOOD,x,3.2,-17.65,.2,6.4,.25);box(deta
 box(details,0xaaa18b,0,6.6,-17.8,41.7,.18,.7);
 // Moonlit window and warm paper lanterns.
 box(details,WOOD,10.1,3.8,-17.6,11.6,5.1,.18);
-// One small procedural sky texture stays behind every window rail and inside the glass.
-function makeNightSky(){
+// One small procedural sky texture stays behind every window rail and inside the glass; it is redrawn when Seoul time or weather changes.
+const WINDOW_LOOKS={
+ night:{stops:['#081426','#243c59','#647b89'],stars:1,moon:true,cloud:[139,158,174],hills:['#344c5e','#152c3c']},
+ dawn:{stops:['#4d5d86','#c99aa6','#f2c7a1'],stars:.25,sun:{x:250,y:330,r:30,color:'255,214,170'},cloud:[214,170,170],hills:['#6b6a80','#4b4c63']},
+ day:{stops:['#78acd6','#b3d3e8','#e2edf0'],stars:0,sun:{x:600,y:92,r:26,color:'255,250,226'},cloud:[255,255,255],hills:['#8aa6a8','#6d8c8e']},
+ dusk:{stops:['#3e4a78','#d68f7f','#f4bd86'],stars:.15,sun:{x:780,y:330,r:32,color:'255,190,140'},cloud:[222,150,140],hills:['#5e5368','#3e3a50']}
+};
+function makeWindowSky(phase='night',weather='clear',rainbow=false){
+ const look=WINDOW_LOOKS[phase]||WINDOW_LOOKS.night,overcast=weather!=='clear'&&weather!=='fog';
  const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=428;const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
- const gradient=ctx.createLinearGradient(0,0,0,h);gradient.addColorStop(0,'#081426');gradient.addColorStop(.62,'#243c59');gradient.addColorStop(1,'#647b89');ctx.fillStyle=gradient;ctx.fillRect(0,0,w,h);
+ const gradient=ctx.createLinearGradient(0,0,0,h);gradient.addColorStop(0,look.stops[0]);gradient.addColorStop(.62,look.stops[1]);gradient.addColorStop(1,look.stops[2]);ctx.fillStyle=gradient;ctx.fillRect(0,0,w,h);
+ if(overcast){ctx.fillStyle=`rgba(112,120,134,${weather==='cloudy'?.32:.5})`;ctx.fillRect(0,0,w,h);}
  const noise=(x,y)=>{const n=Math.sin(x*127.1+y*311.7)*43758.5453;return n-Math.floor(n);};
  const smooth=(x,y)=>{const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);return lerp(lerp(noise(ix,iy),noise(ix+1,iy),u),lerp(noise(ix,iy+1),noise(ix+1,iy+1),u),v);};
- for(let i=0;i<175;i++){const x=noise(i,3)*w,y=noise(i,7)*h*.86,r=.3+Math.pow(noise(i,11),5)*1.15;ctx.fillStyle=`rgba(${210+Math.floor(noise(i,19)*45)},${220+Math.floor(noise(i,23)*30)},245,${.25+noise(i,13)*.65})`;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();}
- const mx=600,my=104,r=24,halo=ctx.createRadialGradient(mx,my,r*.7,mx,my,r*3.4);halo.addColorStop(0,'#dbe8f62d');halo.addColorStop(1,'#dbe8f600');ctx.fillStyle=halo;ctx.fillRect(mx-r*3.4,my-r*3.4,r*6.8,r*6.8);
- ctx.save();ctx.beginPath();ctx.arc(mx,my,r,0,TAU);ctx.clip();const moon=ctx.createRadialGradient(mx-r*.35,my-r*.3,r*.08,mx+r*.3,my+r*.1,r*1.5);moon.addColorStop(0,'#eceee1');moon.addColorStop(.62,'#b8c2c3');moon.addColorStop(1,'#57647a');ctx.fillStyle=moon;ctx.fillRect(mx-r,my-r,r*2,r*2);for(let i=0;i<24;i++){ctx.fillStyle=i%2?'#66748622':'#f4f5e01a';ctx.beginPath();ctx.arc(mx+(noise(i,31)-.5)*r*1.9,my+(noise(i,37)-.5)*r*1.9,1+noise(i,41)*5,0,TAU);ctx.fill();}ctx.restore();
- const clouds=document.createElement('canvas');clouds.width=256;clouds.height=107;const cc=clouds.getContext('2d'),pixels=cc.createImageData(256,107);for(let y=0;y<107;y++)for(let x=0;x<256;x++){let n=0,weight=.55;for(let octave=0;octave<4;octave++){n+=smooth(x/48*2**octave,y/28*2**octave)*weight;weight*=.5;}const alpha=clamp((n-.47)*2.5,0,1)*Math.sin(y/107*Math.PI)*68,at=(y*256+x)*4;pixels.data[at]=139;pixels.data[at+1]=158;pixels.data[at+2]=174;pixels.data[at+3]=alpha;}cc.putImageData(pixels,0,0);ctx.drawImage(clouds,0,0,w,h);
- for(let layer=0;layer<2;layer++){ctx.fillStyle=layer?'#152c3c':'#344c5e';ctx.beginPath();ctx.moveTo(0,h);for(let x=0;x<=w;x+=16)ctx.lineTo(x,h-12-layer*8-smooth(x/170,layer+10)*28);ctx.lineTo(w,h);ctx.closePath();ctx.fill();}
+ const stars=overcast?0:look.stars;if(stars)for(let i=0;i<175;i++){const x=noise(i,3)*w,y=noise(i,7)*h*.86,r=.3+Math.pow(noise(i,11),5)*1.15;ctx.fillStyle=`rgba(${210+Math.floor(noise(i,19)*45)},${220+Math.floor(noise(i,23)*30)},245,${(.25+noise(i,13)*.65)*stars})`;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();}
+ if(look.moon&&!overcast){const mx=600,my=104,r=24,halo=ctx.createRadialGradient(mx,my,r*.7,mx,my,r*3.4);halo.addColorStop(0,'#dbe8f62d');halo.addColorStop(1,'#dbe8f600');ctx.fillStyle=halo;ctx.fillRect(mx-r*3.4,my-r*3.4,r*6.8,r*6.8);
+  ctx.save();ctx.beginPath();ctx.arc(mx,my,r,0,TAU);ctx.clip();const moon=ctx.createRadialGradient(mx-r*.35,my-r*.3,r*.08,mx+r*.3,my+r*.1,r*1.5);moon.addColorStop(0,'#eceee1');moon.addColorStop(.62,'#b8c2c3');moon.addColorStop(1,'#57647a');ctx.fillStyle=moon;ctx.fillRect(mx-r,my-r,r*2,r*2);for(let i=0;i<24;i++){ctx.fillStyle=i%2?'#66748622':'#f4f5e01a';ctx.beginPath();ctx.arc(mx+(noise(i,31)-.5)*r*1.9,my+(noise(i,37)-.5)*r*1.9,1+noise(i,41)*5,0,TAU);ctx.fill();}ctx.restore();}
+ if(look.sun&&!overcast){const s=look.sun,glow=ctx.createRadialGradient(s.x,s.y,s.r*.6,s.x,s.y,s.r*4);glow.addColorStop(0,`rgba(${s.color},.85)`);glow.addColorStop(.3,`rgba(${s.color},.3)`);glow.addColorStop(1,`rgba(${s.color},0)`);ctx.fillStyle=glow;ctx.fillRect(s.x-s.r*4,s.y-s.r*4,s.r*8,s.r*8);ctx.fillStyle=`rgba(${s.color},1)`;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,TAU);ctx.fill();}
+ if(rainbow){ctx.save();ctx.globalAlpha=.32;['#e98d8d','#f0b77e','#f1df8a','#9fd39a','#8fb8e0','#a99bd6'].forEach((c,i)=>{ctx.strokeStyle=c;ctx.lineWidth=9;ctx.beginPath();ctx.arc(w*.42,h*1.25,h*.95-i*9,Math.PI*1.12,Math.PI*1.88);ctx.stroke();});ctx.restore();}
+ const [cr,cg,cb]=overcast?[150,156,166]:look.cloud,cloudAmount=overcast?2.4:1;
+ const clouds=document.createElement('canvas');clouds.width=256;clouds.height=107;const cc=clouds.getContext('2d'),pixels=cc.createImageData(256,107);for(let y=0;y<107;y++)for(let x=0;x<256;x++){let n=0,weight=.55;for(let octave=0;octave<4;octave++){n+=smooth(x/48*2**octave,y/28*2**octave)*weight;weight*=.5;}const alpha=Math.min(255,clamp((n-(overcast?.36:.47))*2.5,0,1)*Math.sin(y/107*Math.PI)*68*cloudAmount),at=(y*256+x)*4;pixels.data[at]=cr;pixels.data[at+1]=cg;pixels.data[at+2]=cb;pixels.data[at+3]=alpha;}cc.putImageData(pixels,0,0);ctx.drawImage(clouds,0,0,w,h);
+ for(let layer=0;layer<2;layer++){ctx.fillStyle=look.hills[layer];ctx.beginPath();ctx.moveTo(0,h);for(let x=0;x<=w;x+=16)ctx.lineTo(x,h-12-layer*8-smooth(x/170,layer+10)*28);ctx.lineTo(w,h);ctx.closePath();ctx.fill();}
+ if(weather==='fog'){ctx.fillStyle='rgba(214,218,222,.42)';ctx.fillRect(0,0,w,h);}
  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;return texture;
 }
+function makeNightSky(){return makeWindowSky('night');}
 const windowSky=mesh(new THREE.PlaneGeometry(10.9,4.55),new THREE.MeshBasicMaterial({map:makeNightSky(),toneMapped:false,fog:false}),world,10.1,3.8,-17.48);windowSky.name='window-night-sky';
+// Rain stays outside the glass: one line batch between the sky picture and the window rails.
+const RAIN_DROPS=mobile?44:80,rainArray=new Float32Array(RAIN_DROPS*6),rainGeo=new THREE.BufferGeometry();rainGeo.setAttribute('position',new THREE.BufferAttribute(rainArray,3));
+for(let i=0;i<RAIN_DROPS;i++){const x=4.75+rand()*10.7,y=1.6+rand()*4.4;rainArray.set([x,y,-17.45,x-.05,y-.32,-17.45],i*6);}
+const windowRain=new THREE.LineSegments(rainGeo,new THREE.LineBasicMaterial({color:0xd8e4ee,transparent:true,opacity:.55,fog:false}));windowRain.name='window-rain';windowRain.visible=false;windowRain.frustumCulled=false;world.add(windowRain);
+let windowSkyKey='night|clear|false';
+const skyWeatherConfig={world:'library',indoor:true,scene,renderer,sun:light,night:{bg:0x695b66,fog:0x796a77,hemiSky:0xffe5bf,hemiGround:0x807986,hemi:1.95,sun:0xffe2b0,sunI:1.75,density:.012},day:{bg:0x8f7f87,fog:0x9d8d94,hemiSky:0xfff0d8,hemiGround:0x918995,hemi:2.25,sun:0xfff0d0,sunI:2.05,density:.011},dusk:0xd6a08f,glows:[{material:mat(0xf1d49c,true),dim:.82}],
+ onChange(s){const key=s.phase+'|'+s.kind+'|'+s.rainbow;if(key!==windowSkyKey){windowSkyKey=key;const old=windowSky.material.map;windowSky.material.map=makeWindowSky(s.phase,s.kind,s.rainbow);windowSky.material.needsUpdate=true;old.dispose();}windowRain.visible=s.kind==='precip'||s.kind==='heavy';},
+ tick(dt,s){if(!windowRain.visible||reduced)return;const fall=(s.kind==='heavy'?9:6)*dt,slant=s.wind.x*.03;for(let i=0;i<RAIN_DROPS;i++){let y=rainArray[i*6+1]-fall;if(y<1.6)y+=4.4;const x=rainArray[i*6];rainArray[i*6+1]=y;rainArray[i*6+3]=x-.05-slant;rainArray[i*6+4]=y-.32;}rainGeo.attributes.position.needsUpdate=true;}};
 for(const x of[6.4,10.1,13.8])box(details,TRIM,x,3.8,-17.37,.13,4.7,.12);box(details,TRIM,10.1,3.8,-17.36,11,.13,.13);box(details,WOOD,10.1,1.35,-17.2,12.1,.22,.65);
 function lantern(x,z,h=6){mesh(geom.cyl,WOOD,details,x,h+.65,z,.025,1.3,.025);sphere(details,mat(0xf1d49c,true),x,h,z,.55,.43,.55);for(let i=0;i<5;i++)ring(details,0xc5aa7f,x,h-.27+i*.135,z,.52*Math.sqrt(1-((i-2)/3)**2),.012);mesh(geom.cyl,WOOD,details,x,h+.43,z,.13,.08,.13);}
 lantern(-7,1,5.9);lantern(5,-4,6.3);lantern(13,9,5.6);
@@ -4051,7 +4072,7 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
  updateResidentCat(dt);networkTick(dt,moving);animatePose(dt,moving,character,mode,elapsed,mode==='cat'||mode==='catWake'?catActionTime:mode==='reading'?readingTurnTime:writingTime);playerShadow.position.set(player.position.x,.035,player.position.z);
  for(let i=0;i<dustCount;i++){const s=dustSeed[i];dustArray[i*3]=s.x+Math.sin(elapsed*.12+i)*.3;dustArray[i*3+1]=s.y+Math.sin(elapsed*.2+i*2)*.12;dustArray[i*3+2]=s.z+Math.cos(elapsed*.1+i)*.2;}dustGeo.attributes.position.needsUpdate=true;
  if(ringTimer>0){ringTimer-=dt;targetRing.scale.setScalar(1+Math.sin(elapsed*4)*.08);targetRing.material.opacity=clamp(ringTimer,0,.7);if(ringTimer<=0)targetRing.visible=false;}
- residentGuide.tick(dt);updateCamera(dt);if(frameCount++%5===0){label('label-books',-12,4.5,-7.3);label('label-window',10,3.2,-11);label('label-desk',13.2,3.4,1.2);updateCatBubble();if(entered)updateUI();}renderer.render(scene,camera);
+ residentGuide.tick(dt);skyWeather.tick(dt);updateCamera(dt);if(frameCount++%5===0){label('label-books',-12,4.5,-7.3);label('label-window',10,3.2,-11);label('label-desk',13.2,3.4,1.2);updateCatBubble();if(entered)updateUI();}renderer.render(scene,camera);
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();$('error').hidden=false;$('error-text').textContent='도서관이 잠깐 쉬고 있어요. 페이지를 다시 열어주세요.';});
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('memory-modal').hidden)closeMemories();});
@@ -4364,6 +4385,59 @@ function createResidentGuide(){
  return{actor:{root,body,head,arms,legs},role,spawn,station,tools:{mug,book,leaf,scoop,pellets},tick,open,close,pick:hit,isOpen:()=>!dialog.hidden};
 }
 const residentGuide=createResidentGuide();
+
+// Sky and weather follow Seoul time, so every friend sees the same sky without any Firebase writes.
+const SKY_KST_OFFSET=9*3600e3,SKY_BLOCK=3*3600e3,SKY_KINDS=['clear','cloudy','precip','heavy','fog'];
+function skyHash(n){n=(n^61)^(n>>>16);n=Math.imul(n,9);n^=n>>>4;n=Math.imul(n,0x27d4eb2d);n^=n>>>15;return(n>>>0)/4294967296;}
+function skyClock(now=Date.now()){const t=new Date(now+SKY_KST_OFFSET);return{hour:t.getUTCHours()+t.getUTCMinutes()/60+t.getUTCSeconds()/3600,month:t.getUTCMonth()+1,date:t.getUTCDate(),block:Math.floor((now+SKY_KST_OFFSET)/SKY_BLOCK)};}
+// Daylight rises 5:00→7:30 and falls 16:30→19:00; warmth peaks at sunrise and sunset.
+function skyPhaseAt(hour){const ramp=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};const daylight=ramp(5,7.5,hour)*(1-ramp(16.5,19,hour)),warmth=Math.max(0,1-Math.abs(hour-6.3)/1.4)+Math.max(0,1-Math.abs(hour-17.8)/1.4),phase=hour>=4.5&&hour<7.5?'dawn':hour>=7.5&&hour<16.5?'day':hour>=16.5&&hour<19.5?'dusk':'night';return{hour,phase,daylight,warmth:Math.min(1,warmth)};}
+function skyKindForBlock(block){const r=skyHash(block*7+3);return r<.32?'clear':r<.52?'cloudy':r<.78?'precip':r<.88?'heavy':'fog';}
+function skyWeatherAt(now=Date.now()){
+ const clock=skyClock(now),sky=skyPhaseAt(clock.hour),kind=skyKindForBlock(clock.block),before=skyKindForBlock(clock.block-1),angle=skyHash(clock.block*7+5)*Math.PI*2,strength=Math.min(1,.15+skyHash(clock.block*7+6)*.65+(kind==='heavy'?.3:0));
+ return{...sky,kind,rainbow:kind==='clear'&&(before==='precip'||before==='heavy')&&sky.daylight>.4,wind:{x:Math.cos(angle)*strength,z:Math.sin(angle)*strength,strength},block:clock.block};
+}
+function skyWeatherLabel(state,world){const phase={dawn:'새벽',day:'낮',dusk:'노을',night:'밤'}[state.phase],snow=world==='winter',weather=state.rainbow?'무지개':{clear:'맑음',cloudy:'흐림',precip:snow?'눈':'비',heavy:snow?'함박눈':'큰비',fog:'안개'}[state.kind];return(world==='aquarium'?'바깥 · ':'')+phase+' · '+weather;}
+// Each world passes its own day/night look; this blends lights, fog and glowing windows toward the shared sky.
+function createSkyWeather(config){
+ const params=typeof location==='object'&&location.search?new URLSearchParams(location.search):null,forcedPhase=params&&params.get('sky'),forcedKind=params&&params.get('weather');
+ const forcedHours={dawn:6.3,day:12,dusk:17.8,night:22};
+ const color=v=>new THREE.Color(v),night=config.night,day=config.day,dusk=color(config.dusk||0xd9a19a);
+ const hemi=config.hemi||config.scene.children.find(o=>o.isHemisphereLight),glows=(config.glows||[]).map(g=>({material:g.material,base:g.material.color.clone(),dim:g.dim}));
+ const target={bg:new THREE.Color(),fog:new THREE.Color(),sky:new THREE.Color(),ground:new THREE.Color(),sun:new THREE.Color()},live={bg:color(night.bg),fog:color(night.fog),sky:color(night.hemiSky),ground:color(night.hemiGround),sun:color(night.sun),hemi:night.hemi,sunI:night.sunI,density:night.density,glow:0};
+ let state=null,checkIn=0,first=true,badge=null;
+ function compute(){
+  let next=skyWeatherAt(config.now?config.now():Date.now());
+  if(forcedPhase in forcedHours)next={...next,...skyPhaseAt(forcedHours[forcedPhase])};
+  if(SKY_KINDS.includes(forcedKind))next={...next,kind:forcedKind,rainbow:false};else if(forcedKind==='rainbow')next={...next,kind:'clear',rainbow:true};
+  return next;
+ }
+ function aim(s){
+  // Indoor worlds only feel the weather through the light; their rooms never fill with fog.
+  const d=s.daylight,w=s.warmth*.38,cloud=(s.kind==='clear'?0:s.kind==='cloudy'?.18:s.kind==='fog'?.28:.24)*(config.indoor?.5:1);
+  for(const[key,from,to]of[['bg','bg','bg'],['fog','fog','fog'],['sky','hemiSky','hemiSky'],['ground','hemiGround','hemiGround'],['sun','sun','sun']]){target[key].set(night[from]).lerp(color(day[to]),d).lerp(dusk,key==='ground'?w*.4:w);if(key!=='sun')target[key].lerp(color(0x8d94a3),cloud*d);}
+  target.hemi=(night.hemi+(day.hemi-night.hemi)*d)*(1-cloud*.35);target.sunI=(night.sunI+(day.sunI-night.sunI)*d)*(1-cloud*.6);
+  target.density=(night.density+(day.density-night.density)*d)*(config.indoor?1:{fog:1.9,heavy:1.35,precip:1.15}[s.kind]||1);target.glow=d;
+ }
+ function apply(t){
+  for(const key of['bg','fog','sky','ground','sun'])live[key].lerp(target[key],t);for(const key of['hemi','sunI','density','glow'])live[key]+=(target[key]-live[key])*t;
+  config.scene.background.copy(live.bg);if(config.renderer&&config.renderer.setClearColor)config.renderer.setClearColor(live.bg);config.scene.fog.color.copy(live.fog);config.scene.fog.density=live.density;
+  if(hemi){hemi.color.copy(live.sky);hemi.groundColor.copy(live.ground);hemi.intensity=live.hemi;}if(config.sun){config.sun.color.copy(live.sun);config.sun.intensity=live.sunI;}
+  for(const g of glows)g.material.color.copy(g.base).multiplyScalar(1+(g.dim-1)*live.glow);
+ }
+ function showBadge(){
+  // Centered above the scene on wide screens; on phones it tucks under the round utility buttons, clear of the title.
+  try{if(!badge&&typeof document==='object'&&document.body){const style=document.createElement('style');style.textContent='.sky-weather-badge{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);z-index:4;padding:5px 12px;border-radius:999px;background:rgba(255,250,240,.78);color:#4b4a5c;font:700 12px/1.4 "Winter Jua","NanumSquareRound",sans-serif;letter-spacing:.02em;pointer-events:none;box-shadow:0 2px 10px rgba(40,40,70,.14);white-space:nowrap}@media (max-width:650px){.sky-weather-badge{left:auto;right:16px;transform:none;top:calc(max(22px,env(safe-area-inset-top)) + 52px);font-size:11px;padding:4px 10px}}';document.head.append(style);badge=document.createElement('div');badge.id='sky-weather-badge';badge.className='sky-weather-badge';badge.setAttribute('aria-label','지금 마을의 시간과 날씨');document.body.append(badge);}if(badge)badge.textContent=skyWeatherLabel(state,config.world);if(document.documentElement){document.documentElement.dataset.skyPhase=state.phase;document.documentElement.dataset.skyWeather=state.rainbow?'rainbow':state.kind;}}catch{}
+ }
+ function refresh(){const next=compute(),changed=!state||next.kind!==state.kind||next.phase!==state.phase||next.rainbow!==state.rainbow;state=next;aim(state);if(changed){showBadge();if(config.onChange)config.onChange(state);}}
+ refresh();apply(1);
+ return{
+  tick(dt){checkIn-=dt;if(checkIn<=0){checkIn=2;refresh();}apply(first?1:Math.min(1,dt*.6));first=false;if(config.tick)config.tick(dt,state);},
+  get state(){return state;},
+  label(){return skyWeatherLabel(state,config.world);}
+ };
+}
+const skyWeather=typeof skyWeatherConfig==='object'?createSkyWeather(skyWeatherConfig):null;
 
 // The visitor reports their own confirmed join; the owner's browser is never the notification server.
 const ARRIVAL_SERVICE={"endpoint":"","partyId":"0946f302b9cf8449c6970809"},arrivalRequests=new Map();

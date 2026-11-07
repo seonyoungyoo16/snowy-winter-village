@@ -185,5 +185,6 @@ addEventListener('pagehide',()=>{if(selfRef)window.WinterFirebase.remove(selfRef
 setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 
 /* RESIDENT_CODE */
+/* SKY_WEATHER_CODE */
 /* ARRIVAL_CLIENT_CODE */
 setupWorldTravel();

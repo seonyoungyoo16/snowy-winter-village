@@ -9,6 +9,8 @@ const scene=new THREE.Scene();scene.background=new THREE.Color(0x092f40);scene.f
 const camera=new THREE.PerspectiveCamera(49,innerWidth/innerHeight,.1,120),world=new THREE.Group(),details=new THREE.Group();scene.add(world,details);
 scene.add(new THREE.HemisphereLight(0xc9f9ef,0x3c5b76,2.15));const light=new THREE.DirectionalLight(0xffe7c7,1.7);light.position.set(-10,22,12);scene.add(light);const blueLight=new THREE.DirectionalLight(0x8fd6e6,.8);blueLight.position.set(14,9,-15);scene.add(blueLight);
 const mats=new Map();function mat(c,em=false,opacity=1){const key=c+'_'+em+'_'+opacity;if(!mats.has(key)){const m=em?new THREE.MeshBasicMaterial({color:c}):new THREE.MeshLambertMaterial({color:c});if(opacity<1){m.transparent=true;m.opacity=opacity;m.depthWrite=false;}mats.set(key,m);}return mats.get(key);}
+// The original sea light is the daytime look; at night the hall settles into a deeper, moonlit blue.
+const skyWeatherConfig={world:'aquarium',indoor:true,scene,renderer,sun:light,day:{bg:0x092f40,fog:0x0b3d4c,hemiSky:0xc9f9ef,hemiGround:0x3c5b76,hemi:2.15,sun:0xffe7c7,sunI:1.7,density:.012},night:{bg:0x05202f,fog:0x072a3a,hemiSky:0xa3cde2,hemiGround:0x2c4563,hemi:1.75,sun:0xbccbea,sunI:1,density:.013},dusk:0xc89b8e};
 const geom={ball:new THREE.SphereGeometry(1,14,10),cone:new THREE.ConeGeometry(1,1,10),box:new THREE.BoxGeometry(1,1,1),cyl:new THREE.CylinderGeometry(1,1,1,36),disc:new THREE.CircleGeometry(1,48)};
 function mesh(g,c,parent,x=0,y=0,z=0,sx=1,sy=sx,sz=sx,em=false){const m=new THREE.Mesh(g,typeof c==='object'?c:mat(c,em));m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);return m;}
 const sphere=(p,c,x,y,z,sx,sy=sx,sz=sx)=>mesh(geom.ball,c,p,x,y,z,sx,sy,sz),box=(p,c,x,y,z,sx,sy,sz)=>mesh(geom.box,c,p,x,y,z,sx,sy,sz);
@@ -142,7 +144,7 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
   }
  }
  networkTick(dt,moving);animatePose(dt,moving);animateWater(dt);playerShadow.position.set(player.position.x,.035,player.position.z);if(ringTimer>0){ringTimer-=dt;targetRing.scale.setScalar(1+Math.sin(elapsed*5)*.08);targetRing.material.opacity=clamp(ringTimer,0,.75);if(ringTimer<=0)targetRing.visible=false;}
- residentGuide.tick(dt);updateCamera(dt);if(frameCount++%5===0){label('label-ocean',0,7.8,-10);label('label-reef',-10,2.8,-2);label('label-jelly',10,6.6,-2);if(entered)updateUI();}renderer.render(scene,camera);
+ residentGuide.tick(dt);skyWeather.tick(dt);updateCamera(dt);if(frameCount++%5===0){label('label-ocean',0,7.8,-10);label('label-reef',-10,2.8,-2);label('label-jelly',10,6.6,-2);if(entered)updateUI();}renderer.render(scene,camera);
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();$('error').hidden=false;$('error-text').textContent='수족관이 잠깐 쉬고 있어요. 페이지를 다시 열어주세요.';});
 /* MULTIPLAYER_CODE */
