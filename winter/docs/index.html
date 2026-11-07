@@ -3778,7 +3778,7 @@ function updateUI(){const nearFire=dist(firePos)<3.5,nearSled=dist(sledStart)<2.
 $('entry-form').addEventListener('submit',e=>{e.preventDefault();if(entered)return;nickname=$('nickname').value.trim().replace(/[\u0000-\u001f\u007f]/g,'').slice(0,12)||'겨울 손님';entered=true;$('welcome').hidden=true;for(const id of['controls','status','keyboard','saved-note'])$(id).hidden=false;$('nickname-label').textContent=nickname;save();updateUI();toast('어서 와요, '+nickname+' 님');renderer.domElement.focus({preventScroll:true});startNetwork();});
 document.querySelectorAll('[data-character]').forEach(b=>b.addEventListener('click',()=>chooseCharacter(Number(b.dataset.character))));
 $('main-action').addEventListener('click',action);$('cancel-action').addEventListener('click',()=>{if(ball)scene.remove(ball);ball=null;mode='idle';rollDistance=0;path=[];updateUI();});document.querySelectorAll('[data-place]').forEach(b=>b.addEventListener('click',()=>{if(mode==='rolling'&&b.dataset.place!=='snow'){toast('눈덩이를 마저 굴리고 가볼까요?');return;}const p=b.dataset.place;if(p==='fire'){const spot=fireApproach();navigate(spot[0],spot[1]);}else if(p==='sled')navigate(13,-12);else if(p==='ice')navigate(8.6,9.2);else navigate(3,9); }));
-function closeHelp(){$('help-modal').hidden=true;$('help').focus();}function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||residentGuide.isOpen()||creatureBook.isOpen()||villageNotes.isOpen()||villageLooks.isOpen()||villageMarket.isOpen()||villageJournal.isOpen()||villageGoals.isOpen()||homestead.isOpen();}$('help').addEventListener('click',()=>{$('help-modal').hidden=false;keys.clear();$('close-help').focus();});$('close-help').addEventListener('click',closeHelp);$('return-village').addEventListener('click',closeHelp);$('help-modal').addEventListener('click',e=>{if(e.target===$('help-modal'))closeHelp();});
+function closeHelp(){$('help-modal').hidden=true;$('help').focus();}function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||residentGuide.isOpen()||creatureBook.isOpen()||villageNotes.isOpen()||villageLooks.isOpen()||residentGifts.isOpen()||villageMarket.isOpen()||villageJournal.isOpen()||villageGoals.isOpen()||homestead.isOpen();}$('help').addEventListener('click',()=>{$('help-modal').hidden=false;keys.clear();$('close-help').focus();});$('close-help').addEventListener('click',closeHelp);$('return-village').addEventListener('click',closeHelp);$('help-modal').addEventListener('click',e=>{if(e.target===$('help-modal'))closeHelp();});
 // Gentle locally synthesized ambience, only after an explicit sound tap.
 let audio=null,audioOn=false;function soundToggle(){try{if(!audio){const ctx=new(window.AudioContext||window.webkitAudioContext)(),master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);const noise=ctx.createBuffer(1,ctx.sampleRate*3,ctx.sampleRate),data=noise.getChannelData(0);let brown=0;for(let i=0;i<data.length;i++){brown=(brown+(Math.random()*2-1)*.02)/1.02;data[i]=brown*2;}const src=ctx.createBufferSource();src.buffer=noise;src.loop=true;const filter=ctx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=600;src.connect(filter);filter.connect(master);src.start();audio={ctx,master,filter};}audioOn=!audioOn;audio.ctx.resume();audio.master.gain.setTargetAtTime(audioOn?.12:0,audio.ctx.currentTime,.4);$('sound').setAttribute('aria-pressed',String(audioOn));$('sound').setAttribute('aria-label',audioOn?'소리 끄기':'소리 켜기');$('sound-wave').setAttribute('d',audioOn?'M16 8c3 2 3 6 0 8m3-11c5 4 5 10 0 14':'m16 9 5 6m0-6-5 6');}catch{toast('이 브라우저에서는 소리를 켤 수 없어요');}}$('sound').addEventListener('click',soundToggle);
 const ray=new THREE.Raycaster(),pointer=new THREE.Vector2(),clickPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);let down=null;
@@ -3809,7 +3809,7 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
  const sky=skyWeather.state,snowShown=Math.round(snowCount*(SNOW_SHARE[sky.kind]||.65)),snowFall=(reduced?.4:1)*(sky.kind==='heavy'?1.3:1),windX=reduced?0:sky.wind.x*.9,windZ=reduced?0:sky.wind.z*.9;snowGeo.setDrawRange(0,snowShown);
  for(let i=0;i<snowShown;i++){snowArray[i*3]+=(Math.sin(elapsed*.25+i)*.16+windX)*dt;snowArray[i*3+2]+=windZ*dt;for(const k of[0,2]){if(snowArray[i*3+k]>31)snowArray[i*3+k]-=62;else if(snowArray[i*3+k]< -31)snowArray[i*3+k]+=62;}snowArray[i*3+1]-=snowSpeed[i]*dt*snowFall;if(snowArray[i*3+1]<groundHeight(snowArray[i*3],snowArray[i*3+2]))snowArray[i*3+1]=24;}snowGeo.attributes.position.needsUpdate=true;
  if(ringTimer>0){ringTimer-=dt;ring.scale.setScalar(1+Math.sin(elapsed*5)*.1);ring.material.opacity=clamp(ringTimer,0,.75);if(ringTimer<=0)ring.visible=false;}
- residentGuide.tick(dt);skyWeather.tick(dt);villagePlay.tick(dt);seasonalEvents.tick(dt);avatarLife.tick(dt);homestead.tick(elapsed);updateCamera(dt);if(frameCount++%4===0){label('label-fire',-5,2.7,-1.5);label('label-sled',13,6.3,-12);label('label-tree',-1,7.3,-10);if(entered)updateUI();}if(elapsed-lastSave>15){melt(Date.now());lastSave=elapsed;}
+ residentGuide.tick(dt);skyWeather.tick(dt);villagePlay.tick(dt);seasonalEvents.tick(dt);avatarLife.tick(dt);residentGifts.tick();homestead.tick(elapsed);updateCamera(dt);if(frameCount++%4===0){label('label-fire',-5,2.7,-1.5);label('label-sled',13,6.3,-12);label('label-tree',-1,7.3,-10);if(entered)updateUI();}if(elapsed-lastSave>15){melt(Date.now());lastSave=elapsed;}
  if(audio&&audioOn){const gain=mode==='warm'?.24:.085;audio.master.gain.setTargetAtTime(gain,audio.ctx.currentTime,.5);audio.filter.frequency.setTargetAtTime(mode==='warm'?1300:450,audio.ctx.currentTime,.5);}
  renderer.render(scene,camera);
 }
@@ -4694,6 +4694,37 @@ LOOK_STATE=createVillageLooks();
 const villageLooks=LOOK_STATE;
 // Rebuild this visitor once so a saved look shows from the first frame.
 if(typeof chooseCharacter==='function')chooseCharacter(selected);
+
+// Residents' birthdays and tastes, and one small gift a Seoul day: a warm cocoa or a picture card of a creature you have met.
+// Replies are words only — no affection points — and a birthday adds a party hat and a special line.
+function createResidentGifts(){
+ const PROFILES={
+  winter:{born:[12,21],likes:['trout','star-smelt','lenok','cocoa'],dislikes:['snow-loach'],love:'우와, 이거 제가 정말 좋아하는 거예요! 오늘 밤 오두막에 걸어 둘게요.',like:'고마워요. 마음이 따뜻해지네요.',meh:'음… 제 취향은 아니지만 마음은 고마워요.',birthday:'오늘이 제 생일인 걸 어떻게 알았어요? 동지라 밤이 제일 길어서, 오래오래 기억할게요.'},
+  aquarium:{born:[7,14],likes:['seahorse','moon-jelly','lantern-jelly','clownfish'],dislikes:['bullhead'],love:'와, 이 친구 그림이라니! 수조 옆에 붙여 둘게요.',like:'고마워요. 오늘 먹이 시간이 더 즐겁겠어요.',meh:'하하, 이건 물고기들이 놀랄지도 몰라요. 그래도 고마워요.',birthday:'생일 축하를 받다니! 오늘은 해파리들도 더 반짝이는 것 같아요.'},
+  library:{born:[4,23],likes:['moon-moth','sparrow','rain-snail','cocoa'],dislikes:['sardine'],love:'어머, 책갈피로 쓰고 싶을 만큼 예뻐요. 정말 고마워요.',like:'고마워요. 책 읽을 때 옆에 두고 볼게요.',meh:'조금 비린 냄새가 나는 것 같아요… 그래도 마음은 받았어요.',birthday:'오늘이 책의 날이자 제 생일이에요. 이렇게 기억해 주다니 정말 기뻐요.'}
+ },me=PROFILES[CURRENT_WORLD];
+ const COCOA={id:'cocoa',name:'따뜻한 코코아'},KEY=()=>'village-gifts:'+CURRENT_WORLD+':'+seoulDay();
+ const seoulDay=(ms=Date.now())=>Math.floor((ms+9*3600e3)/86400e3),seoulDate=(ms=Date.now())=>{const d=new Date(ms+9*3600e3);return[d.getUTCMonth()+1,d.getUTCDate()];};
+ function isBirthday(ms=Date.now()){const[m,d]=seoulDate(ms);return m===me.born[0]&&d===me.born[1];}
+ function read(){try{return JSON.parse(localStorage.getItem(KEY())||'null');}catch{return null;}}
+ function choices(){const met=typeof creatureBook==='object'&&creatureBook?creatureBook.entries():{},cards=(typeof creatureBook==='object'&&creatureBook?creatureBook.ENTRIES:[]).filter(e=>met[e.id]).map(e=>({id:e.id,name:e.name+' 그림 카드'}));return[COCOA,...cards];}
+ function reaction(id){if(isBirthday())return'birthday';if(me.likes.includes(id))return'love';if(me.dislikes.includes(id))return'meh';return'like';}
+ // Returns the reply kind, or null when today's gift was already given or the gift is not available.
+ function give(id){if(read())return null;const g=choices().find(c=>c.id===id);if(!g)return null;const kind=reaction(id);try{localStorage.setItem(KEY(),JSON.stringify({id,kind,t:Date.now()}));}catch{}
+  if(typeof villageJournal==='object'&&villageJournal&&villageJournal.note)villageJournal.note('first-gift');toast(residentGuide.role.name+': '+me[kind]);return kind;}
+ // Birthday party hat: one small cone on the resident's head, only on the day.
+ let hat=null;function dress(){const on=isBirthday();if(on&&!hat){hat=new THREE.Mesh(new THREE.ConeGeometry(.17,.36,10),new THREE.MeshLambertMaterial({color:0xf0a6a0}));hat.name='resident-birthday-hat';hat.position.set(.08,.52,0);hat.rotation.z=-.25;residentGuide.actor.head.add(hat);}if(hat)hat.visible=on;}
+ const sheet=document.createElement('section');sheet.className='creature-book resident-gifts';sheet.hidden=true;const card=document.createElement('div');card.className='creature-book-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');const closeButton=document.createElement('button');closeButton.className='creature-book-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','선물 창 닫기');const body=document.createElement('div');card.append(closeButton,body);sheet.append(card);document.body.append(sheet);
+ function close(){sheet.hidden=true;}closeButton.addEventListener('click',close);sheet.addEventListener('click',e=>{if(e.target===sheet)close();});addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)close();});
+ function render(){const done=read(),title=document.createElement('h2'),note=document.createElement('p'),list=document.createElement('ul');title.textContent=residentGuide.role.name+'에게 선물하기';note.className='creature-count';
+  const[m,d]=me.born;note.textContent=(isBirthday()?'오늘은 '+residentGuide.role.name+'의 생일이에요! ':'생일 '+m+'월 '+d+'일 · ')+(done?'오늘 선물은 이미 건넸어요.':'하루에 한 번 건넬 수 있어요.');
+  list.replaceChildren(...choices().map(g=>{const li=document.createElement('li'),b=document.createElement('button');b.className='resident-next';b.textContent=g.name+' 건네기';b.disabled=Boolean(done);b.addEventListener('click',()=>{if(give(g.id))render();});li.append(b);return li;}));body.replaceChildren(title,note,list);}
+ function open(){render();sheet.hidden=false;closeButton.focus();}
+ if(residentGuide.addAction)residentGuide.addAction('선물 주기',()=>{residentGuide.close();open();});
+ dress();
+ return{PROFILES,profile:me,isBirthday,choices,reaction,give,given:read,open,close,isOpen:()=>!sheet.hidden,tick(){dress();},get hat(){return hat;}};
+}
+const residentGifts=createResidentGifts();
 
 // A small homestead west of the fire: a shared winter garden, a snow-rabbit pen to look after, and a yard the friend group decorates together.
 // Garden beds and yard cells are group-owned slots in the village store (anyone may tend or rearrange them); rabbit care stays in this browser.
