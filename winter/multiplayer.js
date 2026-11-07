@@ -81,7 +81,9 @@ function updateNetworkStatus(message){
  $('new-room').hidden=!roomFull;
  updateWorldTravelUI();
 }
-function validState(data){return data&&data.v===1&&typeof data.u==='string'&&typeof data.n==='string'&&data.n.length>0&&data.n.length<=12&&Number.isInteger(data.k)&&data.k>=0&&data.k<=2&&['x','y','z','a','p','b','t','j','s'].every(k=>Number.isFinite(data[k]))&&Math.abs(data.x)<=26&&Math.abs(data.z)<=26&&data.y>=-1&&data.y<=10&&Math.abs(data.a)<=3.142&&Math.abs(data.p)<=1.6&&data.b>=0&&data.b<=.7&&Object.hasOwn(activityNames,data.m);}
+// Positions travel at half scale: the room rules accept ±26 m, and the village now reaches ±52 m (WORLD_LIMIT).
+const WIRE_SCALE=2,fromWire=d=>({...d,x:d.x*WIRE_SCALE,z:d.z*WIRE_SCALE});
+function validState(data){return data&&data.v===1&&typeof data.u==='string'&&typeof data.n==='string'&&data.n.length>0&&data.n.length<=12&&Number.isInteger(data.k)&&data.k>=0&&data.k<=2&&['x','y','z','a','p','b','t','j','s'].every(k=>Number.isFinite(data[k]))&&Math.abs(data.x)<=26*WIRE_SCALE&&Math.abs(data.z)<=26*WIRE_SCALE&&data.y>=-1&&data.y<=10&&Math.abs(data.a)<=3.142&&Math.abs(data.p)<=1.6&&data.b>=0&&data.b<=.7&&Object.hasOwn(activityNames,data.m);}
 function disposeActor(root){root.traverse(o=>{if(!o.isMesh)return;if(!Object.values(geom).includes(o.geometry))o.geometry.dispose();});scene.remove(root);}
 function removePeer(id){const peer=remotePlayers.get(id);if(!peer)return;villagePlay.drop(peer);iceFishing.drop(peer.actor);disposeActor(peer.actor.root);disposeActor(peer.sled);scene.remove(peer.shadow,peer.ball);peer.label.material.map.dispose();peer.label.material.dispose();remotePlayers.delete(id);}
 function clearPeers(){for(const id of Array.from(remotePlayers.keys()))removePeer(id);}
@@ -107,7 +109,7 @@ function reconcileRoom(){
 }
 function stateBody(){
  const walking=lastNetworkMovement&&!document.hidden;
- return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x),y:roundState(player.position.y),z:roundState(player.position.z),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='fish'?'warm':mode==='idle'&&walking?'walk':mode,b:mode==='fish'?roundState(iceFishing.wire()):mode==='rolling'?roundState(ballRadius):0,j:joinedAt};
+ return{v:1,u:networkAuth.currentUser.uid,n:nickname,k:selected,x:roundState(player.position.x/WIRE_SCALE),y:roundState(player.position.y),z:roundState(player.position.z/WIRE_SCALE),a:roundState(Math.atan2(Math.sin(player.rotation.y),Math.cos(player.rotation.y))),p:roundState(player.rotation.x),m:mode==='fish'?'warm':mode==='idle'&&walking?'walk':mode,b:mode==='fish'?roundState(iceFishing.wire()):mode==='rolling'?roundState(ballRadius):0,j:joinedAt};
 }
 function publishState(force=false){
  if(!networkJoined||!networkConnected||!selfRef||!networkAuth?.currentUser)return;
@@ -124,7 +126,7 @@ async function registerPresence(generation){
   const active=Object.entries(current.val()||{}).filter(([id,d])=>id!==sessionKey&&validState(d)&&Date.now()+serverOffset-d.t<STALE_MS);
   if(active.length>=MAX_VISITORS){roomFull=true;networkJoined=false;updateNetworkStatus('마을이 가득해요');toast('이 마을에는 네 명까지 함께할 수 있어요');return;}
   if(!joinedAt)joinedAt=Date.now()+serverOffset;
-  if(mode==='idle'&&!path.length&&Math.hypot(player.position.x,player.position.z-7)<2&&active.some(([,d])=>Math.hypot(d.x-player.position.x,d.z-player.position.z)<1)){
+  if(mode==='idle'&&!path.length&&Math.hypot(player.position.x,player.position.z-7)<2&&active.some(([,d])=>Math.hypot(d.x*WIRE_SCALE-player.position.x,d.z*WIRE_SCALE-player.position.z)<1)){
    const spawn=[[-1.5,7],[1.5,7],[0,5.2],[0,8.8]].find(([x,z])=>active.every(([,d])=>Math.hypot(d.x-x,d.z-z)>1));if(spawn)player.position.set(spawn[0],0,spawn[1]);
   }
   disconnectJob=F.onDisconnect(selfRef);await disconnectJob.remove();if(generation!==networkGeneration)return;
@@ -142,7 +144,7 @@ async function startNetwork(){
   for(const stop of networkStops)stop();networkStops=[];roomMembers.clear();resetWorldTravel();
   selfRef=F.ref(networkDB,'rooms/'+roomId+'/players/'+sessionKey);
   const players=F.ref(networkDB,'rooms/'+roomId+'/players');
-  const change=snapshot=>{if(generation!==networkGeneration)return;const data=snapshot.val();if(validState(data))roomMembers.set(snapshot.key,data);else roomMembers.delete(snapshot.key);reconcileRoom();};
+  const change=snapshot=>{if(generation!==networkGeneration)return;const data=snapshot.val();if(validState(data))roomMembers.set(snapshot.key,fromWire(data));else roomMembers.delete(snapshot.key);reconcileRoom();};
   const failed=error=>{if(generation!==networkGeneration)return;networkJoined=false;clearPeers();updateNetworkStatus('친구 연결 대기');console.warn('겨울 마을 동기화:',error.code||'network');};
   networkStops.push(subscribeOtherWorld(F,generation),subscribeAdditionalWorld(F,generation));
   networkStops.push(F.onChildAdded(players,change,failed),F.onChildChanged(players,change,failed),F.onChildRemoved(players,snapshot=>{roomMembers.delete(snapshot.key);reconcileRoom();},failed));
