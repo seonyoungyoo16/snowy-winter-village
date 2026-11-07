@@ -84,10 +84,10 @@ function updateNetworkStatus(message){
 }
 function validState(data){return data&&data.v===1&&typeof data.u==='string'&&typeof data.n==='string'&&data.n.length>0&&data.n.length<=12&&Number.isInteger(data.k)&&data.k>=0&&data.k<=2&&['x','y','z','a','p','b','t','j','s'].every(k=>Number.isFinite(data[k]))&&Math.abs(data.x)<=26&&Math.abs(data.z)<=26&&data.y>=-1&&data.y<=10&&Math.abs(data.a)<=3.142&&Math.abs(data.p)<=1.6&&data.b>=0&&data.b<=.7&&Object.hasOwn(activityNames,data.m);}
 function disposeActor(root){root.traverse(o=>{if(!o.isMesh)return;if(!Object.values(geom).includes(o.geometry))o.geometry.dispose();});scene.remove(root);}
-function removePeer(id){const peer=remotePlayers.get(id);if(!peer)return;releasePhotoCamera(peer.actor);disposeActor(peer.actor.root);scene.remove(peer.shadow);peer.label.material.map.dispose();peer.label.material.dispose();remotePlayers.delete(id);}
+function removePeer(id){const peer=remotePlayers.get(id);if(!peer)return;villagePlay.drop(peer);releasePhotoCamera(peer.actor);disposeActor(peer.actor.root);scene.remove(peer.shadow);peer.label.material.map.dispose();peer.label.material.dispose();remotePlayers.delete(id);}
 function clearPeers(){for(const id of Array.from(remotePlayers.keys()))removePeer(id);}
 function makePeer(id,data){
- const actor=avatar(data.k);actor.root.position.set(data.x,data.y,data.z);actor.root.rotation.set(data.p,data.a,0);scene.add(actor.root);
+ const actor=avatar(data.k,peerLook(data.u));actor.lookSig=peerLookSig(data.u);actor.root.position.set(data.x,data.y,data.z);actor.root.rotation.set(data.p,data.a,0);scene.add(actor.root);
  const label=nameSprite(data.n);label.scale.set(2.15,.403,1);label.position.y=2.8;actor.root.add(label);
  const peer={id,actor,label,shadow:shadow(scene,data.x,data.z,.58,.18),data,phase:0,celebration:0,feedBeat:-1,target:new THREE.Vector3(data.x,data.y,data.z)};
  remotePlayers.set(id,peer);return peer;
@@ -100,7 +100,7 @@ function reconcileRoom(){
  if(selfIndex>=MAX_VISITORS){roomFull=true;networkJoined=false;arrivalTracker.pause();if(selfRef)window.WinterFirebase.remove(selfRef).catch(()=>{});clearPeers();updateNetworkStatus('수족관이 가득해요');toast('이 수족관에는 네 명까지 함께할 수 있어요');return;}
  const visible=active.filter(([id])=>id!==sessionKey).slice(0,MAX_VISITORS-1),ids=new Set(visible.map(([id])=>id));
  for(const id of remotePlayers.keys())if(!ids.has(id))removePeer(id);
- for(const[id,data]of visible){let peer=remotePlayers.get(id);if(peer&&peer.actor.kind!==data.k){removePeer(id);peer=null;}if(!peer)peer=makePeer(id,data);if(peer.data.m!==data.m){peer.celebration=0;peer.feedBeat=-1;}if(peer.data.n!==data.n){peer.actor.root.remove(peer.label);peer.label.material.map.dispose();peer.label.material.dispose();peer.label=nameSprite(data.n);peer.label.scale.set(2.15,.403,1);peer.label.position.y=2.8;peer.actor.root.add(peer.label);}peer.data=data;peer.target.set(data.x,data.y,data.z);}
+ for(const[id,data]of visible){let peer=remotePlayers.get(id);if(peer&&(peer.actor.kind!==data.k||peer.actor.lookSig!==peerLookSig(data.u))){removePeer(id);peer=null;}if(!peer)peer=makePeer(id,data);if(peer.data.m!==data.m){peer.celebration=0;peer.feedBeat=-1;}if(peer.data.n!==data.n){peer.actor.root.remove(peer.label);peer.label.material.map.dispose();peer.label.material.dispose();peer.label=nameSprite(data.n);peer.label.scale.set(2.15,.403,1);peer.label.position.y=2.8;peer.actor.root.add(peer.label);}peer.data=data;peer.target.set(data.x,data.y,data.z);}
  for(const arrival of arrivalTracker.observe(visible))announceArrival(arrival.id,arrival.data);
  updateNetworkStatus();
 }
@@ -111,7 +111,7 @@ function stateBody(){
 function publishState(force=false){
  if(!networkJoined||!networkConnected||!selfRef||!networkAuth?.currentUser)return;
  const now=performance.now();if(!force&&now-lastNetworkSend<200)return;
- const body=stateBody(),signature=JSON.stringify(body);if(!force&&signature===lastNetworkBody&&now-lastNetworkSend<6000)return;
+ const body=villageTogether.wire(villageSnowball.wire(villagePlay.wire(stateBody()))),signature=JSON.stringify(body);if(!force&&signature===lastNetworkBody&&now-lastNetworkSend<6000)return;
  lastNetworkBody=signature;lastNetworkSend=now;
  return window.WinterFirebase.set(selfRef,{...body,s:++networkSequence,t:window.WinterFirebase.serverTimestamp()}).catch(error=>{networkJoined=false;clearPeers();updateNetworkStatus('접속을 확인해 주세요');console.warn('물결 수족관 연결:',error.code||'network');toast('친구 연결을 잠시 쉬고 있어요. 초대 버튼에서 다시 연결해요');});
 }
@@ -159,7 +159,7 @@ function updatePeers(dt){
  for(const peer of remotePlayers.values()){
   const data=peer.data;if(Date.now()+serverOffset-data.t>STALE_MS){removePeer(peer.id);updateNetworkStatus();continue;}
   const root=peer.actor.root,distance=root.position.distanceTo(peer.target),blend=1-Math.exp(-dt*12);if(distance>6)root.position.copy(peer.target);else root.position.lerp(peer.target,blend);
-  root.rotation.y+=Math.atan2(Math.sin(data.a-root.rotation.y),Math.cos(data.a-root.rotation.y))*blend;root.rotation.x=lerp(root.rotation.x,data.p,blend);
+  root.rotation.y+=Math.atan2(Math.sin(data.a-root.rotation.y),Math.cos(data.a-root.rotation.y))*blend;root.rotation.x=lerp(root.rotation.x,data.p,blend);villagePlay.peer(peer,dt);villageSnowball.peer(peer);villageTogether.peer(peer);
   peer.phase+=dt;peer.celebration+=dt;const moving=data.m==='walk'||(data.m==='rolling'&&distance>.025),photographing=data.m==='sled';
   if(!photographing)peer.photoTime=null;
   animatePose(dt,moving,peer.actor,photographing?'photo':data.m==='walk'?'idle':data.m,peer.phase,peer.celebration,photographing?remotePhotoTime(peer,dt):0);
@@ -184,5 +184,28 @@ addEventListener('pagehide',()=>{if(selfRef)window.WinterFirebase.remove(selfRef
 setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 
 /* RESIDENT_CODE */
+/* SKY_WEATHER_CODE */
+/* CREATURE_BOOK_CODE */
+/* VILLAGE_STORE_CODE */
+/* VILLAGE_NOTES_CODE */
+/* VILLAGE_PLAY_CODE */
+/* SEASONAL_EVENTS_CODE */
+/* VILLAGE_MARKET_CODE */
+/* VILLAGE_JOURNAL_CODE */
+/* VILLAGE_GOALS_CODE */
+/* AVATAR_LIFE_CODE */
+/* VILLAGE_LOOKS_CODE */
+/* RESIDENT_GIFTS_CODE */
+/* VILLAGE_NEWSPAPER_CODE */
+/* VILLAGE_RADIO_CODE */
+/* PHOTO_MODE_CODE */
+/* COMPANIONS_CODE */
+/* RADIAL_MENU_CODE */
+/* MINIGAMES_CODE */
+/* SNOWBALL_CODE */
+/* TOGETHER_CODE */
+/* HOTBAR_CODE */
+/* EXPEDITION_CODE */
+/* EXHIBIT_CODE */
 /* ARRIVAL_CLIENT_CODE */
 setupWorldTravel();

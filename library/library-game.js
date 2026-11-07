@@ -10,7 +10,7 @@ function distance(p){return Math.hypot(player.position.x-p.x,player.position.z-p
 function stopActivity(){const seat=readingSeat||restSeat;if(seat)player.position.set(seat.approach.x,0,seat.approach.z);readingSeat=null;restSeat=null;finishedPromptBook=null;pendingBookShelf=false;$('book-picker').hidden=true;pendingReadingSeat=null;pendingCatAction=null;catActionTime=0;hideCatProps(character);path=[];mode='idle';writingTime=0;hideBookProps(character);character.body.position.y=0;player.position.y=0;uiKey='';publishState(true);}
 function navigate(x,z){if(!entered)return;if(mode==='wave')return;if(mode!=='idle'||pendingBookShelf||pendingReadingSeat||pendingCatAction)stopActivity();path=pathTo(x,z);if(!path.length&&Math.hypot(player.position.x-x,player.position.z-z)>1){toast('조금 더 가까운 바닥을 눌러주세요');return;}const end=path.at(-1)||player.position;targetRing.position.set(end.x,.045,end.z);targetRing.visible=true;ringTimer=1.5;}
 function travel(place){const p=places[place];if(!p)return;if(place==='books'){startReading();return;}cameraYawTarget=p.yaw;navigate(p.x,p.z);document.querySelectorAll('[data-place]').forEach(b=>b.classList.toggle('active',b.dataset.place===place));}
-function startReading(){
+function startReading(){villageEvent('read');
  if(!entered)return;stopActivity();pendingBookShelf=true;cameraYawTarget=places.books.yaw;path=pathTo(places.books.x,places.books.z);
  if(!path.length&&distance(places.books)>.35){pendingBookShelf=false;toast('책장 앞쪽 바닥을 눌러 다가가 주세요');}
  updateBookShelfWalk();uiKey='';updateUI();publishState(true);
@@ -57,7 +57,7 @@ function turnReadingPage(direction){
 }
 function dismissFinishedPrompt(){finishedPromptBook=null;uiKey='';updateUI();}
 function goStamp(){if(mode!=='reading'||finishedPromptBook!==selectedBook)return;stopActivity();travel('desk');updateUI();}
-function startRest(){const seats=windowSeats.filter(s=>Array.from(remotePlayers.values()).every(p=>Math.hypot(p.data.x-s.x,p.data.z-s.z)>.9)).sort((a,b)=>distance(a)-distance(b));if(!seats.length){toast('창가 자리가 잠깐 가득해요');return;}const s=seats[0];restSeat=s;mode='rest';path=[];player.position.set(s.x,.23,s.z);player.rotation.y=s.a;cameraYawTarget=-.12;uiKey='';updateUI();publishState(true);}
+function startRest(){const seats=windowSeats.filter(s=>Array.from(remotePlayers.values()).every(p=>Math.hypot(p.data.x-s.x,p.data.z-s.z)>.9)).sort((a,b)=>distance(a)-distance(b));if(!seats.length){toast('창가 자리가 잠깐 가득해요');return;}const s=seats[0];restSeat=s;mode='rest';creatureBook.observeWindow(skyWeather.state);villageEvent('window');path=[];player.position.set(s.x,.23,s.z);player.rotation.y=s.a;cameraYawTarget=-.12;uiKey='';updateUI();publishState(true);}
 function startWriting(){mode='writing';writingTime=0;path=[];player.rotation.y=.25;cameraYawTarget=-.6;uiKey='';updateUI();publishState(true);}
 function wave(){if(!entered||mode==='writing'||mode==='wave')return;stopActivity();mode='wave';waveTime=0;path=[];uiKey='';toast('조용히, 반가운 인사를 건네요');}
 function action(){if(!entered)return;if(mode==='reading'||mode==='rest'||pendingBookShelf||pendingReadingSeat||pendingCatAction){stopActivity();updateUI();return;}if(mode==='writing'||mode==='wave'||mode==='cat'||mode==='catWake')return;if(distance(places.desk)<2)startWriting();else if(distance(places.window)<3.5)startRest();else startReading();updateUI();}
@@ -80,7 +80,7 @@ function animatePose(dt,moving,actor=character,state=mode,phase=elapsed,actionTi
  actor.body.position.y=lerp(actor.body.position.y,y,1-Math.exp(-dt*12));actor.body.rotation.x=lerp(actor.body.rotation.x,pitch,1-Math.exp(-dt*10));actor.head.rotation.z=Math.sin(phase*.8)*.018;
  if(state==='cat'){actor.legs.forEach(leg=>leg.position.y=.47-actor.body.position.y);fitCatVisitorHand(actor,catType,actionTime);}
 }
-function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||!$('memory-modal').hidden||!$('cat-modal').hidden||!$('book-picker').hidden||residentGuide.isOpen();}
+function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||!$('memory-modal').hidden||!$('cat-modal').hidden||!$('book-picker').hidden||residentGuide.isOpen()||creatureBook.isOpen()||villageNotes.isOpen()||villageLooks.isOpen()||residentGifts.isOpen()||villageNewspaper.isOpen()||photoMode.isOpen()||villageCompanions.isOpen()||radialMenu.isOpen()||villageMinigames.isOpen()||villageExpedition.isOpen()||villageMarket.isOpen()||villageJournal.isOpen()||villageGoals.isOpen();}
 function closeHelp(){$('help-modal').hidden=true;$('help').focus();}
 $('help').addEventListener('click',()=>{$('help-modal').hidden=false;keys.clear();$('close-help').focus();});$('close-help').addEventListener('click',closeHelp);$('return-village').addEventListener('click',closeHelp);$('help-modal').addEventListener('click',e=>{if(e.target===$('help-modal'))closeHelp();});
 $('memory-action').addEventListener('click',openMemories);$('close-memories').addEventListener('click',closeMemories);$('memory-modal').addEventListener('click',e=>{if(e.target===$('memory-modal'))closeMemories();});

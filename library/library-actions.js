@@ -61,7 +61,7 @@ function animateBookPose(actor,state,index,time,phase,direction=1){
 function remoteWritingTime(peer,dt){const target=writingTimeFromWire(peer.data.b);if(peer.writingTime==null||target<peer.writingTime-.4)peer.writingTime=target;else peer.writingTime=lerp(peer.writingTime,target,1-Math.exp(-dt*16));return peer.writingTime;}
 function remoteReadingTurn(peer,dt){const target=readingTurnFromWire(peer.data.b),key=bookIndexFromWire(peer.data.b)+'_'+readingPageFromWire(peer.data.b)+'_'+target.direction;if(peer.readingKey!==key||peer.readingTime==null||target.time<peer.readingTime-.3)peer.readingTime=target.time;else peer.readingTime=lerp(peer.readingTime,target.time,1-Math.exp(-dt*18));peer.readingKey=key;return{time:peer.readingTime,direction:target.direction};}
 function normalizedMemories(data){return Array.isArray(data)?data.filter(m=>m&&Number.isInteger(m.book)&&m.book>=0&&m.book<3&&Number.isFinite(m.created)&&m.created>0&&m.created<=Date.now()+1000&&typeof m.name==='string').sort((a,b)=>a.created-b.created).slice(-30).map(m=>({book:m.book,created:m.created,name:m.name.slice(0,12)})):[];}
-function finishBookmark(){
+function finishBookmark(){setTimeout(()=>{if(typeof villageJournal==='object')villageJournal.sync();},0);
  memories.push({book:selectedBook,created:Date.now(),name:nickname});memories=memories.slice(-30);save();drawMemoryBoard();stopActivity();toast('작은 책갈피 한 장을 남겼어요');
 }
 const memoryCanvas=document.createElement('canvas');memoryCanvas.width=512;memoryCanvas.height=448;const memoryTexture=new THREE.CanvasTexture(memoryCanvas);memoryTexture.colorSpace=THREE.SRGBColorSpace;

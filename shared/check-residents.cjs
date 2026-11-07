@@ -23,5 +23,19 @@ for(const world of Object.keys(expected)){
  if(world==='library'){time=244300;g.tick(.05);assert(g.tools.leaf.visible);assert(g.tools.book.position.y<g.actor.head.position.y-.3);assert(g.tools.book.position.z>.5);}
  let meshes=0;g.actor.root.traverse(o=>{if(o.isMesh||o.isPoints)meshes++;});g.station.traverse(o=>{if(o.isMesh||o.isPoints)meshes++;});assert(meshes<=14,'resident adds too many draw calls: '+meshes);
  a.player.position.copy(entrance);for(const p of Object.values(a.places)){const route=a.pathTo(p.x,p.z);assert(route.length||Math.hypot(entrance.x-p.x,entrance.z-p.z)<1,'resident blocks an existing activity');}
+ // Seoul-time weekday/weekend routines: every hour has a slot, moods differ, and weekends are not weekdays.
+ const kst=(day,h)=>Date.UTC(2026,10,1+day)+(h-9)*3600e3; // 2026-11-01 (KST) is a Sunday.
+ const moods=new Set(),day=d=>{const list=[];for(let h=0;h<24;h+=.5){const s=g.slotAt(kst(d,h));assert(['work','rest'].includes(s.at)&&['work','rest','sleep'].includes(s.mood),world+' has no slot at day '+d+' '+h);moods.add(s.mood);list.push(s.at+'/'+s.mood);}return list;};
+ const week=[0,1,2,3,4,5,6].map(day);assert.deepEqual([...moods].sort(),['rest','sleep','work']);assert.notDeepEqual(week[3],week[6],'weekend routine is the same as a weekday');
+ assert.equal(g.slotAt(kst(3,10.5)).mood,'work');assert.equal(g.slotAt(kst(3,20.5)).mood,'rest');assert.equal(g.slotAt(kst(4,2)).mood,'sleep');
+ // The rest spot clears furniture and the entrance, and moving the resident there keeps every activity reachable.
+ const rest=g.routines.rest,footprint=a.colliders.findIndex(p=>p.r===.46&&p.x===g.here.x&&p.z===g.here.z),saved=a.colliders.splice(footprint,1)[0];assert(!a.blocked(rest.x,rest.z,.39),world+' rest spot overlaps furniture');assert(Math.hypot(rest.x,rest.z-7)>6);a.colliders.splice(footprint,0,saved);
+ time=kst(4,20);for(let i=0;i<20;i++)g.tick(.05);assert.equal(g.here,rest,world+' resident did not move to the evening spot');assert.equal(g.slot.mood,'rest');assert.equal(g.actor.root.scale.x,1);assert(g.actor.root.position.x===rest.x&&g.actor.root.position.z===rest.z&&g.actor.root.rotation.y===rest.yaw);assert(a.blocked(rest.x,rest.z),'the resident collider moves along');assert(!a.blocked(g.spawn.x,g.spawn.z,.05)||a.colliders.every(p=>!(p.r===.46&&p.x===g.spawn.x&&p.z===g.spawn.z)),'old footprint remains');
+ for(let i=0;i<20;i++){a.player.position.set(rest.x+(i%2?3:-3),0,rest.z+2);g.tick(.05);assert.equal(g.here,rest,'resident follows the visitor');assert(Math.abs(g.actor.arms[1].rotation.z)<.6);}
+ a.player.position.copy(entrance);for(const p of Object.values(a.places)){const route=a.pathTo(p.x,p.z);assert(route.length||Math.hypot(entrance.x-p.x,entrance.z-p.z)<1,'resting resident blocks an existing activity');}
+ a.player.position.set(rest.x,0,rest.z+2);g.open();assert(g.isOpen(),'resting resident cannot be talked to');g.close();
+ time=kst(5,2);for(let i=0;i<20;i++)g.tick(.05);assert.equal(g.slot.mood,'sleep');assert(g.actor.head.rotation.x>.3,'sleeping resident keeps its head up');assert(!g.tools.mug||!g.actor.body.children.some(o=>o===g.tools.mug&&o.visible));
+ time=kst(5,10.5);for(let i=0;i<20;i++)g.tick(.05);assert.equal(g.slot.mood,'work');assert.equal(g.here,g.workSpot);assert(a.blocked(g.spawn.x,g.spawn.z));
  console.log('PASS: '+world+' has a distinct resident at home/work, independent quiet routines, nearby-only dialogue, no tracking or arrival greeting, clear routes and at most 14 scene draw calls.');
+ console.log('PASS: '+world+' resident follows a Seoul-time weekday/weekend routine between safe work and rest spots, sleeps at night, keeps routes clear and still never tracks visitors.');
 }

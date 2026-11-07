@@ -1,0 +1,32 @@
+// Photo mode: hide every on-screen panel (a body class, since some panels re-show themselves each frame), zoom like a little telescope, take a picture and keep the last 24 in an album.
+// Pictures stay in this browser (never uploaded) and can be saved as files.
+function createPhotoMode(){
+ const KEY='village-album',MAX=24,SIDE=640,FOV={min:20,max:60};
+ let on=false,baseFov=null;
+ function album(){try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(a)?a.filter(p=>p&&typeof p.src==='string'&&p.src.startsWith('data:image/')).slice(-MAX):[];}catch{return[];}}
+ // When storage is full the oldest pictures give way; false means not even the new one fits.
+ function store(list){while(list.length){try{localStorage.setItem(KEY,JSON.stringify(list));return true;}catch{list=list.slice(1);}}return false;}
+ const bar=document.createElement('div');bar.className='photo-bar';bar.hidden=true;bar.setAttribute('aria-label','사진 모드');
+ const style=document.createElement('style');style.textContent='body.photo-mode>*:not(#world):not(.photo-bar):not(.village-album):not(#toast):not(style):not(script){display:none!important}.photo-bar{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);z-index:20;display:flex;gap:8px;padding:8px;border-radius:20px;background:rgba(255,247,232,.92);box-shadow:0 3px 14px rgba(40,40,70,.25)}.photo-bar button{min-width:52px;min-height:44px;border:0;border-radius:14px;background:#f1e5d2;color:#5f5050;font:700 13px "Winter Jua",sans-serif;cursor:pointer}.photo-bar .shutter{background:#8e9d83;color:#fff8e8}.photo-toggle{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 188px);z-index:4;width:46px;height:46px;border-radius:50%;border:0;display:grid;place-items:center;background:rgba(255,247,232,.88);color:#5f6f73;box-shadow:0 3px 12px rgba(40,40,70,.18);cursor:pointer}.photo-toggle svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}.village-album img{width:100%;border-radius:12px;display:block}.village-album li{list-style:none}';(document.head||document.body).append(style);
+ const mk=(text,label,fn,cls)=>{const b=document.createElement('button');b.textContent=text;b.setAttribute('aria-label',label);if(cls)b.className=cls;b.addEventListener('click',fn);bar.append(b);return b;};
+ mk('−','멀리 보기',()=>zoom(1));mk('찰칵','사진 찍기',()=>shoot(),'shutter');mk('+','가까이 보기',()=>zoom(-1));mk('앨범','앨범 보기',()=>openAlbum());mk('닫기','사진 모드 끝내기',()=>exit());document.body.append(bar);
+ function enter(){if(on||!entered)return false;on=true;document.body.classList.add('photo-mode');bar.hidden=false;baseFov=camera.fov;return true;}
+ function exit(){if(!on)return;on=false;document.body.classList.remove('photo-mode');bar.hidden=true;if(baseFov!==null){camera.fov=baseFov;camera.updateProjectionMatrix();}}
+ function zoom(dir){if(!on)return camera.fov;camera.fov=Math.max(FOV.min,Math.min(FOV.max,camera.fov+dir*6));camera.updateProjectionMatrix();return camera.fov;}
+ // The frame is read right after a render, so no preserved drawing buffer is needed; it is scaled down before saving.
+ function shoot(){if(!on)return null;renderer.render(scene,camera);const src=renderer.domElement;let url;try{const w=src.width||SIDE,h=src.height||SIDE,k=Math.min(1,SIDE/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*k));c.height=Math.max(1,Math.round(h*k));const g=c.getContext('2d');g.drawImage(src,0,0,c.width,c.height);url=c.toDataURL('image/jpeg',.72);}catch{url=null;}
+  if(!url||!url.startsWith('data:image/'))url=src.toDataURL?src.toDataURL('image/jpeg',.72):null;if(!url){toast('이 브라우저에서는 사진을 찍을 수 없어요');return null;}
+  const list=album();list.push({src:url,t:Date.now(),w:CURRENT_WORLD});if(!store(list.slice(-MAX))){toast('저장 공간이 가득 차서 사진을 담지 못했어요');return null;}toast('찰칵! 앨범에 담았어요');if(typeof villageJournal==='object'&&villageJournal&&villageJournal.note)villageJournal.note('first-photo');return url;}
+ const sheet=document.createElement('section');sheet.className='creature-book village-album';sheet.hidden=true;const card=document.createElement('div');card.className='creature-book-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');const closeButton=document.createElement('button');closeButton.className='creature-book-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','앨범 닫기');const body=document.createElement('div');card.append(closeButton,body);sheet.append(card);document.body.append(sheet);
+ function closeAlbum(){sheet.hidden=true;}closeButton.addEventListener('click',closeAlbum);sheet.addEventListener('click',e=>{if(e.target===sheet)closeAlbum();});
+ function openAlbum(){const list=album().reverse(),title=document.createElement('h2'),note=document.createElement('p'),ul=document.createElement('ul');title.textContent='앨범';note.className='creature-count';note.textContent=list.length?'최근 '+list.length+'장 · 이 브라우저에만 있어요':'아직 찍은 사진이 없어요';
+  ul.replaceChildren(...list.map((p,i)=>{const li=document.createElement('li'),img=document.createElement('img'),a=document.createElement('a');img.src=p.src;img.alt='마을 사진 '+(i+1);a.href=p.src;a.download='village-'+p.t+'.jpg';a.textContent='파일로 저장';li.append(img,a);return li;}));body.replaceChildren(title,note,ul);sheet.hidden=false;closeButton.focus();}
+ addEventListener('keydown',e=>{if(e.key==='Escape'){if(!sheet.hidden)closeAlbum();else if(on)exit();}});
+ // The camera floats just above the emote button; the top bar is already full on phones.
+ const button=document.createElement('button');button.id='photo';button.className='photo-toggle';button.setAttribute('aria-label','사진 모드');button.title='사진 모드';const ns='http://www.w3.org/2000/svg';
+ if(document.createElementNS){const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 24 24');for(const[tag,attrs]of[['path',{d:'M4 8h3l2-2.5h6L17 8h3v11H4Z'}],['circle',{cx:12,cy:13,r:3.5}]]){const el=document.createElementNS(ns,tag);for(const k in attrs)el.setAttribute(k,attrs[k]);svg.append(el);}button.append(svg);}else button.textContent='📷';
+ button.addEventListener('click',()=>{if(!enter()&&!entered)toast('마을에 들어간 뒤 찍을 수 있어요');});
+ document.body.append(button);
+ return{MAX,FOV,enter,exit,zoom,shoot,album,openAlbum,closeAlbum,button,get on(){return on;},isOpen:()=>!sheet.hidden};
+}
+const photoMode=createPhotoMode();

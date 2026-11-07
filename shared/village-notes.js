@@ -1,0 +1,65 @@
+// Letters, a village bulletin board and writable signs, kept per friend group through the village store.
+// All friend text is shown with textContent only, trimmed and length-limited before it is stored.
+function createVillageNotes(){
+ const LAYOUT={
+  winter:{mailbox:{x:-3,z:9.8},board:{x:3.5,z:10.3},signs:[{x:-4,z:4},{x:5,z:3}],resident:'밤이',requests:[['snowman','눈사람 하나 세워 주세요'],['warm','모닥불에서 손 좀 녹이고 가요'],['fish','얼음 연못에서 한 마리 낚아 봐요']]},
+  aquarium:{mailbox:{x:-3,z:8.2},board:{x:3.5,z:8.5},signs:[{x:-6,z:6},{x:6,z:6}],resident:'해리',requests:[['reef','산호 수조 친구들에게 먹이를 주세요'],['ocean','바다 수조 사진을 한 장 찍어 주세요'],['jelly','해파리 쉼터에서 잠깐 쉬어 가요']]},
+  library:{mailbox:{x:-3,z:10},board:{x:3.5,z:10.5},signs:[{x:-6,z:8},{x:6,z:8}],resident:'소담',requests:[['read','책 한 권 펼쳐 읽어 주세요'],['window','창가에서 하늘 구경해요'],['cat','귤이랑 놀아 주세요']]}
+ }[CURRENT_WORLD];
+ const LIMITS={letter:80,memo:40,sign:24},LETTER_DAYS=14,MEMO_DAYS=7,REACH=3.6,STATIONERY=['눈송이 편지지','물결 편지지','책갈피 편지지','엽서 편지지','별빛 편지지'];
+ const clean=(s,n)=>String(s||'').replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim().slice(0,n);
+ const floorAt=(x,z)=>typeof groundHeight==='function'?groundHeight(x,z):0,near=p=>Math.hypot(player.position.x-p.x,player.position.z-p.z)<REACH;
+ const seoulDay=(ms=Date.now())=>Math.floor((ms+9*3600e3)/86400e3);
+ function readLocal(key,fallback){try{const v=JSON.parse(localStorage.getItem(key)||'null');return v===null?fallback:v;}catch{return fallback;}}
+ function writeLocal(key,v){try{localStorage.setItem(key,JSON.stringify(v));}catch{}}
+ // 3D props: a mailbox with a flag, a board and wooden signs; tap them when close.
+ const picks=[];function prop(kind,spot,build){const g=new THREE.Group();g.position.set(spot.x,floorAt(spot.x,spot.z),spot.z);build(g);scene.add(g);block(spot.x,spot.z,.38);const hit=new THREE.Mesh(new THREE.BoxGeometry(1,2,1),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));hit.position.y=1;g.add(hit);picks.push({kind,spot,hit,group:g});return g;}
+ let flag=null;
+ prop('mailbox',LAYOUT.mailbox,g=>{g.name='village-mailbox';mesh(geom.cyl,0x7a6656,g,0,.5,0,.06,1,.06);box(g,0xb9705f,0,1.12,0,.42,.32,.56);box(g,0x8f5446,0,1.12,.285,.36,.24,.02);flag=new THREE.Group();flag.position.set(.24,1.05,-.1);box(flag,0x6b5b50,0,.18,0,.03,.36,.03);box(flag,0xf2c46d,0,.33,.08,.03,.12,.16);g.add(flag);});
+ prop('board',LAYOUT.board,g=>{g.name='village-board';for(const x of[-.7,.7])mesh(geom.cyl,0x7f6857,g,x,.8,0,.06,1.6,.06);box(g,0x9b7c67,0,1.45,0,1.7,1.05,.1);box(g,0xeadcc2,0,1.45,.06,1.52,.88,.02);for(let i=0;i<3;i++)box(g,[0xf3e3a6,0xcfe3df,0xf0c9c0][i],-.45+i*.45,1.5+(i%2)*.12,.08,.32,.26,.01);});
+ const signFaces=LAYOUT.signs.map((spot,i)=>{let face=null;prop('sign',{...spot,index:i},g=>{g.name='village-sign-'+i;mesh(geom.cyl,0x7f6857,g,0,.6,0,.06,1.2,.06);box(g,0xa58468,0,1.3,0,1.2,.5,.08);face=new THREE.Mesh(new THREE.PlaneGeometry(1.08,.4),new THREE.MeshBasicMaterial({color:0xffffff}));face.position.set(0,1.3,.045);g.add(face);});return face;});
+ function paintSign(i,text){const canvas=document.createElement('canvas');canvas.width=320;canvas.height=120;const c=canvas.getContext('2d');c.fillStyle='#efe2c8';c.fillRect(0,0,320,120);c.fillStyle='#5f4b40';c.font='bold 30px "Winter Jua","NanumSquareRound",sans-serif';c.textAlign='center';c.textBaseline='middle';const t=text||'비어 있는 표지판';c.globalAlpha=text?1:.45;c.fillText(t.length>12?t.slice(0,12):t,160,t.length>12?42:60);if(t.length>12)c.fillText(t.slice(12,24),160,82);const tex=new THREE.CanvasTexture(canvas);if(THREE.SRGBColorSpace)tex.colorSpace=THREE.SRGBColorSpace;const old=signFaces[i].material.map;signFaces[i].material.map=tex;signFaces[i].material.needsUpdate=true;if(old)old.dispose();}
+ // One sheet element reused for the mailbox, the board and the sign editor.
+ const sheet=document.createElement('section');sheet.className='creature-book village-notes';sheet.hidden=true;const card=document.createElement('div');card.className='creature-book-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');const closeButton=document.createElement('button');closeButton.className='creature-book-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','닫기');const body=document.createElement('div');card.append(closeButton,body);sheet.append(card);document.body.append(sheet);
+ const style=document.createElement('style');style.textContent='.village-notes textarea,.village-notes input,.village-notes select{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:9px 11px;border:1px solid #dccab0;border-radius:11px;background:#fffaf1;color:#5f5050;margin:4px 0 8px}.village-notes textarea{min-height:72px;resize:none}.village-notes .note-send{display:block;width:100%;min-height:44px;border:0;border-radius:13px;background:#8e9d83;color:#fff8e8;font:inherit;cursor:pointer}.village-notes li small{display:block;color:#a08b7c;font-size:10px}.village-notes li.unread{background:#f7e2b6}.village-notes li.done{text-decoration:line-through;color:#a39587}';(document.head||document.body).append(style);
+ let openKind=null;function close(){sheet.hidden=true;openKind=null;}closeButton.addEventListener('click',close);sheet.addEventListener('click',e=>{if(e.target===sheet)close();});addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)close();});
+ function el(tag,props={},...kids){const n=document.createElement(tag);for(const[k,v]of Object.entries(props))n[k]=v;n.append(...kids);return n;}
+ function show(kind,...kids){openKind=kind;body.replaceChildren(...kids);sheet.hidden=false;closeButton.focus();}
+ const when=t=>{const d=new Date(t+9*3600e3);return(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일';};
+ const sharedNote=()=>villageStore.mode==='shared'?'':' (지금은 이 브라우저에만 보여요)';
+ // #7 Letters: to everyone or one friend by name; read marks stay in this browser; old letters fade out after two weeks.
+ let letters={};const readKey='village-letters-read:'+villageStore.party;
+ function inbox(){const cutoff=Date.now()-LETTER_DAYS*86400e3;return Object.entries(letters).map(([id,l])=>({id,...l})).filter(l=>l&&l.t>cutoff&&(l.to==='*'||l.to===nickname||l.f===nickname)).sort((a,b)=>b.t-a.t);}
+ function unread(){const read=new Set(readLocal(readKey,[]));return inbox().filter(l=>l.f!==nickname&&!read.has(l.id));}
+ function knownNames(){const names=new Set();for(const p of remotePlayers.values())if(p.data&&p.data.n)names.add(p.data.n);for(const l of Object.values(letters))if(l&&l.f)names.add(l.f);names.delete(nickname);return[...names].slice(0,12);}
+ function openMailbox(){const list=inbox(),fresh=new Set(unread().map(l=>l.id)),to=el('select',{ariaLabel:'받는 사람'},el('option',{value:'*',textContent:'모두에게'}),...knownNames().map(n=>el('option',{value:n,textContent:n+' 님에게'}))),paper=el('select',{ariaLabel:'편지지'},...STATIONERY.map((s,i)=>i<3||(typeof villageMarket==='object'&&villageMarket.owns('paper-'+i))?el('option',{value:String(i),textContent:s}):null).filter(Boolean)),text=el('textarea',{maxLength:LIMITS.letter,placeholder:'짧은 편지를 남겨요 (80자)',ariaLabel:'편지 내용'}),send=el('button',{className:'note-send',textContent:'편지 넣기'});
+  send.addEventListener('click',async()=>{const ok=await sendLetter(to.value,text.value,Number(paper.value));if(ok){text.value='';openMailbox();}});
+  show('mailbox',el('h2',{textContent:'우편함'}),el('p',{className:'creature-count',textContent:list.length?'받은 편지와 보낸 편지'+sharedNote():'아직 편지가 없어요'+sharedNote()}),el('ul',{},...list.map(l=>el('li',{className:fresh.has(l.id)?'unread':'seen'},el('small',{textContent:(l.f===nickname?'내가 '+(l.to==='*'?'모두':l.to+' 님')+'에게':l.f+' 님이 '+(l.to==='*'?'모두':'나')+'에게')+' · '+STATIONERY[l.s||0]+' · '+when(l.t)}),document.createTextNode(l.b)))),el('h3',{textContent:'편지 쓰기'}),to,paper,text,send);
+  writeLocal(readKey,[...new Set([...readLocal(readKey,[]),...list.map(l=>l.id)])].slice(-200));updateFlag();}
+ async function sendLetter(to,text,stationery=0){const b=clean(text,LIMITS.letter),target=to==='*'?'*':clean(to,12);if(!b||!target){toast('편지 내용을 적어 주세요');return null;}const t=Date.now(),id=t.toString(36)+Math.random().toString(36).slice(2,7);const result=await villageStore.put('letters',id,{f:nickname,to:target,b,s:Math.max(0,Math.min(4,stationery|0)),u:villageStore.uid(),t});if(typeof villageJournal==='object')villageJournal.note('first-letter');toast('우편함에 편지를 넣었어요'+(result==='shared'?'':' · 이 브라우저에만 보여요'));return result;}
+ function updateFlag(){if(flag)flag.rotation.z=unread().length?-1.25:0;}
+ villageStore.subscribe('letters',v=>{letters=v||{};updateFlag();if(openKind==='mailbox'&&!sheet.hidden)updateFlag();});
+ // #8 Board: two of the resident's small requests each Seoul day (no rewards, just thanks) and short friend memos.
+ let memos={};const doneKey=()=>'village-requests:'+CURRENT_WORLD+':'+seoulDay();
+ function todaysRequests(day=seoulDay()){const all=LAYOUT.requests,skip=((day%3)+3)%3;return all.filter((_,i)=>i!==skip);}
+ function villageEventInner(name){const req=todaysRequests().find(r=>r[0]===name);if(!req)return false;const done=readLocal(doneKey(),[]);if(done.includes(name))return false;writeLocal(doneKey(),[...done,name]);if(typeof villageJournal==='object')villageJournal.note('first-request');if(typeof villageGoals==='object')villageGoals.event('request');toast(LAYOUT.resident+': 부탁 들어줘서 고마워요!');if(typeof villageMarket==='object')villageMarket.earn(2,'오늘의 부탁');return true;}
+ function boardMemos(){const cutoff=Date.now()-MEMO_DAYS*86400e3;return Object.entries(memos).map(([id,m])=>({id,...m})).filter(m=>m&&m.t>cutoff).sort((a,b)=>b.t-a.t).slice(0,8);}
+ function openBoard(){const done=readLocal(doneKey(),[]),text=el('input',{maxLength:LIMITS.memo,placeholder:'친구에게 짧은 메모 (40자)',ariaLabel:'메모 내용'}),send=el('button',{className:'note-send',textContent:'메모 붙이기'});
+  send.addEventListener('click',async()=>{if(await postMemo(text.value)){text.value='';openBoard();}});
+  const memoList=boardMemos();show('board',el('h2',{textContent:'마을 게시판'}),el('h3',{textContent:LAYOUT.resident+'의 오늘 부탁'}),el('ul',{},...todaysRequests().map(([id,t])=>el('li',{className:done.includes(id)?'done':'seen',textContent:t}))),el('h3',{textContent:'친구 메모'+sharedNote()}),el('ul',{},...(memoList.length?memoList.map(m=>el('li',{className:'seen'},el('small',{textContent:m.n+' 님 · '+when(m.t)}),document.createTextNode(m.b))):[el('li',{className:'unseen',textContent:'아직 붙은 메모가 없어요'})])),text,send);}
+ async function postMemo(text){const b=clean(text,LIMITS.memo);if(!b){toast('메모 내용을 적어 주세요');return null;}const t=Date.now(),id=t.toString(36)+Math.random().toString(36).slice(2,7),result=await villageStore.put('board',id,{n:nickname,b,u:villageStore.uid(),t,w:CURRENT_WORLD});if(typeof villageJournal==='object')villageJournal.note('first-memo');toast('게시판에 메모를 붙였어요'+(result==='shared'?'':' · 이 브라우저에만 보여요'));return result;}
+ villageStore.subscribe('board',v=>{memos=v||{};});
+ // #9 Signs: any friend may rewrite a sign; the last words stay until someone writes again.
+ let signs={};const signId=i=>CURRENT_WORLD+'-'+i;
+ function openSign(i){const current=signs[signId(i)],text=el('input',{maxLength:LIMITS.sign,value:current?current.b:'',placeholder:'표지판에 남길 말 (24자)',ariaLabel:'표지판 문구'}),save=el('button',{className:'note-send',textContent:'표지판에 쓰기'});
+  save.addEventListener('click',async()=>{if(await writeSign(i,text.value))close();});
+  show('sign',el('h2',{textContent:'표지판'}),el('p',{className:'creature-count',textContent:(current?current.n+' 님이 '+when(current.t)+'에 썼어요':'아직 아무도 쓰지 않았어요')+sharedNote()}),text,save);}
+ async function writeSign(i,text){const b=clean(text,LIMITS.sign);if(!b){toast('표지판에 남길 말을 적어 주세요');return null;}const result=await villageStore.put('signs',signId(i),{b,n:nickname,u:villageStore.uid(),t:Date.now()});if(typeof villageJournal==='object')villageJournal.note('first-sign');toast('표지판에 적었어요'+(result==='shared'?'':' · 이 브라우저에만 보여요'));return result;}
+ villageStore.subscribe('signs',v=>{signs=v||{};LAYOUT.signs.forEach((_,i)=>paintSign(i,signs[signId(i)]&&signs[signId(i)].b));});
+ // World taps: returns true when a note prop was hit so the world does not also walk there.
+ function pick(ray){for(const p of picks){p.group.updateWorldMatrix(true,true);const hit=ray.intersectObject(p.hit,false)[0];if(!hit)continue;if(!entered)return true;if(!near(p.spot)){toast('가까이 가서 열어 볼까요?');return false;}if(p.kind==='mailbox')openMailbox();else if(p.kind==='board')openBoard();else openSign(p.spot.index);return true;}return false;}
+ return{LAYOUT,LIMITS,pick,openMailbox,openBoard,openSign,sendLetter,postMemo,writeSign,inbox,unread,todaysRequests,event:villageEventInner,clean,close,isOpen:()=>!sheet.hidden,get openKind(){return openKind;}};
+}
+const villageNotes=createVillageNotes();
+// Worlds report small activities here so the board can thank the visitor for today's requests.
+function villageEvent(name){if(typeof villageJournal==='object'){villageJournal.note('did-'+name);villageJournal.sync();}if(typeof villageGoals==='object')villageGoals.event(name);return villageNotes.event(name);}
