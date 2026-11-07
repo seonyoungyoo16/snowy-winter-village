@@ -24,7 +24,7 @@ function createCreatureBook(){
  let entries=load();
  function save(){try{localStorage.setItem(KEY,JSON.stringify({v:1,entries}));}catch{}}
  // Returns true for a first meeting so the world can celebrate it.
- function record(id,detail={}){const known=ENTRIES.find(e=>e.id===id);if(!known)return false;entries=load();const old=entries[id],sky=typeof skyWeather==='object'&&skyWeather?skyWeather.state:null;entries[id]={first:old?old.first:Date.now(),count:(old?old.count:0)+1,best:Math.max(old&&old.best||0,detail.cm||0),phase:old?old.phase:(sky?sky.phase:null)};save();if(!old){toast('도감에 새로 기록했어요 · '+known.name);refresh();}return!old;}
+ function record(id,detail={}){const known=ENTRIES.find(e=>e.id===id);if(!known)return false;entries=load();const old=entries[id],sky=typeof skyWeather==='object'&&skyWeather?skyWeather.state:null;entries[id]={first:old?old.first:Date.now(),count:(old?old.count:0)+1,best:Math.max(old&&old.best||0,detail.cm||0),phase:old?old.phase:(sky?sky.phase:null)};save();if(!old){toast('도감에 새로 기록했어요 · '+known.name);refresh();if(typeof villageMarket==='object')villageMarket.earn(1,'새 친구');}return!old;}
  // Tank activities meet one creature each time, preferring ones not yet in the book.
  function observeTank(tank){const sky=typeof skyWeather==='object'&&skyWeather?skyWeather.state:{phase:'day'},pool=ENTRIES.filter(e=>e.tank===tank&&(e.id!=='lantern-jelly'||sky.phase==='night'||sky.phase==='dusk'));if(!pool.length)return null;const fresh=pool.filter(e=>!entries[e.id]),pick=(fresh.length?fresh:pool)[Math.floor(Math.random()*(fresh.length||pool.length))];record(pick.id);return pick.id;}
  function observeWindow(sky){const id=sky.kind==='precip'||sky.kind==='heavy'?'rain-snail':sky.daylight>.4?'sparrow':'moon-moth';record(id);return id;}
@@ -44,4 +44,4 @@ function createCreatureBook(){
 }
 const creatureBook=createCreatureBook();
 // Winter's ice fishing reports each catch here.
-function onFishCaught(fish){creatureBook.record(fish.id,{cm:fish.cm});}
+function onFishCaught(fish){creatureBook.record(fish.id,{cm:fish.cm});if(typeof villageMarket==='object')villageMarket.earn(1,'낚시');}

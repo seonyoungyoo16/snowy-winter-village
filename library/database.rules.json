@@ -96,7 +96,7 @@
               ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
             },
             "s": {
-              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2 && newData.val() % 1 === 0"
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 4 && newData.val() % 1 === 0"
             },
             "u": {
               ".validate": "newData.isString() && newData.val() === auth.uid"
