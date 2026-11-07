@@ -211,5 +211,6 @@ setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 /* TIDY_CODE */
 /* EXPEDITION_CODE */
 /* HOMESTEAD_CODE */
+/* FOLK_CODE */
 /* ARRIVAL_CLIENT_CODE */
 setupWorldTravel();
