@@ -193,6 +193,7 @@ setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 /* VILLAGE_MARKET_CODE */
 /* VILLAGE_JOURNAL_CODE */
 /* VILLAGE_GOALS_CODE */
+/* AVATAR_LIFE_CODE */
 /* EXHIBIT_CODE */
 /* ARRIVAL_CLIENT_CODE */
 setupWorldTravel();

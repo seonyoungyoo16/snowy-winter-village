@@ -30,7 +30,9 @@ function createVillagePlay(){
  function toggleKite(){if(!kiteOn&&!canKite()){toast('연은 해가 있을 때 날려요');return false;}kiteOn=!kiteOn;if(kiteOn&&typeof villageJournal==='object')villageJournal.note('first-kite');toast(kiteOn?'바람을 타고 연이 올라가요':'연을 거두었어요');if(typeof publishState==='function')publishState(true);return kiteOn;}
  function lantern(){if(!canLantern()){toast('풍등은 해가 진 뒤에 띄워요');return false;}if(now()-lanternAt<4)return false;lanternAt=now();if(typeof villageJournal==='object')villageJournal.note('first-lantern');releaseLantern(player.position,typeof villageMarket==='object'?villageMarket.choice('lantern'):null);toast('소원을 담아 풍등을 띄웠어요');if(typeof publishState==='function')publishState(true);return true;}
  return{
-  EMOTES,say,toggleKite,lantern,isOpen:()=>!palette.hidden,get kiteOn(){return kiteOn;},lanterns,
+  EMOTES,say,toggleKite,lantern,
+  // The face rig shows the matching expression while an emote is up.
+  activeEmote(){return emote!==null&&now()-emoteAt<EMOTE_TIME?emote:null;},isOpen:()=>!palette.hidden,get kiteOn(){return kiteOn;},lanterns,
   // Applied to the published state; only an idle or walking visitor is ever rewritten.
   wire(body){const t=now(),calm=body.m==='idle'||body.m==='walk';if(!calm)return body;if(emote!==null&&t-emoteAt<EMOTE_TIME)return{...body,m:'celebrate',b:Math.round((.1+emote*.05)*1000)/1000};if(WINTER&&t-lanternAt<LANTERN_WIRE)return{...body,b:.45};if(WINTER&&kiteOn)return{...body,b:.41};return body;},
   fromWire:decode,
