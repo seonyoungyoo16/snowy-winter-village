@@ -1,5 +1,57 @@
 // The visitor reports their own confirmed join; the owner's browser is never the notification server.
 const ARRIVAL_SERVICE=/* ARRIVAL_SERVICE_CONFIG */,arrivalRequests=new Map();
+const CONNECTION_TIMEOUT_MS = 20000;
+let connectionAttempt;
+
+function watchVillageConnection(generation) {
+ if (!ARRIVAL_SERVICE.endpoint || partyId(roomId) !== ARRIVAL_SERVICE.partyId || generation !== networkGeneration) return;
+ if (connectionAttempt?.generation === generation) return;
+ clearTimeout(connectionAttempt?.timer);
+ connectionAttempt = {
+  generation,
+  reported: false,
+  timer: setTimeout(() => {
+   if (!document.hidden) void reportVillageConnectionFailure(generation);
+  }, CONNECTION_TIMEOUT_MS)
+ };
+}
+
+function finishVillageConnection(generation) {
+ if (connectionAttempt?.generation !== generation) return;
+ clearTimeout(connectionAttempt.timer);
+ connectionAttempt = undefined;
+}
+
+async function reportVillageConnectionFailure(generation) {
+ const user = networkAuth?.currentUser;
+ if (!user || roomFull || navigator.onLine === false) return;
+ watchVillageConnection(generation);
+ if (generation !== networkGeneration || connectionAttempt?.generation !== generation || connectionAttempt.reported) return;
+ connectionAttempt.reported = true;
+ clearTimeout(connectionAttempt.timer);
+
+ const url = ARRIVAL_SERVICE.endpoint.replace(/\/$/, '') + '/connection-failure';
+ const payload = JSON.stringify({ room: roomId, event: crypto.randomUUID().replace(/-/g, '') });
+ for (let retry = 0; retry < 2; retry++) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
+  try {
+   const idToken = await user.getIdToken();
+   const response = await fetch(url, {
+    method: 'POST', mode: 'cors', credentials: 'omit', keepalive: true,
+    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + idToken },
+    body: payload, signal: controller.signal
+   });
+   if (response.status < 500) return;
+  } catch {
+   // Retry with the same event so a lost response cannot add another failure.
+  } finally {
+   clearTimeout(timeout);
+  }
+  if (!retry) await new Promise(resolve => setTimeout(resolve, 1200));
+ }
+}
+
 function arrivalDevice(){
  const agent=typeof navigator==='undefined'?{}:navigator,ua=agent.userAgent||'';
  if(/Android|iPhone|iPad|iPod|Mobile|IEMobile|Opera Mini/i.test(ua)||(/Macintosh|MacIntel/.test(ua+' '+(agent.platform||''))&&agent.maxTouchPoints>1)||agent.userAgentData?.mobile===true)return 'mobile';

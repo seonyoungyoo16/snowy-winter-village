@@ -116,7 +116,12 @@ function publishState(force=false){
  const now=performance.now();if(!force&&now-lastNetworkSend<200)return;
  const body=villageTogether.wire(villageSnowball.wire(villagePlay.wire(stateBody()))),signature=JSON.stringify(body);if(!force&&signature===lastNetworkBody&&now-lastNetworkSend<6000)return;
  lastNetworkBody=signature;lastNetworkSend=now;
- return window.WinterFirebase.set(selfRef,{...body,s:++networkSequence,t:window.WinterFirebase.serverTimestamp()}).catch(error=>{networkJoined=false;clearPeers();updateNetworkStatus('접속을 확인해 주세요');console.warn('겨울 마을 연결:',error.code||'network');toast('친구 연결을 잠시 쉬고 있어요. 초대 버튼에서 다시 연결해요');});
+ const generation = networkGeneration;
+ return window.WinterFirebase.set(selfRef,{...body,s:++networkSequence,t:window.WinterFirebase.serverTimestamp()}).catch(error=>{
+  if(generation!==networkGeneration)return;
+  void reportVillageConnectionFailure(generation);
+  networkJoined=false;clearPeers();updateNetworkStatus('접속을 확인해 주세요');console.warn('겨울 마을 연결:',error.code||'network');toast('친구 연결을 잠시 쉬고 있어요. 초대 버튼에서 다시 연결해요');
+ });
 }
 async function registerPresence(generation){
  if(generation!==networkGeneration||!networkConnected||roomFull)return;
@@ -124,14 +129,19 @@ async function registerPresence(generation){
  try{
   const current=await F.get(players);if(generation!==networkGeneration)return;
   const active=Object.entries(current.val()||{}).filter(([id,d])=>id!==sessionKey&&validState(d)&&Date.now()+serverOffset-d.t<STALE_MS);
-  if(active.length>=MAX_VISITORS){roomFull=true;networkJoined=false;updateNetworkStatus('마을이 가득해요');toast('이 마을에는 네 명까지 함께할 수 있어요');return;}
+  if(active.length>=MAX_VISITORS){roomFull=true;networkJoined=false;finishVillageConnection(generation);updateNetworkStatus('마을이 가득해요');toast('이 마을에는 네 명까지 함께할 수 있어요');return;}
   if(!joinedAt)joinedAt=Date.now()+serverOffset;
   if(mode==='idle'&&!path.length&&Math.hypot(player.position.x,player.position.z-7)<2&&active.some(([,d])=>Math.hypot(d.x*WIRE_SCALE-player.position.x,d.z*WIRE_SCALE-player.position.z)<1)){
    const spawn=[[-1.5,7],[1.5,7],[0,5.2],[0,8.8]].find(([x,z])=>active.every(([,d])=>Math.hypot(d.x-x,d.z-z)>1));if(spawn)player.position.set(spawn[0],0,spawn[1]);
   }
   disconnectJob=F.onDisconnect(selfRef);await disconnectJob.remove();if(generation!==networkGeneration)return;
-  arrivalTracker.seed(active);networkJoined=true;const saved=publishState(true);reconcileRoom();if(saved?.then)saved.then(()=>reportOwnArrival(generation)).catch(()=>{});
- }catch(error){if(generation!==networkGeneration)return;networkJoined=false;updateNetworkStatus('친구 연결 대기');console.warn('겨울 마을 입장:',error.code||'network');toast('친구 연결을 준비하지 못했어요. 잠시 후 초대 버튼을 눌러주세요');}
+  arrivalTracker.seed(active);networkJoined=true;const saved=publishState(true);reconcileRoom();
+  if(saved?.then)saved.then(()=>{
+   if(generation!==networkGeneration||!networkJoined)return;
+   finishVillageConnection(generation);
+   return reportOwnArrival(generation);
+  }).catch(()=>{});
+ }catch(error){if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation);networkJoined=false;updateNetworkStatus('친구 연결 대기');console.warn('겨울 마을 입장:',error.code||'network');toast('친구 연결을 준비하지 못했어요. 잠시 후 초대 버튼을 눌러주세요');}
 }
 async function startNetwork(){
  if(!entered||networkStarting||networkJoined||roomFull)return;
@@ -141,19 +151,21 @@ async function startNetwork(){
   if(!networkAuth){const app=F.initializeApp(firebaseConfig);networkAuth=F.getAuth(app);await F.setPersistence(networkAuth,F.browserSessionPersistence);networkDB=F.getDatabase(app);}
   if(!networkAuth.currentUser)await F.signInAnonymously(networkAuth);
   if(generation!==networkGeneration)return;
+  watchVillageConnection(generation);
   for(const stop of networkStops)stop();networkStops=[];roomMembers.clear();resetWorldTravel();
   selfRef=F.ref(networkDB,'rooms/'+roomId+'/players/'+sessionKey);
   const players=F.ref(networkDB,'rooms/'+roomId+'/players');
   const change=snapshot=>{if(generation!==networkGeneration)return;const data=snapshot.val();if(validState(data))roomMembers.set(snapshot.key,fromWire(data));else roomMembers.delete(snapshot.key);reconcileRoom();};
-  const failed=error=>{if(generation!==networkGeneration)return;networkJoined=false;clearPeers();updateNetworkStatus('친구 연결 대기');console.warn('겨울 마을 동기화:',error.code||'network');};
+  const failed=error=>{if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation);networkJoined=false;clearPeers();updateNetworkStatus('친구 연결 대기');console.warn('겨울 마을 동기화:',error.code||'network');};
   networkStops.push(subscribeOtherWorld(F,generation),subscribeAdditionalWorld(F,generation));
   networkStops.push(F.onChildAdded(players,change,failed),F.onChildChanged(players,change,failed),F.onChildRemoved(players,snapshot=>{roomMembers.delete(snapshot.key);reconcileRoom();},failed));
   networkStops.push(F.onValue(F.ref(networkDB,'.info/serverTimeOffset'),snapshot=>{serverOffset=Number(snapshot.val())||0;}));
-  networkStops.push(F.onValue(F.ref(networkDB,'.info/connected'),snapshot=>{if(generation!==networkGeneration)return;networkConnected=snapshot.val()===true;if(networkConnected)registerPresence(generation);else{networkJoined=false;arrivalTracker.pause();clearPeers();resetWorldTravel();updateNetworkStatus('다시 연결 중…');}}));
- }catch(error){updateNetworkStatus('혼자 산책 중');console.warn('겨울 마을 연결 준비:',error.code||error.message);toast('인터넷 연결을 확인해 주세요. 혼자 산책은 계속할 수 있어요');}
+  networkStops.push(F.onValue(F.ref(networkDB,'.info/connected'),snapshot=>{if(generation!==networkGeneration)return;networkConnected=snapshot.val()===true;if(networkConnected)registerPresence(generation);else{networkJoined=false;watchVillageConnection(generation);arrivalTracker.pause();clearPeers();resetWorldTravel();updateNetworkStatus('다시 연결 중…');}}));
+ }catch(error){if(generation!==networkGeneration)return;void reportVillageConnectionFailure(generation);updateNetworkStatus('혼자 산책 중');console.warn('겨울 마을 연결 준비:',error.code||error.message);toast('인터넷 연결을 확인해 주세요. 혼자 산책은 계속할 수 있어요');}
  finally{networkStarting=false;}
 }
 async function newRoom(){
+ finishVillageConnection(networkGeneration);
  arrivalTracker.reset();resetWorldTravel();
  ++networkGeneration;for(const stop of networkStops)stop();networkStops=[];if(selfRef)await window.WinterFirebase.remove(selfRef).catch(()=>{});if(disconnectJob)await disconnectJob.cancel().catch(()=>{});
  roomMembers.clear();clearPeers();networkJoined=false;networkConnected=false;networkStarting=false;roomFull=false;selfRef=null;joinedAt=0;roomId=token();history.replaceState(null,'',location.pathname+location.search+'#room='+roomId);$('invite-link').value=inviteURL();await startNetwork();toast('새 마을의 초대 주소를 만들었어요');
@@ -183,7 +195,7 @@ addEventListener('storage',event=>{if(event.key===DESKTOP_ALERT_KEY){desktopAler
 refreshDesktopAlerts();
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('invite-modal').hidden)closeInvite();});
 addEventListener('online',()=>{if(entered&&!networkJoined&&!roomFull)startNetwork();});
-addEventListener('pagehide',()=>{if(selfRef)window.WinterFirebase.remove(selfRef).catch(()=>{});});
+addEventListener('pagehide',()=>{finishVillageConnection(networkGeneration);if(selfRef)window.WinterFirebase.remove(selfRef).catch(()=>{});});
 setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 
 /* RESIDENT_CODE */

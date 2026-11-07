@@ -20,8 +20,58 @@ async function fixture(connected=true){
   if(target.hostname==='api.telegram.org'){assert(target.pathname.startsWith('/bot'+env.TELEGRAM_BOT_TOKEN+'/'));const payload=JSON.parse(options.body);messages.push(payload);return Response.json(state.failTelegram?{ok:false}:{ok:true,result:{message_id:messages.length}},{status:state.failTelegram?500:200});}
   throw Error('Unexpected external request');
  }};
- return{env,state,messages,sleeps,dependencies,arrival:async(room=PARTY,overrides={})=>{const request=new Request('https://notify.test/arrival',{method:'POST',headers:{origin:env.SITE_ORIGIN,authorization:'Bearer '+TOKEN,'content-type':'application/json',...overrides.headers},body:JSON.stringify({room,session:SESSION,...overrides.body})});if(overrides.cf)Object.defineProperty(request,'cf',{value:overrides.cf});return handleRequest(request,env,dependencies);},webhook:async(update,secret=env.WEBHOOK_SECRET)=>handleRequest(new Request('https://notify.test/telegram',{method:'POST',headers:{'content-type':'application/json','x-telegram-bot-api-secret-token':secret},body:JSON.stringify(update)}),env,dependencies)};
+ const failure = (room, event, headers = {}) => handleRequest(new Request('https://notify.test/connection-failure', {
+  method: 'POST', headers: { origin: env.SITE_ORIGIN, authorization: 'Bearer ' + TOKEN, ...headers },
+  body: JSON.stringify({ room, event: event.toString(16).padStart(32, '0') })
+ }), env, dependencies);
+ return{env,state,messages,sleeps,dependencies,failure,arrival:async(room=PARTY,overrides={})=>{const request=new Request('https://notify.test/arrival',{method:'POST',headers:{origin:env.SITE_ORIGIN,authorization:'Bearer '+TOKEN,'content-type':'application/json',...overrides.headers},body:JSON.stringify({room,session:SESSION,...overrides.body})});if(overrides.cf)Object.defineProperty(request,'cf',{value:overrides.cf});return handleRequest(request,env,dependencies);},webhook:async(update,secret=env.WEBHOOK_SECRET)=>handleRequest(new Request('https://notify.test/telegram',{method:'POST',headers:{'content-type':'application/json','x-telegram-bot-api-secret-token':secret},body:JSON.stringify(update)}),env,dependencies)};
 }
+test('five authenticated failures in a rolling window alert for the affected world only', async () => {
+ const f = await fixture();
+ const room = 'lb_' + PARTY;
+ f.state.now = Math.floor(NOW / 300000) * 300000 + 299000;
+ for (let event = 1; event <= 4; event++) assert.equal((await f.failure(room, event)).status, 202);
+ assert.equal((await f.failure(room, 4)).status, 202);
+ assert.equal((await f.failure(PARTY, 5)).status, 202);
+ assert.equal((await f.failure(room, 5, { authorization: 'Bearer invalid.token.signature' })).status, 401);
+ assert.equal((await f.failure(room, 5, { origin: 'https://other.test' })).status, 403);
+ assert.equal((await f.failure('untracked-room', 5)).status, 400);
+ assert.equal(f.messages.length, 0);
+
+ f.state.now += 1500;
+ const response = await f.failure(room, 5);
+ assert.equal(response.status, 200);
+ assert.equal(response.headers.get('access-control-allow-origin'), f.env.SITE_ORIGIN);
+ assert.match(f.messages[0].text, /책숲 도서관\n최근 5분 동안 연결 실패 5회/);
+ assert.equal(f.messages[0].reply_markup.inline_keyboard[0][0].url, f.env.SITE_BASE + 'library/#room=' + room);
+ assert.equal((await f.failure(room, 6)).status, 202);
+ assert.equal(f.messages.length, 1);
+});
+test('expired failures do not count and concurrent reports only claim one alert', async () => {
+ const f = await fixture();
+ const room = 'aq_' + PARTY;
+ for (let event = 1; event <= 4; event++) await f.failure(room, event);
+ f.state.now += 300001;
+ for (let event = 5; event <= 8; event++) assert.equal((await f.failure(room, event)).status, 202);
+ assert.equal(f.messages.length, 0);
+ const responses = await Promise.all([9, 10, 11].map(event => f.failure(room, event)));
+ assert.deepEqual(responses.map(r => r.status).sort(), [200, 202, 202]);
+ assert.equal(f.messages.length, 1);
+ assert.match(f.messages[0].text, /물결 수족관\n최근 5분 동안 연결 실패 [5-7]회/);
+ f.state.now += 15 * 60 * 1000;
+ for (let event = 12; event <= 16; event++) await f.failure(room, event);
+ assert.equal(f.messages.length, 2);
+ assert.match(f.messages[1].text, /연결 실패 5회/);
+});
+test('retrying a failed Telegram delivery does not count the report twice', async () => {
+ const f = await fixture();
+ for (let event = 1; event <= 4; event++) await f.failure(PARTY, event);
+ f.state.failTelegram = true;
+ assert.equal((await f.failure(PARTY, 5)).status, 502);
+ f.state.failTelegram = false;
+ assert.equal((await f.failure(PARTY, 5)).status, 200);
+ assert.match(f.messages.at(-1).text, /겨울 마을\n최근 5분 동안 연결 실패 5회/);
+});
 test('a confirmed Firebase visitor notifies the private phone chat with the correct world link',async()=>{
  const f=await fixture();const response=await f.arrival('lb_'+PARTY,{body:{device:'mobile'},cf:{country:'KR',region:'Seoul',regionCode:'11',city:'Seoul',latitude:'37.5',longitude:'127.0'}});assert.equal(response.status,200);assert.equal(response.headers.get('access-control-allow-origin'),f.env.SITE_ORIGIN);assert.equal(f.messages.length,1);const message=f.messages[0];assert.equal(message.chat_id,'12345');assert(message.text.includes('방문 곰'));assert(message.text.includes('책숲 도서관'));assert(message.text.includes('🌱 첫 방문 · 📱 모바일'));assert(message.text.includes('📍 대한민국 · 서울 (IP 추정)'));assert(!message.text.includes('37.5'));assert.equal(message.parse_mode,undefined);assert.equal(message.reply_markup.inline_keyboard[0][0].url,f.env.SITE_BASE+'library/#room=lb_'+PARTY);assert(!message.text.includes(TOKEN));
 });
