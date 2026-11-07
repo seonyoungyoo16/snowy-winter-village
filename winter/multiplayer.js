@@ -198,6 +198,8 @@ setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 /* VILLAGE_LOOKS_CODE */
 /* RESIDENT_GIFTS_CODE */
 /* VILLAGE_NEWSPAPER_CODE */
+/* VILLAGE_RADIO_CODE */
+/* PHOTO_MODE_CODE */
 /* HOMESTEAD_CODE */
 /* ARRIVAL_CLIENT_CODE */
 setupWorldTravel();
