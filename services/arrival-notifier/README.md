@@ -4,12 +4,14 @@
 
 현재 활성화 여부는 루트 `shared/arrival-config.json`의 `endpoint`로 확인합니다. 빈 주소는 연결 대기 상태입니다. 코드 검사 통과는 실제 휴대폰 수신 완료를 뜻하지 않습니다.
 
+알림 서버 주소는 `https://my-little-village-arrivals.seonyoungyoo16.workers.dev`입니다. 서버를 미리 배포해 두어도 봇과 수신 대화를 연결하기 전에는 알림을 보내지 않습니다. `/health`는 개인 정보 없이 연결 여부만 반환합니다.
+
 ## 최초 연결
 
 1. 텔레그램에서 공식 **[@BotFather](https://t.me/BotFather)**를 열고 `/newbot`을 보냅니다. 표시 이름과 `bot`으로 끝나는 고유 사용자 이름을 정합니다. 발급받은 토큰은 채팅·GitHub에 올리지 않습니다.
 2. 무료 [Cloudflare 계정](https://dash.cloudflare.com/)으로 로그인합니다. 유료 Workers 구독이나 Firebase Blaze 업그레이드는 필요하지 않습니다.
 3. 이 폴더에서 `npm ci`를 실행합니다. Node.js 24 이상이 필요합니다.
-4. `npx wrangler login --use-keyring --scopes account:read user:read workers:write d1:write`로 공식 CLI 연결을 승인합니다. Windows에서 키링 의존성 설치를 요청하면 공식 안내에 따릅니다. 계정 조회, Workers 배포, D1 저장소 권한을 사용합니다.
+4. `npx wrangler login --use-keyring --scopes account:read user:read workers_scripts:write d1:write`로 공식 CLI 연결을 승인합니다. Windows에서 키링 의존성 설치를 요청하면 공식 안내에 따릅니다. 계정 조회, Workers 배포, D1 저장소 권한을 사용합니다.
 5. `npm run setup`을 실행하고 출력되는 `http://127.0.0.1:.../setup/...` 주소를 엽니다. 이 PC에서만 열리는 일회용 창입니다. 계정을 선택하고 봇 토큰을 **그 창의 비밀번호 입력란**에 붙여 넣어 연결합니다.
 6. 창의 **내 텔레그램 봇 열기**를 눌러 내 휴대폰 텔레그램에서 **시작**합니다. 처음 연결한 개인 대화 하나만 수신자로 저장합니다. 연결 링크는 30분 동안 유효하므로 공유하지 않습니다.
 7. 창에서 연결 완료를 확인한 뒤 루트에서 `npm test`를 실행하고, 갱신된 `shared/arrival-config.json`과 빌드 HTML을 기존 저장소에 배포합니다. 실제 주소에서 접속해 휴대폰 수신을 확인합니다. 연결을 마치면 로컬 설정 창과 명령을 종료해도 됩니다.
