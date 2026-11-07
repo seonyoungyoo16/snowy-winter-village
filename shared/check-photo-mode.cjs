@@ -10,7 +10,7 @@ for(const world of['winter','aquarium','library']){
  vm.runInContext(scripts.at(-1).replace(/\}\)\(\);\s*$/,`globalThis.audit={photoMode,camera,setEntered(){entered=true;}};})();`),c);
  const{photoMode:P,camera}=c.audit;
  // The camera button floats on the page; in photo mode a body class hides it with every other panel.
- assert.equal(P.button.id,'photo');assert(body.children.includes(P.button));
+ assert(!body.children.some(n=>n.className==='photo-toggle'),'photo mode opens from the hotbar camera, not its own button');
  assert.equal(P.enter(),false,'photo mode before entering the village');assert.equal(P.shoot(),null);
  c.audit.setEntered();const fov=camera.fov;
  assert.equal(P.enter(),true);assert(P.on);assert(classes.has('photo-mode'),'panels stay on screen in photo mode');

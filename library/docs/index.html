@@ -3908,7 +3908,7 @@ function animatePose(dt,moving,actor=character,state=mode,phase=elapsed,actionTi
  actor.body.position.y=lerp(actor.body.position.y,y,1-Math.exp(-dt*12));actor.body.rotation.x=lerp(actor.body.rotation.x,pitch,1-Math.exp(-dt*10));actor.head.rotation.z=Math.sin(phase*.8)*.018;
  if(state==='cat'){actor.legs.forEach(leg=>leg.position.y=.47-actor.body.position.y);fitCatVisitorHand(actor,catType,actionTime);}
 }
-function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||!$('memory-modal').hidden||!$('cat-modal').hidden||!$('book-picker').hidden||residentGuide.isOpen()||creatureBook.isOpen()||villageNotes.isOpen()||villageLooks.isOpen()||residentGifts.isOpen()||villageNewspaper.isOpen()||photoMode.isOpen()||villageCompanions.isOpen()||radialMenu.isOpen()||villageMinigames.isOpen()||villageExpedition.isOpen()||villageMarket.isOpen()||villageJournal.isOpen()||villageGoals.isOpen();}
+function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||!$('memory-modal').hidden||!$('cat-modal').hidden||!$('book-picker').hidden||residentGuide.isOpen()||creatureBook.isOpen()||villageNotes.isOpen()||villageLooks.isOpen()||residentGifts.isOpen()||villageNewspaper.isOpen()||photoMode.isOpen()||villageCompanions.isOpen()||radialMenu.isOpen()||villageMinigames.isOpen()||villageExpedition.isOpen()||villageMarket.isOpen()||villageJournal.isOpen()||villageGoals.isOpen()||(typeof villageFolk==='object'&&villageFolk.isOpen())||(typeof villageMap==='object'&&villageMap.isOpen())||(typeof villageBag==='object'&&villageBag.isOpen());}
 function closeHelp(){$('help-modal').hidden=true;$('help').focus();}
 $('help').addEventListener('click',()=>{$('help-modal').hidden=false;keys.clear();$('close-help').focus();});$('close-help').addEventListener('click',closeHelp);$('return-village').addEventListener('click',closeHelp);$('help-modal').addEventListener('click',e=>{if(e.target===$('help-modal'))closeHelp();});
 $('memory-action').addEventListener('click',openMemories);$('close-memories').addEventListener('click',closeMemories);$('memory-modal').addEventListener('click',e=>{if(e.target===$('memory-modal'))closeMemories();});
@@ -4063,16 +4063,16 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
   else if(mode==='idle'){
    updateCatApproach(dt);updateBookShelfWalk();updateReadingWalk();
    if(mode==='idle'){
-   let vx=0,vz=0;const speed=3.5;if(keys.has('w')||keys.has('arrowup'))vz--;if(keys.has('s')||keys.has('arrowdown'))vz++;if(keys.has('a')||keys.has('arrowleft'))vx--;if(keys.has('d')||keys.has('arrowright'))vx++;
+   let vx=0,vz=0;const speed=3.5*villageRun.factor(mode);if(keys.has('w')||keys.has('arrowup'))vz--;if(keys.has('s')||keys.has('arrowdown'))vz++;if(keys.has('a')||keys.has('arrowleft'))vx--;if(keys.has('d')||keys.has('arrowright'))vx++;
    if(vx||vz){if(pendingBookShelf||pendingReadingSeat||pendingCatAction)stopActivity();path=[];const v=new THREE.Vector3(vx,0,vz).normalize().applyAxisAngle(new THREE.Vector3(0,1,0),cameraYaw),nx=player.position.x+v.x*speed*dt,nz=player.position.z+v.z*speed*dt;if(!blocked(nx,nz)){player.position.x=nx;player.position.z=nz;moving=true;}else{if(!blocked(nx,player.position.z)){player.position.x=nx;moving=true;}if(!blocked(player.position.x,nz)){player.position.z=nz;moving=true;}}if(moving){const desired=Math.atan2(v.x,v.z);player.rotation.y+=Math.atan2(Math.sin(desired-player.rotation.y),Math.cos(desired-player.rotation.y))*(1-Math.exp(-dt*12));}}
    else if(path.length){const p=path[0],dx=p.x-player.position.x,dz=p.z-player.position.z,d=Math.hypot(dx,dz),step=Math.min(speed*dt,d);if(d<(pendingCatAction&&pendingCatAction.kind!==null ? .015 : .07))path.shift();else{player.position.x+=dx/d*step;player.position.z+=dz/d*step;const desired=Math.atan2(dx,dz);player.rotation.y+=Math.atan2(Math.sin(desired-player.rotation.y),Math.cos(desired-player.rotation.y))*(1-Math.exp(-dt*13));moving=true;}}
   }
   }
  }
- updateResidentCat(dt);networkTick(dt,moving);animatePose(dt,moving,character,mode,elapsed,mode==='cat'||mode==='catWake'?catActionTime:mode==='reading'?readingTurnTime:writingTime);playerShadow.position.set(player.position.x,.035,player.position.z);
+ updateResidentCat(dt);networkTick(dt,moving);animatePose(dt,moving,character,mode,villageRun.phase(dt,moving),mode==='cat'||mode==='catWake'?catActionTime:mode==='reading'?readingTurnTime:writingTime);playerShadow.position.set(player.position.x,.035,player.position.z);
  for(let i=0;i<dustCount;i++){const s=dustSeed[i];dustArray[i*3]=s.x+Math.sin(elapsed*.12+i)*.3;dustArray[i*3+1]=s.y+Math.sin(elapsed*.2+i*2)*.12;dustArray[i*3+2]=s.z+Math.cos(elapsed*.1+i)*.2;}dustGeo.attributes.position.needsUpdate=true;
  if(ringTimer>0){ringTimer-=dt;targetRing.scale.setScalar(1+Math.sin(elapsed*4)*.08);targetRing.material.opacity=clamp(ringTimer,0,.7);if(ringTimer<=0)targetRing.visible=false;}
- residentGuide.tick(dt);skyWeather.tick(dt);villagePlay.tick(dt);seasonalEvents.tick(dt);avatarLife.tick(dt);residentGifts.tick();villageRadio.tick();villageCompanions.tick(dt);radialMenu.tick(dt);villageMinigames.tick(dt);villageSnowball.tick(dt);villageTogether.tick(dt);villageHotbar.tick();villageExpedition.tick(dt);updateCamera(dt);if(frameCount++%5===0){label('label-books',-12,4.5,-7.3);label('label-window',10,3.2,-11);label('label-desk',13.2,3.4,1.2);updateCatBubble();if(entered)updateUI();}renderer.render(scene,camera);
+ residentGuide.tick(dt);skyWeather.tick(dt);villagePlay.tick(dt);seasonalEvents.tick(dt);avatarLife.tick(dt);residentGifts.tick();villageRadio.tick();villageCompanions.tick(dt);radialMenu.tick(dt);villageMinigames.tick(dt);villageSnowball.tick(dt);villageTogether.tick(dt);villageHotbar.tick();villageTidy.tick(dt);villageRun.tick();villageExpedition.tick(dt);villageFolk.tick(dt);villageMap.tick(dt);villageBag.tick(dt);updateCamera(dt);if(frameCount++%5===0){label('label-books',-12,4.5,-7.3);label('label-window',10,3.2,-11);label('label-desk',13.2,3.4,1.2);updateCatBubble();if(entered)updateUI();}renderer.render(scene,camera);
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();$('error').hidden=false;$('error-text').textContent='도서관이 잠깐 쉬고 있어요. 페이지를 다시 열어주세요.';});
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('memory-modal').hidden)closeMemories();});
@@ -4382,13 +4382,17 @@ function createResidentGuide(){
  function place(spot){hereY=typeof groundHeight==='function'?groundHeight(spot.x,spot.z):0;root.position.set(spot.x,hereY,spot.z);root.rotation.y=spot.yaw;footprint.x=spot.x;footprint.z=spot.z;shade.position.x=spot.x;shade.position.z=spot.z;here=spot;}
  place(spotFor(slot.at));
  const moodText=()=>slot.mood==='work'?role:routines.moods[slot.mood];const pick=mesh(new THREE.SphereGeometry(.66,8,6),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}),root,0,1,0,1,1.55,1);
- const style=document.createElement('style');style.textContent='.resident-bubble{position:fixed;white-space:nowrap;z-index:3;transform:translate(-50%,-100%);padding:8px 12px;border:0;border-radius:17px;background:#f1dfbfee;color:#655346;font:inherit;font-size:11px;min-height:36px;box-shadow:0 3px 12px #302c3326;cursor:pointer}.resident-dialog{position:fixed;inset:0;z-index:12;display:grid;align-items:end;justify-items:center;padding:18px;background:linear-gradient(0deg,#29213266,transparent 65%)}.resident-card{position:relative;width:min(360px,100%);padding:25px 23px 20px;border-radius:25px;background:#fff3e3f5;color:#69534f;text-align:center}.resident-card h2{margin:0 0 12px;font-size:21px}.resident-card p{font-size:13px;line-height:1.8;margin:0 0 16px}.resident-card small{font-size:10px;color:#a18c78}.resident-card button{font:inherit;min-height:44px;border:0;border-radius:14px;cursor:pointer}.resident-card .resident-close{position:absolute;right:8px;top:7px;width:40px;background:transparent;color:#a18b7d;font-size:24px}.resident-next{display:block;width:100%;margin-bottom:14px;padding:12px;background:#8e9d83;color:#fff8e8}';document.body.append(style);
- const titleText=role.title+' '+role.name,bubble=document.createElement('button');bubble.className='resident-bubble';bubble.textContent=titleText;bubble.setAttribute('aria-label',titleText+'에게 말 걸기');bubble.hidden=true;document.body.append(bubble);const dialog=document.createElement('section');dialog.className='resident-dialog';dialog.setAttribute('aria-label',titleText);dialog.hidden=true;const card=document.createElement('div');card.className='resident-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label',titleText);const closeButton=document.createElement('button');closeButton.className='resident-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','주민 이야기 닫기');const title=document.createElement('h2');title.textContent=titleText;const line=document.createElement('p'),next=document.createElement('button');next.className='resident-next';next.textContent='이야기 더 듣기';const note=document.createElement('small');note.textContent=role.note;card.append(closeButton,title,line,next,note);dialog.append(card);
- // Worlds can add their own conversation choices (e.g. the aquarium's donations) above the note.
- function addAction(label,run){const b=document.createElement('button');b.className='resident-next';b.textContent=label;b.addEventListener('click',run);if(card.insertBefore)card.insertBefore(b,note);else card.append(b);return b;}document.body.append(dialog);
+ const style=document.createElement('style');style.textContent='.resident-bubble{position:fixed;white-space:nowrap;z-index:3;transform:translate(-50%,-100%);padding:8px 12px;border:0;border-radius:17px;background:#f1dfbfee;color:#655346;font:inherit;font-size:11px;min-height:36px;box-shadow:0 3px 12px #302c3326;cursor:pointer}.resident-dialog{position:fixed;inset:0;z-index:12;display:grid;align-items:end;justify-items:center;padding:18px;background:linear-gradient(0deg,#29213266,transparent 65%)}.resident-card{position:relative;width:min(360px,100%);padding:25px 23px 20px;border-radius:25px;background:#fff3e3;color:#69534f;box-shadow:0 8px 30px #2a223326;text-align:center}.resident-card h2{margin:0 0 12px;font-size:21px}.resident-card p{font-size:13px;line-height:1.8;margin:0 0 16px}.resident-card small{font-size:10px;color:#a18c78}.resident-card button{font:inherit;min-height:44px;border:0;border-radius:14px;cursor:pointer}.resident-card .resident-close{position:absolute;right:8px;top:7px;width:40px;background:transparent;color:#a18b7d;font-size:24px}.resident-next{display:block;width:100%;margin-bottom:10px;padding:12px;background:#8e9d83;color:#fff8e8}.resident-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}.resident-actions:empty{display:none}.resident-actions .resident-next{margin:0;padding:9px 6px;font-size:12px;background:#efe1cb;color:#6a5350}.resident-actions .resident-next:only-child{grid-column:1/-1}.resident-card .resident-more{display:block;width:100%;margin-bottom:10px;padding:9px;background:transparent;color:#8a7468;font-size:12px;border:1px solid #e3d2bb}.resident-more-list[hidden],.resident-card .resident-more[hidden]{display:none}';document.body.append(style);
+ const titleText=role.title+' '+role.name,bubble=document.createElement('button');bubble.className='resident-bubble';bubble.textContent=titleText;bubble.setAttribute('aria-label',titleText+'에게 말 걸기');bubble.hidden=true;document.body.append(bubble);const dialog=document.createElement('section');dialog.className='resident-dialog';dialog.setAttribute('aria-label',titleText);dialog.hidden=true;const card=document.createElement('div');card.className='resident-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label',titleText);const closeButton=document.createElement('button');closeButton.className='resident-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','주민 이야기 닫기');const title=document.createElement('h2');title.textContent=titleText;const line=document.createElement('p'),next=document.createElement('button');next.className='resident-next';next.textContent='이야기 더 듣기';const note=document.createElement('small');note.textContent=role.note;const actions=document.createElement('div');actions.className='resident-actions';const more=document.createElement('button');more.className='resident-more';more.textContent='마을 일 더 보기';more.setAttribute('aria-expanded','false');more.hidden=true;const moreList=document.createElement('div');moreList.className='resident-actions resident-more-list';moreList.hidden=true;
+ more.addEventListener('click',()=>setMore(moreList.hidden));card.append(closeButton,title,line,next,actions,more,moreList,note);dialog.append(card);
+ function setMore(open){moreList.hidden=!open;more.setAttribute('aria-expanded',String(open));more.textContent=open?'마을 일 접기':'마을 일 더 보기';}
+ // Worlds and shared modules add their own conversation choices. A few sit in front; the rest (shop, journal, goals,
+ // paper, radio, companions, trips) fold under one "마을 일" button so the card stays short.
+ const FRONT=['선물 주기','함께 놀기','전시 수조에 기증하기'];
+ function addAction(label,run){const b=document.createElement('button');b.className='resident-next';b.textContent=label;b.addEventListener('click',run);if(FRONT.includes(label))actions.append(b);else{moreList.append(b);more.hidden=false;}return b;}document.body.append(dialog);
  let lineIndex=0,nodUntil=0,lastSight=-Infinity,occluded=false;const project=new THREE.Vector3(),screenRay=new THREE.Raycaster(),viewDirection=new THREE.Vector3(),clockNow=()=>((Date.now()+serverOffset)/1000),distanceToResident=()=>Math.hypot(player.position.x-here.x,player.position.z-here.z);
  function close(){dialog.hidden=true;renderer.domElement.focus({preventScroll:true});}
- function open(){if(!entered||mode!=='idle'||helpOpen())return;if(distanceToResident()>talkRange){toast(role.name+' 가까이에서 이야기해요.');return;}path=[];keys.clear();line.textContent=moodText().intro+(typeof seasonalEvents==='object'&&seasonalEvents.residentLine()?' '+seasonalEvents.residentLine():'');note.textContent=moodText().note;lineIndex=0;nodUntil=clockNow()+1.3;dialog.hidden=false;closeButton.focus();}
+ function open(){if(!entered||mode!=='idle'||helpOpen())return;if(distanceToResident()>talkRange){toast(role.name+' 가까이에서 이야기해요.');return;}path=[];keys.clear();line.textContent=moodText().intro+(typeof seasonalEvents==='object'&&seasonalEvents.residentLine()?' '+seasonalEvents.residentLine():'');note.textContent=moodText().note;lineIndex=0;nodUntil=clockNow()+1.3;dialog.hidden=false;setMore(false);closeButton.focus();}
  closeButton.addEventListener('click',close);bubble.addEventListener('click',open);dialog.addEventListener('click',e=>{if(e.target===dialog)close();});next.addEventListener('click',()=>{const words=moodText().words;line.textContent=words[lineIndex++%words.length];nodUntil=clockNow()+.8;});addEventListener('keydown',e=>{if(e.key==='Escape'&&!dialog.hidden)close();});
  function tick(dt){
   const clock=clockNow(),phase=clock%24,talking=!dialog.hidden;
@@ -4546,7 +4550,7 @@ const villageStore=createVillageStore();
 // All friend text is shown with textContent only, trimmed and length-limited before it is stored.
 function createVillageNotes(){
  const LAYOUT={
-  winter:{mailbox:{x:-3,z:9.8},board:{x:3.5,z:10.3},signs:[{x:-4,z:4},{x:5,z:3}],resident:'밤이',requests:[['snowman','눈사람 하나 세워 주세요'],['warm','모닥불에서 손 좀 녹이고 가요'],['fish','얼음 연못에서 한 마리 낚아 봐요']]},
+  winter:{mailbox:{x:-2.4,z:4.6},board:{x:-2.8,z:1.8},signs:[{x:-4,z:4},{x:-5.4,z:5.2}],resident:'밤이',requests:[['snowman','눈사람 하나 세워 주세요'],['warm','모닥불에서 손 좀 녹이고 가요'],['fish','얼음 연못에서 한 마리 낚아 봐요']]},
   aquarium:{mailbox:{x:-3,z:8.2},board:{x:3.5,z:8.5},signs:[{x:-6,z:6},{x:6,z:6}],resident:'해리',requests:[['reef','산호 수조 친구들에게 먹이를 주세요'],['ocean','바다 수조 사진을 한 장 찍어 주세요'],['jelly','해파리 쉼터에서 잠깐 쉬어 가요']]},
   library:{mailbox:{x:-3,z:10},board:{x:3.5,z:10.5},signs:[{x:-6,z:8},{x:6,z:8}],resident:'소담',requests:[['read','책 한 권 펼쳐 읽어 주세요'],['window','창가에서 하늘 구경해요'],['cat','귤이랑 놀아 주세요']]}
  }[CURRENT_WORLD];
@@ -4628,13 +4632,12 @@ function createVillagePlay(){
  function lanternsTick(dt){for(let i=lanterns.length-1;i>=0;i--){const l=lanterns[i];l.age+=dt;const w=skyWeather.state.wind;l.mesh.position.y+=dt*.55;l.mesh.position.x+=(w.x*.25+Math.sin(l.age*.7+l.seed)*.08)*dt;l.mesh.position.z+=(w.z*.25+Math.cos(l.age*.6+l.seed)*.08)*dt;const fade=Math.max(0,Math.min(1,(28-l.age)/6));for(const m of l.mesh.children)m.material.opacity=.95*fade;if(fade<=0){scene.remove(l.mesh);lanterns.splice(i,1);}}}
  function decode(m,b){if(m==='celebrate'&&b>=.09&&b<=.36)return{emote:Math.round((b-.1)/.05)};if((m==='idle'||m==='walk')&&Math.abs(b-.41)<.005)return{kite:true};if((m==='idle'||m==='walk')&&Math.abs(b-.45)<.005)return{lantern:true};return null;}
  const canKite=()=>WINTER&&skyWeather.state.daylight>.25,canLantern=()=>WINTER&&skyWeather.state.daylight<.35;
- // Palette: a round button at the lower right opens the emotes (and, in winter, the kite or a lantern for the hour).
- const style=document.createElement('style');style.textContent='.play-toggle{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 132px);z-index:4;width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,247,232,.88);color:#8f5a54;font:700 21px/1 "Winter Jua",sans-serif;box-shadow:0 3px 12px rgba(40,40,70,.18);cursor:pointer}.play-palette{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 186px);z-index:4;display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:18px;background:rgba(255,247,232,.94);box-shadow:0 3px 14px rgba(40,40,70,.2)}.play-palette button{min-width:44px;min-height:40px;border:0;border-radius:12px;background:#f3e6d1;color:#6a5050;font:700 13px "Winter Jua",sans-serif;cursor:pointer;white-space:nowrap}.play-palette button[aria-pressed=true]{background:#d9b98d}';(document.head||document.body).append(style);
- const toggle=document.createElement('button');toggle.className='play-toggle';toggle.textContent='☺';toggle.setAttribute('aria-label','표현하기');toggle.hidden=true;const palette=document.createElement('div');palette.className='play-palette';palette.hidden=true;palette.setAttribute('aria-label','표현 고르기');document.body.append(toggle,palette);
- let kiteButton=null,lanternButton=null;
+ // A round button at the lower right opens the quick ring (emotes and friends' choices); the palette below is the
+ // fallback when the ring is missing. The kite and lantern live in the hotbar.
+ const style=document.createElement('style');style.textContent='.play-toggle{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 132px);z-index:4;width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,247,232,.88);color:#8f5a54;font:700 21px/1 "Winter Jua",sans-serif;box-shadow:0 3px 12px rgba(40,40,70,.18);cursor:pointer;display:grid;place-items:center}.play-toggle[hidden]{display:none}.play-toggle svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.play-palette{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 186px);z-index:4;display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:18px;background:rgba(255,247,232,.94);box-shadow:0 3px 14px rgba(40,40,70,.2)}.play-palette button{min-width:44px;min-height:40px;border:0;border-radius:12px;background:#f3e6d1;color:#6a5050;font:700 13px "Winter Jua",sans-serif;cursor:pointer;white-space:nowrap}.play-palette button[aria-pressed=true]{background:#d9b98d}';(document.head||document.body).append(style);
+ const toggle=document.createElement('button');toggle.className='play-toggle';toggle.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 14a4.5 4.5 0 0 0 8 0M9 9.5h.01M15 9.5h.01"/></svg>';toggle.setAttribute('aria-label','표현하기');toggle.hidden=true;const palette=document.createElement('div');palette.className='play-palette';palette.hidden=true;palette.setAttribute('aria-label','표현 고르기');document.body.append(toggle,palette);
  for(const[i,[glyph,label]]of EMOTES.entries()){const b=document.createElement('button');b.textContent=glyph+' '+label;b.setAttribute('aria-label',label);b.addEventListener('click',()=>{say(i);palette.hidden=true;});palette.append(b);}
- if(WINTER){kiteButton=document.createElement('button');kiteButton.textContent='연 날리기';kiteButton.addEventListener('click',()=>{toggleKite();palette.hidden=true;});lanternButton=document.createElement('button');lanternButton.textContent='풍등 띄우기';lanternButton.addEventListener('click',()=>{lantern();palette.hidden=true;});palette.append(kiteButton,lanternButton);}
- toggle.addEventListener('click',()=>{if(kiteButton){kiteButton.hidden=!canKite();kiteButton.setAttribute('aria-pressed',String(kiteOn));kiteButton.textContent=kiteOn?'연 거두기':'연 날리기';lanternButton.hidden=!canLantern();}palette.hidden=!palette.hidden;});
+ toggle.addEventListener('click',()=>{if(typeof radialMenu==='object'&&radialMenu){palette.hidden=true;radialMenu.open();return;}palette.hidden=!palette.hidden;});
  function free(){return entered&&mode==='idle';}
  function say(i){if(!free()){toast('하던 일을 마치고 표현해 볼까요?');return false;}if(now()-emoteAt<2.5)return false;emote=i;emoteAt=now();if(typeof villageJournal==='object')villageJournal.note('first-emote');if(typeof publishState==='function')publishState(true);return true;}
  function toggleKite(){if(!kiteOn&&!canKite()){toast('연은 해가 있을 때 날려요');return false;}kiteOn=!kiteOn;if(kiteOn&&typeof villageJournal==='object')villageJournal.note('first-kite');toast(kiteOn?'바람을 타고 연이 올라가요':'연을 거두었어요');if(typeof publishState==='function')publishState(true);return kiteOn;}
@@ -4776,6 +4779,10 @@ function createVillageJournal(){
   ['did-window','도서관 창가에서 하늘을 봤어요','도서관 창가 자리에서 쉬기'],
   ['did-cat','귤이와 놀았어요','도서관 고양이 귤이와 놀기'],
   ['first-request','주민의 부탁을 처음 들어줬어요','게시판의 오늘 부탁 하나 들어주기'],
+  ['first-pickup','반짝이는 걸 주워 가방에 넣었어요','마을 곳곳의 반짝이는 물건 줍기'],
+  ['first-run','눈길을 신나게 달려 봤어요','Shift를 누르거나 달리기 버튼으로 달리기'],
+  ['first-folk','마을 이웃과 처음 이야기를 나눴어요','돌아다니는 이웃에게 말 걸기'],
+  ['first-beacon','마을 끝의 등불 표지를 밝혔어요','겨울 마을의 새 지역에서 등불 표지 만지기'],
   ['first-letter','친구에게 편지를 보냈어요','우편함에서 편지 쓰기'],
   ['first-memo','게시판에 메모를 붙였어요','게시판에 메모 붙이기'],
   ['first-sign','표지판에 한 줄을 남겼어요','표지판에 문구 쓰기'],
@@ -4864,12 +4871,15 @@ function createAvatarLife(){
   const lids=merged([-1,1].map(s=>({geo:ball,pos:[s*f.eyeX,f.eyeY+.012,f.eyeZ+.004],scale:[.046,.052,.02]})),f.skin,'face-lids');
   const arcs=merged([-1,1].map(s=>({geo:arc,pos:[s*f.eyeX,f.eyeY-.012,f.eyeZ+.012],scale:[.032,.032,.02]})),f.eye,'face-happy-eyes');
   const mouth=merged([{geo:ring,pos:[0,f.mouthY,f.mouthZ+.006],scale:[.03,.034,.02]}],0x8f6d68,'face-mouth');
-  head.add(lids,arcs,mouth);r={lids,arcs,mouth,nextBlink:now()+1+Math.random()*4,blinkAt:-9,glanceY:0,nextGlance:now()+3+Math.random()*4,glanceUntil:0,breathAt:now()+Math.random()*3};rigs.set(head,r);return r;}
+  // Sparkle and blush: a white glint in each eye and soft pink cheeks, one mesh each.
+  const shine=merged([-1,1].map(s=>({geo:ball,pos:[s*f.eyeX+.016,f.eyeY+.02,f.eyeZ+.014],scale:[.014,.014,.008]})),0xffffff,'look-shine');shine.material=new THREE.MeshBasicMaterial({color:0xffffff});shine.visible=true;
+  const blush=merged([-1,1].map(s=>({geo:ball,pos:[s*f.eyeX*1.42,f.eyeY-.095,f.eyeZ-.035],scale:[.062,.034,.02]})),0xf2a7a0,'look-blush');blush.material=new THREE.MeshBasicMaterial({color:0xf2a7a0,transparent:true,opacity:.55,depthWrite:false});blush.visible=true;
+  head.add(lids,arcs,mouth,shine,blush);r={lids,arcs,mouth,shine,blush,nextBlink:now()+1+Math.random()*4,blinkAt:-9,glanceY:0,nextGlance:now()+3+Math.random()*4,glanceUntil:0,breathAt:now()+Math.random()*3};rigs.set(head,r);return r;}
  // Expression wins over blinking; a blink is a quick 0.14 s close.
  function face(r,expr,t){if(t>=r.nextBlink){r.blinkAt=t;r.nextBlink=t+3+Math.random()*3;}const blink=t-r.blinkAt<.14;
   r.arcs.visible=expr==='happy';r.mouth.visible=expr==='surprised'||expr==='talk';if(expr==='talk')r.mouth.scale.set(1,.6+Math.abs(Math.sin(t*9))*.5,1);else r.mouth.scale.set(1,1,1);
   if(expr==='happy'||expr==='asleep'){r.lids.visible=true;r.lids.scale.y=1;r.lids.position.y=0;}else if(expr==='sleepy'){r.lids.visible=true;r.lids.scale.y=.55;r.lids.position.y=.018;}else if(expr==='surprised'){r.lids.visible=false;}else{r.lids.visible=blink;r.lids.scale.y=1;r.lids.position.y=0;}
-  return blink;}
+  r.shine.visible=!r.lids.visible&&!r.arcs.visible;return blink;}
  // Glances: now and then a calm visitor turns its head toward someone nearby, never tracking for long.
  function glance(r,actor,others,calm,t,dt){const root=actor.root;if(calm&&t>=r.nextGlance){r.nextGlance=t+4+Math.random()*5;let best=null,bestD=6;for(const o of others){if(o===root)continue;const d=root.position.distanceTo(o.position);if(d<bestD){bestD=d;best=o;}}if(best){const dx=best.position.x-root.position.x,dz=best.position.z-root.position.z,rel=Math.atan2(Math.sin(Math.atan2(dx,dz)-root.rotation.y),Math.cos(Math.atan2(dx,dz)-root.rotation.y));r.glanceTarget=Math.max(-.6,Math.min(.6,rel));r.glanceUntil=t+1.2+Math.random()*.8;}}
   const target=calm&&t<r.glanceUntil?r.glanceTarget:0;if(Math.abs(target)<1e-4&&Math.abs(r.glanceY)<1e-3){if(r.glanceY!==0){r.glanceY=0;actor.head.rotation.y=0;}return;}r.glanceY+=(target-r.glanceY)*Math.min(1,dt*5);actor.head.rotation.y=r.glanceY;}
@@ -4883,11 +4893,18 @@ function createAvatarLife(){
  function actors(){const list=[];if(typeof character==='object'&&character&&character.head)list.push({actor:character,f:VISITOR,expr:localExpr(),calm:typeof mode==='undefined'||mode==='idle'});
   if(typeof remotePlayers==='object')for(const peer of remotePlayers.values())if(peer.actor&&peer.actor.head)list.push({actor:peer.actor,f:VISITOR,expr:peer.emoteAt!==undefined&&now()-peer.emoteAt<EMOTE_TIME?EMOTE_FACE[peer.emoteShown]||null:null,calm:!peer.data||peer.data.m==='idle'||peer.data.m==='walk'});
   if(typeof residentGuide==='object'&&residentGuide&&residentGuide.actor){const s=residentGuide.slot;list.push({actor:residentGuide.actor,f:RESIDENT,expr:s&&s.mood==='sleep'&&!residentGuide.isOpen()?'asleep':residentGuide.isOpen()?'talk':null,calm:false,resident:true});}
+  if(typeof villageFolk==='object'&&villageFolk&&villageFolk.visible)for(const fk of villageFolk.visible())if(fk.actor&&fk.actor.head)list.push({actor:fk.actor,f:VISITOR,expr:null,calm:!fk.walking});
   return list;}
+ // Little finishing touches on visitor and folk bodies, added once: a rounder head, a tail for each animal and a soft
+ // outline around head and body so the characters read clearly against the snow.
+ const dressed=new WeakSet(),HULL=new THREE.MeshBasicMaterial({color:0x5b4f5f,side:THREE.BackSide,transparent:true,opacity:.42,depthWrite:false});
+ function dress(actor){if(dressed.has(actor.root)||!actor.body||![0,1,2].includes(actor.kind))return;dressed.add(actor.root);const coat=actor.body.children[0]&&actor.body.children[0].material?actor.body.children[0].material.color.getHex():0xd5b59b;
+  actor.head.scale.setScalar(1.04);const hullHead=new THREE.Mesh(ball,HULL);hullHead.scale.set(.47,.46,.43);hullHead.name='look-outline';actor.head.add(hullHead);const hullBody=new THREE.Mesh(ball,HULL);hullBody.position.set(0,.79,0);hullBody.scale.set(.405,.495,.315);hullBody.name='look-outline';actor.body.add(hullBody);
+  const tail=actor.kind===0?merged([{geo:ball,pos:[0,.6,-.3],scale:[.11,.1,.09]}],0xf6f1ea,'look-tail'):actor.kind===1?merged([{geo:ball,pos:[0,.58,-.29],scale:[.08,.075,.07]}],coat,'look-tail'):merged([{geo:ball,pos:[0,.62,-.42],rot:[.9,0,0],scale:[.12,.3,.11]},{geo:ball,pos:[0,.79,-.6],rot:[.9,0,0],scale:[.07,.1,.065]}],coat,'look-tail');tail.visible=true;actor.body.add(tail);}
  function localExpr(){if(typeof villagePlay!=='object'||!villagePlay||!villagePlay.activeEmote)return null;const i=villagePlay.activeEmote();return i===null?null:EMOTE_FACE[i]||null;}
  return{
   EMOTE_FACE,rig,
-  tick(dt){const t=now(),list=actors(),roots=list.map(x=>x.actor.root);const breathe=cold();
+  tick(dt){const t=now(),list=actors(),roots=list.map(x=>x.actor.root);for(const x of list)if(!x.resident)dress(x.actor);const breathe=cold();
    for(const x of list){const r=rig(x.actor.head,x.f);face(r,x.expr,t);if(!x.resident)glance(r,x.actor,roots,x.calm,t,dt);if(breathe&&t>=r.breathAt){r.breathAt=t+3+Math.random()*2;puff(x.actor.head);}}
    puffsTick(dt);},
   get puffs(){return puffs;}
@@ -4919,7 +4936,7 @@ function lookDress(head,look,p){
  const color=look.a==='glasses'?0x4d4552:look.a==='flower'?0xf2c1cf:p.scarf,mesh=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color}));mesh.name='look-accessory-'+look.a;head.add(mesh);return mesh;
 }
 function createVillageLooks(){
- const KEY='village-look',SETS='village-look-sets',MIRROR={x:-6.5,z:10},REACH=3.4,DEFAULT={c:0,s:0,a:'none'};
+ const KEY='village-look',SETS='village-look-sets',MIRROR=CURRENT_WORLD==='winter'?{x:-13.2,z:8.6}:{x:-6.5,z:10},REACH=3.4,DEFAULT={c:0,s:0,a:'none'};
  const valid=l=>Boolean(l)&&Number.isInteger(l.c)&&l.c>=0&&l.c<LOOK_COATS.length&&Number.isInteger(l.s)&&l.s>=0&&l.s<LOOK_SCARVES.length&&LOOK_ACCESSORIES.includes(l.a);
  const clean=l=>valid(l)?{c:l.c,s:l.s,a:l.a}:{...DEFAULT};
  function read(key,fallback){try{const v=JSON.parse(localStorage.getItem(key)||'null');return v===null?fallback:v;}catch{return fallback;}}
@@ -5065,7 +5082,7 @@ function createPhotoMode(){
  // When storage is full the oldest pictures give way; false means not even the new one fits.
  function store(list){while(list.length){try{localStorage.setItem(KEY,JSON.stringify(list));return true;}catch{list=list.slice(1);}}return false;}
  const bar=document.createElement('div');bar.className='photo-bar';bar.hidden=true;bar.setAttribute('aria-label','사진 모드');
- const style=document.createElement('style');style.textContent='body.photo-mode>*:not(#world):not(.photo-bar):not(.village-album):not(#toast):not(style):not(script){display:none!important}.photo-bar{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);z-index:20;display:flex;gap:8px;padding:8px;border-radius:20px;background:rgba(255,247,232,.92);box-shadow:0 3px 14px rgba(40,40,70,.25)}.photo-bar button{min-width:52px;min-height:44px;border:0;border-radius:14px;background:#f1e5d2;color:#5f5050;font:700 13px "Winter Jua",sans-serif;cursor:pointer}.photo-bar .shutter{background:#8e9d83;color:#fff8e8}.photo-toggle{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 188px);z-index:4;width:46px;height:46px;border-radius:50%;border:0;display:grid;place-items:center;background:rgba(255,247,232,.88);color:#5f6f73;box-shadow:0 3px 12px rgba(40,40,70,.18);cursor:pointer}.photo-toggle svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}.village-album img{width:100%;border-radius:12px;display:block}.village-album li{list-style:none}';(document.head||document.body).append(style);
+ const style=document.createElement('style');style.textContent='body.photo-mode>*:not(#world):not(.photo-bar):not(.village-album):not(#toast):not(style):not(script){display:none!important}.photo-bar{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);z-index:20;display:flex;gap:8px;padding:8px;border-radius:20px;background:rgba(255,247,232,.92);box-shadow:0 3px 14px rgba(40,40,70,.25)}.photo-bar button{min-width:52px;min-height:44px;border:0;border-radius:14px;background:#f1e5d2;color:#5f5050;font:700 13px "Winter Jua",sans-serif;cursor:pointer}.photo-bar .shutter{background:#8e9d83;color:#fff8e8}.village-album img{width:100%;border-radius:12px;display:block}.village-album li{list-style:none}';(document.head||document.body).append(style);
  const mk=(text,label,fn,cls)=>{const b=document.createElement('button');b.textContent=text;b.setAttribute('aria-label',label);if(cls)b.className=cls;b.addEventListener('click',fn);bar.append(b);return b;};
  mk('−','멀리 보기',()=>zoom(1));mk('찰칵','사진 찍기',()=>shoot(),'shutter');mk('+','가까이 보기',()=>zoom(-1));mk('앨범','앨범 보기',()=>openAlbum());mk('닫기','사진 모드 끝내기',()=>exit());document.body.append(bar);
  function enter(){if(on||!entered)return false;on=true;document.body.classList.add('photo-mode');bar.hidden=false;baseFov=camera.fov;return true;}
@@ -5080,12 +5097,8 @@ function createPhotoMode(){
  function openAlbum(){const list=album().reverse(),title=document.createElement('h2'),note=document.createElement('p'),ul=document.createElement('ul');title.textContent='앨범';note.className='creature-count';note.textContent=list.length?'최근 '+list.length+'장 · 이 브라우저에만 있어요':'아직 찍은 사진이 없어요';
   ul.replaceChildren(...list.map((p,i)=>{const li=document.createElement('li'),img=document.createElement('img'),a=document.createElement('a');img.src=p.src;img.alt='마을 사진 '+(i+1);a.href=p.src;a.download='village-'+p.t+'.jpg';a.textContent='파일로 저장';li.append(img,a);return li;}));body.replaceChildren(title,note,ul);sheet.hidden=false;closeButton.focus();}
  addEventListener('keydown',e=>{if(e.key==='Escape'){if(!sheet.hidden)closeAlbum();else if(on)exit();}});
- // The camera floats just above the emote button; the top bar is already full on phones.
- const button=document.createElement('button');button.id='photo';button.className='photo-toggle';button.setAttribute('aria-label','사진 모드');button.title='사진 모드';const ns='http://www.w3.org/2000/svg';
- if(document.createElementNS){const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 24 24');for(const[tag,attrs]of[['path',{d:'M4 8h3l2-2.5h6L17 8h3v11H4Z'}],['circle',{cx:12,cy:13,r:3.5}]]){const el=document.createElementNS(ns,tag);for(const k in attrs)el.setAttribute(k,attrs[k]);svg.append(el);}button.append(svg);}else button.textContent='📷';
- button.addEventListener('click',()=>{if(!enter()&&!entered)toast('마을에 들어간 뒤 찍을 수 있어요');});
- document.body.append(button);
- return{MAX,FOV,enter,exit,zoom,shoot,album,openAlbum,closeAlbum,button,get on(){return on;},isOpen:()=>!sheet.hidden};
+ // Photo mode opens from the camera slot of the hotbar, so there is no separate floating button.
+ return{MAX,FOV,enter,exit,zoom,shoot,album,openAlbum,closeAlbum,get on(){return on;},isOpen:()=>!sheet.hidden};
 }
 const photoMode=createPhotoMode();
 
@@ -5156,22 +5169,45 @@ function createVillageCompanions(){
 }
 const villageCompanions=createVillageCompanions();
 
+// Line icons shared by the ring, the hotbar and the emote button, drawn on a 24-unit grid like the top bar icons.
+const villageIcons={
+ snowball:'<circle cx="12" cy="12" r="7"/><path d="M9.5 10h.01M14 9.5h.01M11.5 14h.01"/>',
+ bubble:'<circle cx="10" cy="13" r="6"/><circle cx="17.5" cy="6.5" r="2.5"/><path d="M7.5 11.5a3 3 0 0 1 2.5-2.5"/>',
+ plane:'<path d="M3 11 21 4l-6 16-3.5-6.5Z"/><path d="m11.5 13.5 4-4"/>',
+ kite:'<path d="M12 3l6 7-6 7-6-7Z"/><path d="M6 10h12M12 3v14M12 17c0 2-2 2-2 4"/>',
+ lantern:'<path d="M9 4h6M8 7h8l-1 10H9Z"/><path d="M10 20h4M12 17v3"/>',
+ cocoa:'<path d="M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5Z"/><path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16M8.5 3.5c0 1.5 1.5 1.5 1.5 3M12.5 3.5c0 1.5 1.5 1.5 1.5 3"/>',
+ camera:'<path d="M4 8h3l1.5-2h7L17 8h3v11H4Z"/><circle cx="12" cy="13" r="3.5"/>',
+ heart:'<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10Z"/>',
+ smile:'<circle cx="12" cy="12" r="9"/><path d="M8 14a4.5 4.5 0 0 0 8 0M9 9.5h.01M15 9.5h.01"/>',
+ wave:'<path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V11m0-6a1.5 1.5 0 0 1 3 0v6m0-4.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.5A6 6 0 0 1 5 18l-1.5-3a1.5 1.5 0 0 1 2.6-1.5L8 16"/>',
+ moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/>',
+ surprise:'<path d="M12 4v10M12 19h.01"/>',
+ clap:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>',
+ pin:'<path d="M12 21s6-6 6-11a6 6 0 0 0-12 0c0 5 6 11 6 11Z"/><circle cx="12" cy="10" r="2"/>',
+ paw:'<circle cx="7" cy="10" r="1.6"/><circle cx="10.5" cy="6.5" r="1.6"/><circle cx="14.5" cy="6.5" r="1.6"/><circle cx="18" cy="10" r="1.6"/><path d="M12 12c-3 0-5 3.5-5 5.5S9 20 12 19s5 .5 5-1.5S15 12 12 12Z"/>',
+ dice:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h.01M15 15h.01M12 12h.01"/>',
+ carry:'<path d="M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4"/>',
+ close:'<path d="M6 6l12 12M18 6 6 18"/>'
+};
+// An icon as markup; an unknown name falls back to its own text so an older caller still reads.
+function villageIcon(name){return villageIcons[name]?'<svg viewBox="0 0 24 24" aria-hidden="true">'+villageIcons[name]+'</svg>':'<span aria-hidden="true">'+String(name||'')+'</span>';}
+const EMOTE_ICONS=['heart','smile','wave','moon','surprise','clap'];
 // A ring menu for one-finger choices: hold the scene still for half a second (or press Q) and pick an emote,
-// sky play, the camera or a companion. Arrow keys move around the ring, Enter picks, Esc closes.
+// a ping, a companion or a game. Things to hold (the throwable, kite, lantern, cocoa, camera) live in the hotbar. Arrow keys move around the ring, Enter picks, Esc closes.
 function createRadialMenu(){
- const HOLD=.48,SLOP=10,RADIUS=104,extra=[];
+ const HOLD=.48,SLOP=10,RADIUS=112,extra=[];
  const ring=document.createElement('div');ring.className='radial-menu';ring.hidden=true;ring.setAttribute('role','menu');ring.setAttribute('aria-label','빠른 메뉴');
- const style=document.createElement('style');style.textContent='.radial-menu{position:fixed;inset:0;z-index:30;background:rgba(40,40,70,.12)}.radial-menu button{position:absolute;width:52px;height:52px;margin:-26px 0 0 -26px;border:0;border-radius:50%;background:rgba(255,247,232,.95);color:#5f5050;font:700 19px/1 "Winter Jua",sans-serif;box-shadow:0 3px 12px rgba(40,40,70,.22);cursor:pointer;display:grid;place-items:center}.radial-menu button small{display:none;position:absolute;top:56px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;color:#fff8e8;text-shadow:0 1px 3px rgba(0,0,0,.6)}.radial-menu button:focus small,.radial-menu button:hover small{display:block}.radial-menu button:focus-visible{outline:3px solid #8e9d83;outline-offset:2px}.radial-menu .radial-close{background:#8e9d83;color:#fff8e8;width:44px;height:44px;margin:-22px 0 0 -22px}';(document.head||document.body).append(style);document.body.append(ring);
+ const style=document.createElement('style');style.textContent='.radial-menu{position:fixed;inset:0;z-index:30;background:rgba(40,40,70,.28)}.radial-menu button{position:absolute;width:52px;height:52px;margin:-26px 0 0 -26px;border:0;border-radius:50%;background:rgba(255,247,232,.95);color:#5f5050;font:700 19px/1 "Winter Jua",sans-serif;box-shadow:0 3px 12px rgba(40,40,70,.22);cursor:pointer;display:grid;place-items:center}.radial-menu button svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.radial-menu button small{position:absolute;top:55px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:700;color:#fff8e8;text-shadow:0 1px 3px rgba(0,0,0,.65);pointer-events:none}.radial-menu button:focus-visible{outline:3px solid #8e9d83;outline-offset:2px}.radial-menu .radial-close{background:#8e9d83;color:#fff8e8;width:44px;height:44px;margin:-22px 0 0 -22px}';(document.head||document.body).append(style);document.body.append(ring);
  // Built fresh each time so a winter-only or newly hatched choice shows up when it applies.
- function items(){const out=[];if(typeof villagePlay==='object'&&villagePlay){villagePlay.EMOTES.forEach((e,i)=>out.push({icon:e[0],label:e[1],run:()=>villagePlay.say(i)}));if(CURRENT_WORLD==='winter'){out.push({icon:'◇',label:villagePlay.kiteOn?'연 내리기':'연',run:()=>villagePlay.toggleKite()});out.push({icon:'✦',label:'풍등',run:()=>villagePlay.lantern()});}}
-  if(typeof photoMode==='object'&&photoMode)out.push({icon:'▣',label:'사진',run:()=>photoMode.enter()});
-  if(typeof villageCompanions==='object'&&villageCompanions&&villageCompanions.state.owned.length)out.push({icon:'✿',label:'동반 친구',run:()=>villageCompanions.cycle()});
+ function items(){const out=[];if(typeof villagePlay==='object'&&villagePlay)villagePlay.EMOTES.forEach((e,i)=>out.push({icon:EMOTE_ICONS[i]||e[0],label:e[1],run:()=>villagePlay.say(i)}));
+  if(typeof villageCompanions==='object'&&villageCompanions&&villageCompanions.state.owned.length)out.push({icon:'paw',label:'동반 친구',run:()=>villageCompanions.cycle()});
   for(const it of extra)if(!it.when||it.when())out.push(typeof it.label==='function'?{...it,label:it.label()}:it);return out;}
  let buttons=[],shown=[],press=null,suppress=false,restore=null,at=null;
  function busy(){return!entered||(typeof photoMode==='object'&&photoMode&&photoMode.on)||[...document.querySelectorAll('.creature-book')].some(s=>!s.hidden)||(typeof helpOpen==='function'&&helpOpen());}
  function open(x=innerWidth/2,y=innerHeight/2,held=false){if(busy())return false;at={x,y,held};shown=items();const r=shown.length>8?RADIUS+16:RADIUS,cx=Math.max(r+30,Math.min(innerWidth-r-30,x)),cy=Math.max(r+30,Math.min(innerHeight-r-40,y));
-  buttons=shown.map((it,i)=>{const a=-Math.PI/2+i*Math.PI*2/shown.length,b=document.createElement('button'),label=document.createElement('small');b.setAttribute('role','menuitem');b.setAttribute('aria-label',it.label);b.textContent=it.icon;label.textContent=it.label;b.append(label);b.style.left=(cx+Math.cos(a)*r)+'px';b.style.top=(cy+Math.sin(a)*r)+'px';b.addEventListener('click',()=>pick(i));return b;});
-  const x0=document.createElement('button');x0.className='radial-close';x0.textContent='×';x0.setAttribute('aria-label','빠른 메뉴 닫기');x0.style.left=cx+'px';x0.style.top=cy+'px';x0.addEventListener('click',close);
+  buttons=shown.map((it,i)=>{const a=-Math.PI/2+i*Math.PI*2/shown.length,b=document.createElement('button'),label=document.createElement('small');b.setAttribute('role','menuitem');b.setAttribute('aria-label',it.label);b.innerHTML=villageIcon(it.icon);label.textContent=it.label;b.append(label);b.style.left=(cx+Math.cos(a)*r)+'px';b.style.top=(cy+Math.sin(a)*r)+'px';b.addEventListener('click',()=>pick(i));return b;});
+  const x0=document.createElement('button');x0.className='radial-close';x0.innerHTML=villageIcon('close');x0.setAttribute('aria-label','빠른 메뉴 닫기');x0.style.left=cx+'px';x0.style.top=cy+'px';x0.addEventListener('click',close);
   restore=document.activeElement;ring.replaceChildren(...buttons,x0);ring.hidden=false;if(buttons[0])buttons[0].focus();return true;}
  function close(){if(ring.hidden)return;ring.hidden=true;ring.replaceChildren();buttons=[];if(restore&&restore.focus)restore.focus({preventScroll:true});restore=null;}
  // Each choice hears where the ring was opened ({x,y,held}); a long press marks a spot on the scene.
@@ -5237,7 +5273,7 @@ function createVillageMinigames(){
  function render(){const title=el('h2','',GAME.title),hint=el('p','creature-count',GAME.hint);status=sig();body.replaceChildren(title,hint,...view());}
  function open(){if(CURRENT_WORLD==='library'&&!memory.cards.length)memory.deal();if(CURRENT_WORLD==='winter'&&!dice.target.length)dice.deal();render();sheet.hidden=false;closeButton.focus();if(typeof villageJournal==='object'&&villageJournal&&villageJournal.note)villageJournal.note('first-minigame');}
  if(residentGuide.addAction)residentGuide.addAction('함께 놀기',()=>{residentGuide.close();open();});
- if(typeof radialMenu==='object'&&radialMenu)radialMenu.addItem({icon:'⚄',label:'놀이',run:open});
+ if(typeof radialMenu==='object'&&radialMenu)radialMenu.addItem({icon:'dice',label:'놀이',run:open});
  return{GAME,BOOKS,FACES,ARCADE,memory,dice,arcade,open,close,isOpen:()=>!sheet.hidden,
   // The arcade redraws only when what it shows changes.
   tick(dt){if(!arcade.running)return;arcade.step(dt);if(!sheet.hidden&&status!==sig())render();}};
@@ -5284,7 +5320,6 @@ function createVillageSnowball(){
   const r=renderer.domElement.getBoundingClientRect(),ray=new THREE.Raycaster(),hit=new THREE.Vector3();ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1),camera);
   if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-player.position.y),hit))throwAt(hit.x,hit.z);},true);
  addEventListener('keydown',e=>{if(e.key==='Escape'&&armed){armed=false;hand.visible=false;}});
- if(typeof radialMenu==='object'&&radialMenu)radialMenu.addItem({icon:CURRENT_WORLD==='library'?'✈':'○',label:KIND.verb,run:arm});
  return{KIND,MIN,MAX,WIRE,arm,aim,throwAt,decode,wireOf,get armed(){return armed;},flights,splashes,hand,
   wire(body){if((body.m!=='idle'&&body.m!=='walk')||clock>=sendUntil)return body;if(Math.abs(body.b-.41)<.005||Math.abs(body.b-.45)<.005)return body;return{...body,b:Math.round((WIRE+sendStep*.01)*1000)/1000};},
   // A friend's throw appears once per signal, from where they stand along the way they face.
@@ -5300,7 +5335,7 @@ const villageSnowball=createVillageSnowball();
 // idle/walk b values: ping .05–.25 (0–20 m ahead along the facing), carrying .30, cocoa .33. b is claimed only when it is 0.
 function createVillageTogether(){
  const PING={wire:.05,max:20,show:10,hold:1.5,gap:4},CARRY_B=.30,COCOA_B=.33,COCOA={reach:3,hold:1.5,gap:5},
-  BIG={winter:{name:'큰 눈덩이',x:3,z:4,r:.75,color:0xf4f8ff},aquarium:{name:'커다란 물놀이 공',x:2,z:4,r:.6,color:0x9fd3e3},library:{name:'책 수레',x:2,z:4,r:.6,color:0xb08a68}}[CURRENT_WORLD],
+  BIG={winter:{name:'큰 눈덩이',x:6.4,z:5.6,r:.75,color:0xf4f8ff},aquarium:{name:'커다란 물놀이 공',x:4.5,z:5.5,r:.6,color:0x9fd3e3},library:{name:'책 수레',x:4.5,z:5.5,r:.6,color:0xb08a68}}[CURRENT_WORLD],
   SOLO=.8,PAIR=4,GRAB=2.2,KEY='village-carry:'+CURRENT_WORLD;
  let clock=0,pingUntil=-9,pingStep=0,lastPing=-9,cocoaUntil=-9,lastCocoa=-9,carrying=false;
  const pings=[],q=(b,v)=>Math.abs(b-v)<.003;
@@ -5335,9 +5370,8 @@ function createVillageTogether(){
  function nearestPeer(from,reach){let best=null,bd=reach;for(const peer of remotePlayers.values()){const r=peer.actor.root.position,d=Math.hypot(r.x-from.x,r.z-from.z);if(d<=bd){bd=d;best=peer;}}return best;}
  function cocoa(){if(!entered)return false;const peer=nearestPeer(player.position,COCOA.reach);if(!peer){toast('가까이 있는 친구에게 건넬 수 있어요');return false;}if(clock-lastCocoa<COCOA.gap)return false;lastCocoa=clock;cocoaUntil=clock+COCOA.hold;
   player.rotation.y=Math.atan2(peer.actor.root.position.x-player.position.x,peer.actor.root.position.z-player.position.z);toast(peer.data.n+' 님에게 따뜻한 코코아를 건넸어요');return peer;}
- if(typeof radialMenu==='object'&&radialMenu){radialMenu.addItem({icon:'◎',label:'여기!',run(at){const spot=at&&at.held?groundAt(at.x,at.y):null;spot?ping(spot.x,spot.z):ping();}});
-  radialMenu.addItem({icon:'⇆',label:()=>carrying?BIG.name+' 놓기':BIG.name+' 잡기',when:()=>carrying||near(player.position,GRAB),run:grab});
-  radialMenu.addItem({icon:'☕',label:'코코아 건네기',when:()=>Boolean(nearestPeer(player.position,COCOA.reach)),run:cocoa});}
+ if(typeof radialMenu==='object'&&radialMenu){radialMenu.addItem({icon:'pin',label:'여기!',run(at){const spot=at&&at.held?groundAt(at.x,at.y):null;spot?ping(spot.x,spot.z):ping();}});
+  radialMenu.addItem({icon:'carry',label:()=>carrying?BIG.name+' 놓기':BIG.name+' 잡기',when:()=>carrying||near(player.position,GRAB),run:grab});}
  return{PING,BIG,CARRY_B,COCOA_B,decode,ping,grab,cocoa,carriers,groundAt,pings,big,get carrying(){return carrying;},
   wire(body){if((body.m!=='idle'&&body.m!=='walk')||body.b!==0)return body;if(clock<pingUntil)return{...body,b:Math.round((PING.wire+pingStep*.01)*1000)/1000};if(clock<cocoaUntil)return{...body,b:COCOA_B};if(carrying)return{...body,b:CARRY_B};return body;},
   // A friend's ping or cocoa happens once per signal; carrying is read every frame from their state.
@@ -5358,15 +5392,15 @@ const villageTogether=createVillageTogether();
 function createVillageHotbar(){
  const WINTER=CURRENT_WORLD==='winter',SHOP=kind=>typeof villageMarket==='object'&&villageMarket&&villageMarket.choice?villageMarket.choice(kind):null;
  const SLOTS=[
-  {id:'toss',icon:CURRENT_WORLD==='library'?'✈':'○',name:()=>villageSnowball.KIND.name,use:()=>{if(villageSnowball.armed)villageSnowball.arm();return true;},arms:true},
-  ...(WINTER?[{id:'kite',icon:'◇',name:()=>'연',use:()=>villagePlay.toggleKite(),shop:'kite'},{id:'lantern',icon:'✦',name:()=>'풍등',use:()=>villagePlay.lantern(),shop:'lantern'}]:[]),
-  {id:'cocoa',icon:'☕',name:()=>'코코아',use:()=>villageTogether.cocoa()},
-  {id:'camera',icon:'▣',name:()=>'카메라',use:()=>photoMode.enter()}
+  {id:'toss',icon:CURRENT_WORLD==='library'?'plane':CURRENT_WORLD==='aquarium'?'bubble':'snowball',name:()=>villageSnowball.KIND.name,short:CURRENT_WORLD==='library'?'비행기':null,use:()=>{if(villageSnowball.armed)villageSnowball.arm();return true;},arms:true},
+  ...(WINTER?[{id:'kite',icon:'kite',name:()=>'연',use:()=>villagePlay.toggleKite(),shop:'kite'},{id:'lantern',icon:'lantern',name:()=>'풍등',use:()=>villagePlay.lantern(),shop:'lantern'}]:[]),
+  {id:'cocoa',icon:'cocoa',name:()=>'코코아',use:()=>villageTogether.cocoa()},
+  {id:'camera',icon:'camera',name:()=>'카메라',use:()=>photoMode.enter()}
  ];
  let held=null,dots=null;const hands=new Map();
  const bar=document.createElement('div');bar.className='village-hotbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','들고 다니는 물건');bar.hidden=true;
- const style=document.createElement('style');style.textContent='.village-hotbar{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 190px);transform:translateX(-50%);z-index:4;display:flex;gap:6px;padding:5px;border-radius:18px;background:rgba(255,247,232,.62);backdrop-filter:blur(8px)}.village-hotbar button{position:relative;width:44px;height:44px;border:0;border-radius:13px;background:rgba(255,247,232,.92);color:#5f5050;font:700 18px/1 "Winter Jua",sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(40,40,70,.15)}.village-hotbar button[aria-pressed="true"]{background:#8e9d83;color:#fff8e8}.village-hotbar button small{position:absolute;left:4px;top:3px;font-size:9px;opacity:.7}.village-hotbar button i{position:absolute;right:5px;bottom:5px;width:7px;height:7px;border-radius:50%}';(document.head||document.body).append(style);
- const buttons=SLOTS.map((s,i)=>{const b=document.createElement('button'),n=document.createElement('small'),icon=document.createElement('span'),dot=document.createElement('i');n.textContent=String(i+1);icon.textContent=s.icon;b.append(n,icon,dot);b.addEventListener('click',()=>press(i));bar.append(b);return{b,dot};});document.body.append(bar);
+ const style=document.createElement('style');style.textContent='.village-hotbar{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 190px);transform:translateX(-50%);z-index:4;display:flex;gap:5px;padding:4px;border-radius:17px;background:rgba(255,247,232,.5);backdrop-filter:blur(8px)}.village-hotbar[hidden]{display:none}.village-hotbar button{position:relative;width:50px;height:46px;border:0;border-radius:13px;background:rgba(255,247,232,.92);color:#5f5050;font:700 9.5px/1 "Winter Jua",sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(40,40,70,.12);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0}.village-hotbar button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.village-hotbar button[aria-pressed="true"]{background:#8e9d83;color:#fff8e8}.village-hotbar button small{position:absolute;left:5px;top:4px;font-size:8px;opacity:.55}.village-hotbar button b{font-weight:700;white-space:nowrap}.village-hotbar button i{position:absolute;right:5px;top:5px;width:6px;height:6px;border-radius:50%}';(document.head||document.body).append(style);
+ const buttons=SLOTS.map((s,i)=>{const b=document.createElement('button'),n=document.createElement('small'),icon=document.createElement('span'),name=document.createElement('b'),dot=document.createElement('i');n.textContent=String(i+1);icon.innerHTML=typeof villageIcon==='function'?villageIcon(s.icon):s.icon;icon.style.display='contents';name.textContent=s.short||s.name();b.title=s.name();b.append(n,icon,name,dot);b.addEventListener('click',()=>press(i));bar.append(b);return{b,dot};});document.body.append(bar);
  // Hand-held models, made once per kind from a few basic shapes.
  function handFor(id){if(id==='toss')return null;if(hands.has(id))return hands.get(id);const color=id==='kite'?SHOP('kite')||0xe4a28e:id==='lantern'?SHOP('lantern')||0xffd49a:id==='cocoa'?0xc98b6b:0x5f6f73,g=new THREE.Group(),m=new THREE.MeshLambertMaterial({color});
   if(id==='kite'){const k=new THREE.Mesh(new THREE.OctahedronGeometry(.16,0),m);k.scale.set(1,1.3,.2);g.add(k);}else if(id==='lantern'){const l=new THREE.Mesh(new THREE.CylinderGeometry(.09,.11,.2,8),new THREE.MeshBasicMaterial({color}));g.add(l);}
@@ -5385,6 +5419,55 @@ function createVillageHotbar(){
   tick(){bar.hidden=!entered;if(held==='toss'&&!villageSnowball.armed){held=null;show();}const sig=SLOTS.map(x=>x.shop?SHOP(x.shop):'').join();if(sig!==dots){dots=sig;buttons.forEach(({dot},i)=>{const c=SLOTS[i].shop?SHOP(SLOTS[i].shop):null;dot.style.background=c===null?'transparent':'#'+c.toString(16).padStart(6,'0');});}}};
 }
 const villageHotbar=createVillageHotbar();
+
+// Keeps the screen quiet once you know your way around: the walking hint steps aside after the first walk, the corner
+// notes (already in the help window) fade after a few seconds, the hotbar sits in line with the other bottom controls
+// with the emote button at its end, and on a phone the walk buttons shrink and the two world-travel buttons fold into one.
+function createVillageTidy(){
+ const NOTE_TIME=8,WALKED=1.5,hint=document.getElementById('hint'),controls=document.getElementById('controls'),idleHint=hint?hint.textContent:'';
+ const style=document.createElement('style');style.textContent='.hint[data-quiet="1"]{display:none}.keyboard.tidy-faded,.saved-note.tidy-faded{opacity:0;transition:opacity .8s}.village-hotbar.in-controls{position:static;transform:none;pointer-events:auto}.play-toggle.in-hotbar{position:static;width:46px;height:46px;margin-left:3px;box-shadow:none;background:#f1dfbf}.world-fold{display:none}@media(max-width:600px){.topbar .brand p{display:none}.travel{gap:5px}.travel button{font-size:11px;padding:6px 10px;min-height:38px}.travel button span{font-size:12px;margin-right:3px}.world-fold{display:inline-flex;align-items:center;gap:6px}.world-travel:not(.unfolded) .world-switch-row .world-switch{display:none}.world-travel.unfolded .world-fold{display:none}}';(document.head||document.body).append(style);
+ let start=null,walked=false,noteLeft=NOTE_TIME;
+ // The hotbar joins the bottom column just above the hint, so the rows stack evenly instead of overlapping.
+ const bar=typeof villageHotbar==='object'&&villageHotbar?villageHotbar.bar:null;
+ if(bar&&controls&&hint&&typeof controls.insertBefore==='function'&&hint.parentNode===controls){controls.insertBefore(bar,hint);bar.classList.add('in-controls');}
+ const toggle=bar&&document.querySelector?document.querySelector('.play-toggle'):null;if(toggle){bar.append(toggle);toggle.classList.add('in-hotbar');}
+ // Phone: one "다른 공간" button opens the two destinations; picking one or tapping elsewhere folds them back.
+ const travel=document.getElementById('world-travel'),row=travel&&travel.querySelector?travel.querySelector('.world-switch-row'):null;let fold=null;
+ if(travel&&row&&typeof travel.insertBefore==='function'){fold=document.createElement('button');fold.className='world-switch world-fold';fold.setAttribute('aria-expanded','false');fold.innerHTML='<span>다른 공간</span><span class="world-arrow" aria-hidden="true">↗</span>';
+  fold.addEventListener('click',e=>{e.stopPropagation();setFold(true);});travel.insertBefore(fold,row);
+  row.addEventListener('click',()=>setFold(false));addEventListener('pointerdown',e=>{if(travel.classList.contains('unfolded')&&!travel.contains(e.target))setFold(false);});}
+ function setFold(open){if(!travel||!fold)return;travel.classList.toggle('unfolded',open);fold.setAttribute('aria-expanded',String(open));if(open){const first=row.querySelector('.world-switch:not([hidden])');if(first)first.focus();}}
+ return{NOTE_TIME,WALKED,get walked(){return walked;},fold:()=>fold,setFold,
+  tick(dt){if(!entered){start=null;return;}
+   if(!start)start={x:player.position.x,z:player.position.z};else if(!walked&&Math.hypot(player.position.x-start.x,player.position.z-start.z)>WALKED)walked=true;
+   // The hint stays for anything new it has to say; only the opening "tap where to go" line goes quiet.
+   if(hint)hint.dataset.quiet=walked&&hint.textContent===idleHint?'1':'0';
+   if(noteLeft>0){noteLeft-=dt;if(noteLeft<=0)for(const id of['keyboard','saved-note']){const n=document.getElementById(id);if(n&&n.classList)n.classList.add('tidy-faded');}}}};
+}
+const villageTidy=createVillageTidy();
+
+// Running: hold Shift on a keyboard, or tap the running shoe at the end of the hotbar on a phone, to move about 1.8×
+// faster while walking. Only plain walking speeds up (not rolling a snowball, sledding or sitting), and the legs swing
+// faster to match. There is no stamina to watch; it is just quicker across the wider village.
+function createVillageRun(){
+ const FACTOR=1.8,STRIDE=1.7;let held=false,toggled=false,phase=0;
+ const button=document.createElement('button');button.className='run-toggle';button.setAttribute('aria-pressed','false');button.setAttribute('aria-label','달리기');button.title='달리기 (Shift)';button.hidden=true;
+ button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="14.5" cy="4.5" r="2"/><path d="M8 21l3-6 3 2v5M6 12l3-4h5l3 4 3 1M11 8l-1 5 4 2"/></svg><b>달리기</b>';
+ const style=document.createElement('style');style.textContent='.run-toggle{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 186px);z-index:4;width:50px;height:46px;border:0;border-radius:13px;background:rgba(255,247,232,.92);color:#5f5050;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:700 9.5px/1 "Winter Jua",sans-serif;cursor:pointer}.run-toggle[hidden]{display:none}.run-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.run-toggle[aria-pressed="true"]{background:#d98c7a;color:#fff8e8}.village-hotbar .run-toggle{position:static;margin-left:3px;box-shadow:none}@media(max-width:420px){.village-hotbar{gap:4px;padding:3px}.village-hotbar button,.village-hotbar .play-toggle,.village-hotbar .run-toggle{width:42px;margin-left:0}}';(document.head||document.body).append(style);
+ // It sits at the end of the hotbar when there is one, beside the emote button.
+ const bar=typeof villageHotbar==='object'&&villageHotbar?villageHotbar.bar:null;(bar||document.body).append(button);
+ function set(v){toggled=Boolean(v);button.setAttribute('aria-pressed',String(toggled));if(toggled&&typeof villageJournal==='object'&&villageJournal&&villageJournal.note)villageJournal.note('first-run');return toggled;}
+ button.addEventListener('click',()=>set(!toggled));
+ addEventListener('keydown',e=>{if(e.key==='Shift')held=true;});addEventListener('keyup',e=>{if(e.key==='Shift')held=false;});addEventListener('blur',()=>{held=false;});
+ const on=()=>Boolean(entered)&&(held||toggled);
+ return{FACTOR,button,on,set,get toggled(){return toggled;},
+  // Speed factor for the current activity: only idle walking runs.
+  factor(state){return on()&&(state==='idle'||state==='walk')?FACTOR:1;},
+  // A walk-cycle clock that ticks faster while running, so the stride matches the speed without a jump when switching.
+  phase(dt,moving){phase+=dt*(moving&&on()?STRIDE:1);return phase;},
+  tick(){button.hidden=!entered;}};
+}
+const villageRun=createVillageRun();
 
 // Short expeditions: send the companion walking with you (or the resident's paper crane when there is none) to one of
 // three places for 1, 3 or 6 hours. Time passes while the page is closed; nothing can go wrong. Coming home brings a
@@ -5430,6 +5513,260 @@ function createVillageExpedition(){
   tick(dt){checkIn-=dt;if(checkIn<=0){checkIn=5;check();}}};
 }
 const villageExpedition=createVillageExpedition();
+
+// Village folk: many small residents built from the same avatar parts as visitors (animal, coat, scarf, accessory, size),
+// each with a name, a temperament and a loop of stops in one part of the space. Where everyone stands is worked out
+// from Seoul time alone, so friends in the same room see the same folk in the same places without sending anything.
+// Walk up to one and tap the name above them to chat; a reply a day makes you a little closer, and a close friend
+// hands over a shell once. In winter a travelling merchant visits the market street every third day and at weekends.
+function createVillageFolk(){
+ const WORLD=CURRENT_WORLD,COUNT={winter:14,aquarium:9,library:9}[WORLD]||8,SHOW=5,SEE=28,TALK=2.8,KEY='village-folk-v1',SPEED=.9,H=3600e3;
+ const NAMES=['콩이','보리','몽이','단비','호두','솔이','라떼','모카','밤톨','두부','토리','쿠키','율무','감자','하루','나리','별이','구름','포도','땅콩','망고','레몬','꼬미','도토리','깨비','사과','초코','마루','수수','눈꽃'];
+ const TYPES={
+  chatty:{label:'수다쟁이',hi:['어머, 안녕! 오늘 무슨 일 있었어?','마침 잘 왔어, 할 얘기가 산더미야!'],glad:'나도 나도! 다음엔 더 길게 얘기하자.',how:'하루 종일 떠들었더니 목이 다 쉬었어. 그래도 즐거워!'},
+  calm:{label:'느긋함',hi:['천천히 와도 괜찮아요.','바람 소리 들려요? 좋다…'],glad:'네, 저도요. 같이 잠깐 쉬어요.',how:'별일 없어서 좋은 날이에요.'},
+  busy:{label:'부지런함',hi:['아, 안녕하세요! 잠깐이면 돼요.','오늘 할 일이 많지만 반가워요!'],glad:'저도요! 다음엔 차 한 잔 해요.',how:'아침부터 길을 쓸고 장작도 날랐어요. 뿌듯해요!'},
+  dreamy:{label:'몽상가',hi:['구름 모양이 꼭 고래 같지 않아요?','어젯밤 꿈에서 여기 와 본 것 같아요.'],glad:'반가움이 눈송이처럼 내려앉네요.',how:'하늘 색을 세어 보는 중이었어요. 벌써 일곱 가지예요.'},
+  shy:{label:'수줍음',hi:['아… 안녕하세요.','저, 저한테 말 거신 거예요?'],glad:'…저, 저도요. 헤헤.',how:'조용히 산책하는 게 제일 좋아요.'},
+  curious:{label:'호기심쟁이',hi:['그건 뭐예요? 처음 보는데!','저쪽엔 뭐가 있을까요?'],glad:'반가워요! 다음엔 어디서 왔는지 들려줘요.',how:'오늘은 발자국 모양을 모으고 있어요. 벌써 열두 개!'}};
+ const TYPE_IDS=Object.keys(TYPES),ACCESSORIES=['none','beanie','earmuffs','flower','glasses','none'];
+ const PLACES={aquarium:['바다 수조','산호 정원','해파리 쉼터'],library:['책장 숲','창가 자리','스탬프 책상']};
+ // A small seeded generator per space, so every browser builds the same folk.
+ let seed=[...WORLD].reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619)>>>0,2166136261);const rnd=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ const districts=typeof villageDistricts==='object'&&villageDistricts?villageDistricts.DISTRICTS:null;
+ const BOUNDS={winter:null,aquarium:{r:18},library:{x:17,z:14}}[WORLD];
+ function freeSpot(home){for(let i=0;i<80;i++){let x,z;if(home){const a=rnd()*Math.PI*2,r=rnd()*home.r*.7;x=home.x+Math.cos(a)*r;z=home.z+Math.sin(a)*r;}else if(BOUNDS&&BOUNDS.r){const a=rnd()*Math.PI*2,r=Math.sqrt(rnd())*BOUNDS.r;x=Math.cos(a)*r;z=Math.sin(a)*r;}else{x=(rnd()*2-1)*(BOUNDS?BOUNDS.x:18);z=(rnd()*2-1)*(BOUNDS?BOUNDS.z:18);}
+  if(!blocked(x,z,.8)&&Math.hypot(x,z-7)>2.2)return{x,z};}return{x:home?home.x:0,z:home?home.z+3:3};}
+ const day=(ms=now())=>Math.floor((ms+9*H)/86400e3),now=()=>Date.now()+(typeof serverOffset==='number'?serverOffset:0);
+ const folk=[];const used=new Set();
+ for(let i=0;i<COUNT;i++){let n;do{n=NAMES[Math.floor(rnd()*NAMES.length)];}while(used.has(n));used.add(n);
+  const home=districts?districts[i%districts.length]:null,stops=[0,1,2].map(()=>freeSpot(home)),type=TYPE_IDS[Math.floor(rnd()*TYPE_IDS.length)];
+  const look={c:1+Math.floor(rnd()*6),s:1+Math.floor(rnd()*6),a:ACCESSORIES[Math.floor(rnd()*ACCESSORIES.length)]},kind=Math.floor(rnd()*3),scale=.84+rnd()*.2,offset=rnd()*3600;
+  const legs=stops.map((a,k)=>{const b=stops[(k+1)%stops.length];return{a,b,walk:Math.hypot(b.x-a.x,b.z-a.z)*1.3/SPEED,rest:16+rnd()*26};});
+  folk.push({id:WORLD+'-'+i,name:n,type,look,kind,scale,home:home&&home.id,stops,legs,offset,cycle:legs.reduce((s,l)=>s+l.walk+l.rest,0),night:rnd()<.35,actor:null,pos:{x:stops[0].x,z:stops[0].z},yaw:0,walking:false});}
+ // The merchant stands beside the middle stall of the market street on visiting days.
+ const marketD=districts&&districts.find(d=>d.id==='market');
+ const merchant=marketD?{id:'merchant',name:'떠돌이 상인 바람',type:'curious',look:{c:4,s:3,a:'beanie'},kind:2,scale:1,merchant:true,spot:{x:marketD.x+2.6,z:marketD.z},actor:null,pos:{x:marketD.x+2.6,z:marketD.z},yaw:-Math.PI/2,walking:false}:null;
+ const merchantDay=(ms=now())=>{const d=day(ms),wd=new Date(ms+9*H).getUTCDay();return d%3===0||wd===0||wd===6;};
+ // Each leg follows the walking grid once it is needed; the timing uses the straight distance so every browser agrees.
+ const routes=new Map();
+ function route(f,k){const key=f.id+':'+k;if(routes.has(key))return routes.get(key);const{a,b}=f.legs[k];let pts=[{x:a.x,z:a.z}];
+  if(typeof pathTo==='function'){const keep=player.position.clone();player.position.set(a.x,player.position.y,a.z);let p=[];try{p=pathTo(b.x,b.z);}catch{p=[];}player.position.copy(keep);for(const v of p)pts.push({x:v.x,z:v.z});}
+  if(pts.length<2||Math.hypot(pts.at(-1).x-b.x,pts.at(-1).z-b.z)>1.2)pts.push({x:b.x,z:b.z});const len=[0];for(let i=1;i<pts.length;i++)len.push(len[i-1]+Math.hypot(pts[i].x-pts[i-1].x,pts[i].z-pts[i-1].z));const r={pts,len};routes.set(key,r);return r;}
+ function along(r,f){const want=f*r.len.at(-1);for(let i=1;i<r.pts.length;i++)if(r.len[i]>=want){const t=(want-r.len[i-1])/Math.max(1e-6,r.len[i]-r.len[i-1]),a=r.pts[i-1],b=r.pts[i];return{x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t,yaw:Math.atan2(b.x-a.x,b.z-a.z)};}const e=r.pts.at(-1);return{x:e.x,z:e.z,yaw:0};}
+ // Where one of the folk is at a moment: walking a leg, or resting at the stop it reached.
+ function placeAt(f,ms,detailed=true){if(f.merchant)return{x:f.spot.x,z:f.spot.z,yaw:f.yaw,walking:false,out:merchantDay(ms)};
+  const hour=new Date(ms+9*H).getUTCHours(),out=!(hour<6||hour>=23)||f.night;let t=((ms/1000+f.offset)%f.cycle+f.cycle)%f.cycle;
+  for(let k=0;k<f.legs.length;k++){const l=f.legs[k];if(t<l.walk){const frac=t/l.walk;if(!detailed){return{x:l.a.x+(l.b.x-l.a.x)*frac,z:l.a.z+(l.b.z-l.a.z)*frac,yaw:Math.atan2(l.b.x-l.a.x,l.b.z-l.a.z),walking:true,out};}const p=along(route(f,k),frac);return{...p,walking:true,out};}t-=l.walk;if(t<l.rest)return{x:l.b.x,z:l.b.z,yaw:null,walking:false,out};t-=l.rest;}
+  return{x:f.stops[0].x,z:f.stops[0].z,yaw:null,walking:false,out};}
+ function actorFor(f){if(f.actor)return f.actor;const a=avatar(f.kind,f.look);a.root.scale.setScalar(f.scale);a.root.name='folk-'+f.id;a.root.visible=false;scene.add(a.root);f.actor=a;return a;}
+ // Friendship: one step a Seoul day per person, a shell from a close friend once.
+ const load=()=>{try{const s=JSON.parse(localStorage.getItem(KEY)||'{}');return s&&typeof s==='object'&&!Array.isArray(s)?s:{};}catch{return{};}};
+ let bond=load();const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(bond));}catch{}};
+ const bondOf=id=>{const b=bond[id];return b&&Number.isFinite(b.f)?b:{f:0,d:-1,g:false};};
+ // Chat card.
+ const style=document.createElement('style');style.textContent='.folk-bubble{position:fixed;z-index:3;transform:translate(-50%,-100%);white-space:nowrap;padding:7px 12px;border:0;border-radius:16px;background:#fff3e3ee;color:#655346;font:700 11px "Winter Jua",sans-serif;min-height:34px;box-shadow:0 3px 12px #302c3326;cursor:pointer}.folk-bubble[hidden],.folk-dialog[hidden]{display:none}.folk-dialog{position:fixed;inset:0;z-index:12;display:grid;align-items:end;justify-items:center;padding:18px;background:linear-gradient(0deg,#29213266,transparent 65%)}.folk-card{position:relative;width:min(360px,100%);padding:22px 22px 18px;border-radius:25px;background:#fff3e3;color:#69534f;text-align:center;box-shadow:0 8px 30px #2a223326}.folk-card h2{margin:0 0 4px;font-size:19px}.folk-card .folk-tag{display:inline-block;margin-bottom:12px;padding:3px 10px;border-radius:999px;background:#efe1cb;font-size:11px}.folk-card p{font-size:13px;line-height:1.8;margin:0 0 14px}.folk-card .folk-replies{display:grid;gap:7px}.folk-card button{font:inherit;min-height:44px;border:0;border-radius:14px;cursor:pointer;background:#efe1cb;color:#6a5350}.folk-card .folk-close{position:absolute;right:8px;top:7px;width:40px;background:transparent;color:#a18b7d;font-size:24px}';(document.head||document.body).append(style);
+ const bubble=document.createElement('button');bubble.className='folk-bubble';bubble.hidden=true;document.body.append(bubble);
+ const dialog=document.createElement('section');dialog.className='folk-dialog';dialog.hidden=true;const card=document.createElement('div');card.className='folk-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');
+ const closeButton=document.createElement('button');closeButton.className='folk-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','이야기 닫기');const title=document.createElement('h2'),tag=document.createElement('span'),line=document.createElement('p'),replies=document.createElement('div');tag.className='folk-tag';replies.className='folk-replies';
+ card.append(closeButton,title,tag,line,replies);dialog.append(card);document.body.append(dialog);
+ let near=null,talking=null;
+ function close(){dialog.hidden=true;talking=null;}closeButton.addEventListener('click',close);dialog.addEventListener('click',e=>{if(e.target===dialog)close();});addEventListener('keydown',e=>{if(e.key==='Escape'&&!dialog.hidden)close();});
+ const levelName=f=>f>=3?'친한 사이':f>=1?'아는 사이':'처음 만남';
+ function recommend(){if(districts){const here=villageDistricts.current&&villageDistricts.current.id,pick=districts.filter(d=>d.id!==here)[day()%(districts.length-1)];return pick.name+'에 가 봐요. 등불도 밝혀 보고요!';}const list=PLACES[WORLD]||[];return list.length?list[day()%list.length]+' 쪽이 요즘 제일 좋아요.':'여기저기 다 좋아요.';}
+ function weatherLine(){const s=typeof skyWeather==='object'&&skyWeather?skyWeather.state:null;if(!s)return'';if(s.kind==='heavy'||s.kind==='precip')return WORLD==='winter'?' 눈이 펑펑 와서 발자국이 금방 지워져요.':' 밖에 비가 오나 봐요.';if(s.kind==='rainbow')return' 무지개 봤어요?';return s.phase==='night'?' 밤이라 조금 졸려요.':'';}
+ function choices(f){const t=TYPES[f.type];if(f.merchant)return[['구경할게요',()=>{close();if(typeof villageMarket==='object'&&villageMarket)villageMarket.open();return null;}],['어디서 왔어요?',()=>'눈 덮인 산 너머, 등불이 많은 마을에서요. 사흘마다 들르니까 또 봐요!'],['오늘의 이야기',()=>'오는 길에 얼음 호수에서 스케이트 타는 여우를 봤어요. 아주 능숙하던걸요.']];
+  return[['반가워요!',()=>t.glad],['요즘 어때요?',()=>t.how+weatherLine()],['추천할 곳 있어요?',recommend]];}
+ function render(f){const b=bondOf(f.id),t=TYPES[f.type];title.textContent=f.name;tag.textContent=(f.merchant?'떠돌이 상인':t.label)+' · '+levelName(b.f);
+  line.textContent=f.merchant?'먼 마을에서 왔어요. 오늘만 가게를 열어요!':b.f>=3?nickname()+' 님 오셨네요! 기다렸어요.':t.hi[day()%t.hi.length];
+  replies.replaceChildren(...choices(f).map(([label,run],i)=>{const btn=document.createElement('button');btn.textContent=label;btn.addEventListener('click',()=>reply(i));return btn;}));}
+ const nickname=()=>{try{return typeof myNickname==='function'?myNickname():(document.getElementById('nickname-label')||{}).textContent||'손님';}catch{return'손님';}};
+ function open(id){const f=[...folk,merchant].find(x=>x&&x.id===id);if(!f||!entered)return false;talking=f;render(f);dialog.hidden=false;closeButton.focus();return true;}
+ function reply(i){const f=talking;if(!f)return null;const said=choices(f)[i][1]();if(said===null)return'shop';const b=bondOf(f.id),d=day();let gift=false;
+  if(b.d!==d){b.f+=1;b.d=d;if(b.f>=3&&!b.g&&typeof villageMarket==='object'&&villageMarket){b.g=true;gift=villageMarket.earn(1,f.name+'의 선물')>0;}bond[f.id]=b;save();}
+  line.textContent=said+(gift?' 이건 작은 선물이에요!':'');tag.textContent=(f.merchant?'떠돌이 상인':TYPES[f.type].label)+' · '+levelName(b.f);const done=document.createElement('button');done.textContent='고마워요';done.addEventListener('click',close);replies.replaceChildren(done);
+  if(typeof villageJournal==='object'&&villageJournal&&villageJournal.note)villageJournal.note('first-folk');return said;}
+ bubble.addEventListener('click',()=>{if(near)open(near.id);});
+ const project=new THREE.Vector3();
+ return{FOLK:folk,merchant,TYPES,placeAt,merchantDay,open,close,reply,isOpen:()=>!dialog.hidden,bondOf,dialog,bubble,get near(){return near;},
+  visible:()=>[...folk,merchant].filter(f=>f&&f.actor&&f.actor.root.visible),
+  tick(dt){const ms=now(),me=player.position,t=performance.now()/1000;
+   // Rough places for everyone, then full detail (and a body) only for the few nearest.
+   const all=[...folk,merchant].filter(Boolean).map(f=>({f,p:placeAt(f,ms,false)})).filter(o=>o.p.out).map(o=>({...o,d:Math.hypot(o.p.x-me.x,o.p.z-me.z)})).sort((a,b)=>a.d-b.d);
+   const shown=new Set(all.filter(o=>o.d<SEE).slice(0,SHOW).map(o=>o.f));
+   for(const f of[...folk,merchant]){if(!f)continue;if(!shown.has(f)){if(f.actor)f.actor.root.visible=false;continue;}
+    const a=actorFor(f),p=talking===f?{x:f.pos.x,z:f.pos.z,yaw:Math.atan2(me.x-f.pos.x,me.z-f.pos.z),walking:false}:placeAt(f,ms,true);f.pos={x:p.x,z:p.z};f.walking=p.walking;
+    if(p.yaw===null){let face=null,best=3.2;for(const g of shown)if(g!==f&&!g.walking){const d=Math.hypot(g.pos.x-p.x,g.pos.z-p.z);if(d<best){best=d;face=g;}}p.yaw=face?Math.atan2(face.pos.x-p.x,face.pos.z-p.z):Math.hypot(me.x-p.x,me.z-p.z)<5?Math.atan2(me.x-p.x,me.z-p.z):f.yaw;}
+    f.yaw=p.yaw;const y=typeof groundHeight==='function'?groundHeight(p.x,p.z):0;a.root.visible=true;a.root.position.set(p.x,y+(p.walking?Math.abs(Math.sin(t*7+f.scale*9))*.05:Math.sin(t*1.6+f.scale*5)*.012),p.z);
+    let dy=f.yaw-a.root.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));a.root.rotation.y+=dy*Math.min(1,dt*6);
+    const swing=p.walking?Math.sin(t*7+f.scale*9)*.55:0;if(a.legs)a.legs.forEach((l,i)=>{l.rotation.x=i?swing:-swing;});if(a.arms)a.arms.forEach((m,i)=>{m.rotation.x=i?-swing*.7:swing*.7;});}
+   // The nearest one within reach gets a name bubble to tap.
+   near=null;if(entered&&dialog.hidden&&!(typeof helpOpen==='function'&&helpOpen())){let best=TALK;for(const f of shown){const d=Math.hypot(f.pos.x-me.x,f.pos.z-me.z);if(d<best){best=d;near=f;}}}
+   if(near&&near.actor){project.set(near.pos.x,(typeof groundHeight==='function'?groundHeight(near.pos.x,near.pos.z):0)+2.3*near.scale,near.pos.z).project(camera);const x=(project.x+1)*innerWidth/2,y=(-project.y+1)*innerHeight/2;
+    bubble.textContent=near.name+(near.merchant?' · 가게':' · 말 걸기');bubble.setAttribute('aria-label',near.name+'에게 말 걸기');bubble.style.left=x+'px';bubble.style.top=y+'px';bubble.hidden=project.z>1||project.z<-1;}else bubble.hidden=true;}};
+}
+const villageFolk=createVillageFolk();
+
+// Village map: a round minimap in the top-right corner that follows you, and a full-screen map (tap the minimap or
+// press M) that you can drag and zoom. The map is drawn from the space itself — walls, trees, buildings, roads and
+// named places — with you, friends, folk, the resident and 여기! pings on top. In the wide winter village the parts
+// you have not walked near yet stay under snow mist (remembered in this browser), lit beacons can be tapped to hop
+// there, and tapping anywhere else walks you there.
+function createVillageMap(){
+ const WORLD=CURRENT_WORLD,D=typeof villageDistricts==='object'&&villageDistricts?villageDistricts:null,FOG=Boolean(D),FOG_KEY='village-map-fog:'+WORLD,CELL=4,REVEAL=11;
+ const EXTENT={winter:typeof WORLD_LIMIT==='number'?WORLD_LIMIT:26,aquarium:21.5,library:20}[WORLD]||26;
+ // Named spots: winter districts and landmarks, or the walk buttons' places elsewhere.
+ const LABELS=[];
+ if(D)for(const d of D.DISTRICTS)LABELS.push({x:d.x,z:d.id==='plaza'?-4:d.z,name:d.name,big:true,id:d.id});
+ if(WORLD==='winter')for(const[name,x,z]of[['모닥불',-5,-1.5],['썰매 언덕',13,-12],['얼음 연못',8.6,10.5],['소원 나무',-1,-10]])LABELS.push({x,z,name});
+ else{const NAMES={ocean:'바다 수조',reef:'산호 정원',jelly:'해파리 쉼터',books:'책의 숲',window:'달빛 창가',desk:'책갈피 책상'};if(typeof places==='object'&&places)for(const k in places)LABELS.push({x:places[k].x,z:places[k].z,name:NAMES[k]||k,big:true});}
+ // Snow mist: one bit per 4 m cell, revealed around you as you walk.
+ const N=Math.ceil(EXTENT*2/CELL)+1,seen=new Uint8Array(N*N);
+ if(FOG)try{const raw=localStorage.getItem(FOG_KEY);if(raw&&raw.length===N*N)for(let i=0;i<raw.length;i++)seen[i]=raw.charCodeAt(i)===49?1:0;}catch{}
+ let fogDirty=false,fogSave=0;const cellOf=v=>Math.max(0,Math.min(N-1,Math.floor((v+EXTENT)/CELL)));
+ function reveal(x,z){if(!FOG)return 0;let n=0;const r=Math.ceil(REVEAL/CELL);const cx=cellOf(x),cz=cellOf(z);for(let j=-r;j<=r;j++)for(let i=-r;i<=r;i++){const gx=cx+i,gz=cz+j;if(gx<0||gz<0||gx>=N||gz>=N)continue;const wx=-EXTENT+(gx+.5)*CELL,wz=-EXTENT+(gz+.5)*CELL;if(Math.hypot(wx-x,wz-z)<=REVEAL+CELL*.5&&!seen[gz*N+gx]){seen[gz*N+gx]=1;n++;}}if(n)fogDirty=true;return n;}
+ const isSeen=(x,z)=>!FOG||seen[cellOf(z)*N+cellOf(x)]===1;
+ function saveFog(){if(!FOG||!fogDirty)return;fogDirty=false;try{let s='';for(const v of seen)s+=v?'1':'0';localStorage.setItem(FOG_KEY,s);}catch{}}
+ // The still parts are drawn once onto an offscreen canvas at a fixed scale, then copied for every view.
+ const PX=WORLD==='winter'?8:14,SIZE=Math.round(EXTENT*2*PX),base=document.createElement('canvas');base.width=SIZE;base.height=SIZE;
+ const toB=(x,z)=>[(x+EXTENT)*PX,(z+EXTENT)*PX];
+ function drawBase(){const g=base.getContext('2d');if(!g||!g.fillRect)return;g.fillStyle=WORLD==='aquarium'?'#2f5f73':WORLD==='library'?'#7a5a4a':'#e9eef5';g.fillRect(0,0,SIZE,SIZE);
+  g.fillStyle=WORLD==='aquarium'?'#cfe7ea':WORLD==='library'?'#e9d9c3':'#f7f8fb';g.beginPath();if(WORLD==='aquarium')g.arc(SIZE/2,SIZE/2,21*PX,0,Math.PI*2);else if(WORLD==='library')g.rect((EXTENT-19.5)*PX,(EXTENT-16.7)*PX,39*PX,33.4*PX);else g.rect(0,0,SIZE,SIZE);g.fill();
+  if(D){g.strokeStyle='#d4dceb';g.lineCap='round';g.lineWidth=2.4*PX;for(const[x1,z1,x2,z2]of D.ROADS){g.beginPath();g.moveTo(...toB(x1,z1));g.lineTo(...toB(x2,z2));g.stroke();}
+   const lake=D.DISTRICTS.find(d=>d.id==='lake');if(lake){g.fillStyle='#bfe0ea';g.beginPath();g.arc(...toB(lake.x,lake.z),9*PX,0,Math.PI*2);g.fill();}
+   g.fillStyle='#dfe9f0';g.fillRect(...toB(11.3,-13),3.4*PX,20*PX);g.fillStyle='#cfe6ee';g.beginPath();g.arc(...toB(8.6,10.8),2.6*PX,0,Math.PI*2);g.fill();}
+  for(const c of typeof colliders==='object'&&colliders?colliders:[]){if(!Number.isFinite(c.x)||!Number.isFinite(c.z))continue;const r=c.r||(c.w?Math.max(c.w,c.d||c.w)/2:.4),[x,y]=toB(c.x,c.z);
+   if(WORLD==='winter'){g.fillStyle=r>=1.8?'#b08f78':r>=.45&&r<1.4?'#7fa39f':r<.3?'#8c8f9a':'#c2ab95';}else g.fillStyle=WORLD==='aquarium'?'#6aa6b8':'#b08f78';
+   g.beginPath();if(r>=1.8||c.w){const w=c.w?c.w*PX:r*1.6*PX,h=c.d?c.d*PX:r*1.6*PX;g.fillRect(x-w/2,y-h/2,w,h);if(WORLD==='winter'){g.fillStyle='#8c6f60';g.fillRect(x-w/2,y-h/2,w,h*.38);}}
+   else if(WORLD==='winter'&&r>=.45&&r<1.4){const t=Math.max(3,r*PX*1.5);g.moveTo(x,y-t);g.lineTo(x+t*.8,y+t*.7);g.lineTo(x-t*.8,y+t*.7);g.closePath();}else g.arc(x,y,Math.max(1.5,r*PX),0,Math.PI*2);g.fill();}}
+ drawBase();
+ // Shared painter for both views: view = {cx, cz, scale (px per metre), w, h}.
+ const COLORS={me:'#e4a28e',friend:'#7fa3c9',folk:'#9a8f86',resident:'#8e9d83',ping:'#e2a13c'};
+ function paint(g,view,full){const{cx,cz,scale,w,h}=view,sx=x=>w/2+(x-cx)*scale,sy=z=>h/2+(z-cz)*scale,k=scale/PX;
+  g.clearRect(0,0,w,h);g.save();g.fillStyle='#c4cee0';g.fillRect(0,0,w,h);g.drawImage(base,(-EXTENT-cx)*scale+w/2,(-EXTENT-cz)*scale+h/2,SIZE*k,SIZE*k);
+  if(FOG){g.fillStyle='rgba(196,206,224,.96)';const x0=Math.max(0,cellOf(cx-w/2/scale)),x1=Math.min(N-1,cellOf(cx+w/2/scale)),z0=Math.max(0,cellOf(cz-h/2/scale)),z1=Math.min(N-1,cellOf(cz+h/2/scale));for(let j=z0;j<=z1;j++)for(let i=x0;i<=x1;i++)if(!seen[j*N+i])g.fillRect(Math.floor(sx(-EXTENT+i*CELL)),Math.floor(sy(-EXTENT+j*CELL)),Math.ceil(CELL*scale)+1,Math.ceil(CELL*scale)+1);}
+  const dot=(x,z,r,c)=>{g.fillStyle=c;g.beginPath();g.arc(sx(x),sy(z),r,0,Math.PI*2);g.fill();};
+  if(D)for(const b of D.beacons){if(!isSeen(b.x,b.z))continue;const lit=D.state.lit.includes(b.id);g.fillStyle=lit?'#f2b84b':'#9aa6b8';g.save();g.translate(sx(b.x),sy(b.z));g.rotate(Math.PI/4);const s=full?7:4;g.fillRect(-s/2,-s/2,s,s);g.restore();}
+  if(typeof villageFolk==='object'&&villageFolk)for(const f of villageFolk.visible())dot(f.pos.x,f.pos.z,full?3.5:2.2,COLORS.folk);
+  if(typeof residentGuide==='object'&&residentGuide&&residentGuide.here)dot(residentGuide.here.x,residentGuide.here.z,full?4.5:3,COLORS.resident);
+  if(typeof villageTogether==='object'&&villageTogether)for(const p of villageTogether.pings)dot(p.x,p.z,full?6:4,COLORS.ping);
+  if(typeof remotePlayers==='object'&&remotePlayers)for(const peer of remotePlayers.values()){const r=peer.actor&&peer.actor.root;if(!r)continue;dot(r.position.x,r.position.z,full?5:3.4,COLORS.friend);if(full&&peer.data&&peer.data.n){g.fillStyle='#3e4660';g.font='700 11px "Winter Jua",sans-serif';g.textAlign='center';g.fillText(peer.data.n,sx(r.position.x),sy(r.position.z)-9);}}
+  if(full){g.textAlign='center';for(const l of LABELS){if(!isSeen(l.x,l.z))continue;g.font=(l.big?'700 15px':'700 11px')+' "Winter Jua",sans-serif';g.lineWidth=3;g.strokeStyle='rgba(255,255,255,.85)';g.strokeText(l.name,sx(l.x),sy(l.z));g.fillStyle=l.big?'#3e4660':'#6a5f5a';g.fillText(l.name,sx(l.x),sy(l.z));}}
+  // You: an arrow pointing where you face.
+  const me=player.position,a=player.rotation.y;g.save();g.translate(sx(me.x),sy(me.z));g.rotate(-a+Math.PI);g.fillStyle=COLORS.me;g.strokeStyle='#fff';g.lineWidth=2;const s=full?9:7;g.beginPath();g.moveTo(0,-s);g.lineTo(s*.7,s*.7);g.lineTo(0,s*.35);g.lineTo(-s*.7,s*.7);g.closePath();g.fill();g.stroke();g.restore();g.restore();}
+ // Minimap.
+ const style=document.createElement('style');style.textContent='.village-minimap{position:fixed;right:16px;top:calc(max(22px,env(safe-area-inset-top)) + 54px);z-index:3;width:132px;height:132px;padding:0;border:3px solid rgba(255,247,232,.92);border-radius:50%;overflow:hidden;background:#e9eef5;box-shadow:0 4px 16px rgba(40,40,70,.22);cursor:pointer}.village-minimap[hidden],.village-map[hidden]{display:none}.village-minimap canvas{width:100%;height:100%;display:block}.village-minimap b{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);white-space:nowrap;max-width:86%;overflow:hidden;text-overflow:ellipsis;font:700 9px "Winter Jua",sans-serif;color:#5f5050;background:rgba(255,247,232,.85);padding:2px 6px;border-radius:999px;pointer-events:none}.sky-weather-badge{top:calc(max(22px,env(safe-area-inset-top)) + 192px)!important;left:auto!important;right:16px!important;transform:none!important}'+
+  '.village-map{position:fixed;inset:0;z-index:14;background:#e9eef5;touch-action:none}.village-map canvas{width:100%;height:100%;display:block}.village-map-bar{position:absolute;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;align-items:center;justify-content:space-between;gap:8px;pointer-events:none}.village-map-bar h2{margin:0;padding:8px 14px;border-radius:999px;background:rgba(255,247,232,.92);color:#5f5050;font:700 15px "Winter Jua",sans-serif}.village-map-bar div{display:flex;gap:6px;pointer-events:auto}.village-map button{min-width:44px;min-height:44px;border:0;border-radius:14px;background:rgba(255,247,232,.95);color:#5f5050;font:700 18px "Winter Jua",sans-serif;cursor:pointer;box-shadow:0 2px 10px rgba(40,40,70,.15)}.village-map-note{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);transform:translateX(-50%);margin:0;padding:8px 14px;border-radius:999px;background:rgba(53,59,85,.7);color:#fff8ec;font:700 12px "Winter Jua",sans-serif;white-space:nowrap}'+
+  '@media(max-width:600px){.village-minimap{width:104px;height:104px;top:calc(max(19px,env(safe-area-inset-top)) + 54px)}.sky-weather-badge{top:calc(max(19px,env(safe-area-inset-top)) + 164px)!important}.district-banner{top:calc(env(safe-area-inset-top,0px) + 196px)!important}.beacon-hop{top:calc(env(safe-area-inset-top,0px) + 240px)!important}.beacon-list{top:calc(env(safe-area-inset-top,0px) + 288px)!important}}';(document.head||document.body).append(style);
+ const mini=document.createElement('button');mini.className='village-minimap';mini.setAttribute('aria-label','지도 크게 보기 (M)');mini.title='지도 (M)';mini.hidden=true;const miniCanvas=document.createElement('canvas');miniCanvas.width=264;miniCanvas.height=264;const miniName=document.createElement('b');mini.append(miniCanvas,miniName);document.body.append(mini);
+ // Full map.
+ const sheet=document.createElement('section');sheet.className='village-map';sheet.hidden=true;sheet.setAttribute('role','dialog');sheet.setAttribute('aria-modal','true');sheet.setAttribute('aria-label','마을 지도');
+ const canvas=document.createElement('canvas'),bar=document.createElement('div'),title=document.createElement('h2'),tools=document.createElement('div'),zoomIn=document.createElement('button'),zoomOut=document.createElement('button'),center=document.createElement('button'),closeButton=document.createElement('button'),note=document.createElement('p');
+ bar.className='village-map-bar';title.textContent={winter:'겨울 마을 지도',aquarium:'수족관 지도',library:'도서관 지도'}[WORLD]||'지도';zoomIn.textContent='+';zoomIn.setAttribute('aria-label','확대');zoomOut.textContent='−';zoomOut.setAttribute('aria-label','축소');center.textContent='◎';center.setAttribute('aria-label','내 위치로');closeButton.textContent='×';closeButton.setAttribute('aria-label','지도 닫기 (M)');note.className='village-map-note';note.textContent=D?'밝힌 등불을 누르면 바로 가요 · 다른 곳을 누르면 걸어가요':'가고 싶은 곳을 누르면 걸어가요';
+ tools.append(zoomOut,zoomIn,center,closeButton);bar.append(title,tools);sheet.append(canvas,bar,note);document.body.append(sheet);
+ let view={cx:0,cz:0,scale:6,w:1,h:1},drag=null,pinch=null,miniIn=0;const pointers=new Map();
+ const MIN_SCALE=()=>Math.min(view.w,view.h)/(EXTENT*2.2),MAX_SCALE=28;
+ function clampView(){view.scale=Math.max(MIN_SCALE(),Math.min(MAX_SCALE,view.scale));view.cx=Math.max(-EXTENT,Math.min(EXTENT,view.cx));view.cz=Math.max(-EXTENT,Math.min(EXTENT,view.cz));}
+ function size(){const r=devicePixelRatio>1?Math.min(2,devicePixelRatio):1;view.w=innerWidth;view.h=innerHeight;canvas.width=Math.round(innerWidth*r);canvas.height=Math.round(innerHeight*r);const g=canvas.getContext('2d');if(g&&g.setTransform)g.setTransform(r,0,0,r,0,0);}
+ function draw(){if(sheet.hidden)return;const g=canvas.getContext('2d');if(g&&g.drawImage)paint(g,view,true);}
+ function open(){if(!entered||(typeof photoMode==='object'&&photoMode&&photoMode.on))return false;size();view.cx=player.position.x;view.cz=player.position.z;view.scale=Math.max(MIN_SCALE(),Math.min(view.w,view.h)/(WORLD==='winter'?60:34));clampView();sheet.hidden=false;draw();closeButton.focus();return true;}
+ function close(){sheet.hidden=true;pointers.clear();drag=null;pinch=null;}
+ const toWorld=(px,py)=>({x:view.cx+(px-view.w/2)/view.scale,z:view.cz+(py-view.h/2)/view.scale});
+ // A tap: a lit beacon nearby hops there; anywhere seen and walkable walks there.
+ function tap(px,py){const p=toWorld(px,py);if(D){const b=D.beacons.find(b=>D.state.lit.includes(b.id)&&Math.hypot(b.x-p.x,b.z-p.z)*view.scale<22);if(b){close();D.travel(b.id);return'hop';}}
+  if(!isSeen(p.x,p.z)){toast('아직 가 보지 않은 곳이에요');return'fog';}if(typeof navigate==='function'){close();navigate(p.x,p.z);return'walk';}return null;}
+ zoomIn.addEventListener('click',()=>{view.scale*=1.4;clampView();draw();});zoomOut.addEventListener('click',()=>{view.scale/=1.4;clampView();draw();});center.addEventListener('click',()=>{view.cx=player.position.x;view.cz=player.position.z;draw();});closeButton.addEventListener('click',close);
+ canvas.addEventListener('pointerdown',e=>{pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1)drag={x:e.clientX,y:e.clientY,cx:view.cx,cz:view.cz,moved:false};else if(pointers.size===2){const[a,b]=[...pointers.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),scale:view.scale};drag=null;}});
+ canvas.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pinch&&pointers.size===2){const[a,b]=[...pointers.values()];view.scale=pinch.scale*Math.hypot(a.x-b.x,a.y-b.y)/Math.max(1,pinch.d);clampView();draw();}else if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.hypot(dx,dy)>6)drag.moved=true;view.cx=drag.cx-dx/view.scale;view.cz=drag.cz-dy/view.scale;clampView();draw();}});
+ for(const k of['pointerup','pointercancel'])canvas.addEventListener(k,e=>{const was=drag;pointers.delete(e.pointerId);if(k==='pointerup'&&was&&!was.moved&&!pinch)tap(e.clientX,e.clientY);if(pointers.size<2)pinch=null;if(!pointers.size)drag=null;});
+ canvas.addEventListener('wheel',e=>{e.preventDefault();view.scale*=e.deltaY<0?1.15:1/1.15;clampView();draw();},{passive:false});
+ mini.addEventListener('click',open);
+ addEventListener('keydown',e=>{if(e.repeat||e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;if(e.key==='Escape'&&!sheet.hidden){close();return;}if(e.key==='m'||e.key==='M'||e.key==='ㅡ'){if(!sheet.hidden){e.preventDefault();close();}else if(!(typeof helpOpen==='function'&&helpOpen())&&open())e.preventDefault();}});
+ addEventListener('resize',()=>{if(!sheet.hidden){size();clampView();draw();}});
+ return{EXTENT,LABELS,open,close,tap,isOpen:()=>!sheet.hidden,mini,sheet,reveal,isSeen,toWorld,get view(){return view;},seenCount:()=>seen.reduce((s,v)=>s+v,0),
+  tick(dt){mini.hidden=!entered||(typeof photoMode==='object'&&photoMode&&photoMode.on);if(!entered)return;const p=player.position;reveal(p.x,p.z);fogSave-=dt;if(fogSave<=0){fogSave=5;saveFog();}
+   if(!sheet.hidden){draw();return;}miniIn-=dt;if(miniIn>0||mini.hidden)return;miniIn=.12;const g=miniCanvas.getContext('2d');if(g&&g.drawImage)paint(g,{cx:p.x,cz:p.z,scale:WORLD==='winter'?4.4:6.5,w:264,h:264},false);
+   const here=D&&D.current?D.current.name:'';if(miniName.textContent!==here)miniName.textContent=here;miniName.hidden=!here;}};
+}
+const villageMap=createVillageMap();
+
+// The bag: one place for everything you carry. Little things picked up around each space (new spots every Seoul day)
+// stack in slots; things bought in the village shop, expedition cards and creature pictures show alongside them.
+// Open it with the bag button under the minimap or the I key. Tabs sort by kind; a picked-up thing can be eaten,
+// or three of a kind traded for a shell. The bag lives in this browser and is shared by all three spaces.
+function createVillageBag(){
+ const WORLD=CURRENT_WORLD,KEY='village-bag-v1',SLOTS=30,STACK=99,TRADE=3,REACH=1.4,H=3600e3;
+ const ITEMS={
+  pinecone:{name:'솔방울',tab:'found',color:0x9b7653,shape:'cone',note:'눈숲에서 굴러온 단단한 솔방울.'},
+  snowflake:{name:'눈꽃 결정',tab:'found',color:0xe6f4ff,shape:'star',note:'녹지 않는 신기한 눈꽃. 빛에 비추면 반짝여요.'},
+  feather:{name:'깃털',tab:'found',color:0xf3ede4,shape:'leaf',note:'새가 놓고 간 보드라운 깃털.'},
+  glimmer:{name:'반짝 돌',tab:'found',color:0xb9c7e8,shape:'gem',note:'호수 가장자리에서 찾은 매끈한 돌.'},
+  seashell:{name:'소라 껍데기',tab:'found',color:0xf1c9b8,shape:'shell',note:'귀에 대면 파도 소리가 나요.'},
+  seaglass:{name:'바다 유리',tab:'found',color:0x9fd6c9,shape:'gem',note:'파도에 둥글게 깎인 유리 조각.'},
+  leaf:{name:'눌린 잎',tab:'found',color:0xc99a5a,shape:'leaf',note:'책 사이에서 납작해진 단풍잎.'},
+  bookmark:{name:'헌 책갈피',tab:'found',color:0xd98c7a,shape:'card',note:'누군가 읽다 만 자리를 표시하던 책갈피.'},
+  berry:{name:'겨울 열매',tab:'food',color:0xd9555f,shape:'berry',note:'새콤달콤한 빨간 열매. 먹으면 기운이 나요.',eat:'새콤달콤해서 기운이 났어요'},
+  biscuit:{name:'별 비스킷',tab:'food',color:0xe6c27a,shape:'star',note:'도서관 간식 바구니에서 나온 별 모양 비스킷.',eat:'바삭바삭, 별 맛이 났어요'}};
+ const POOLS={winter:['pinecone','snowflake','feather','glimmer','berry'],aquarium:['seashell','seaglass','glimmer','berry'],library:['leaf','bookmark','feather','biscuit']};
+ const TABS=[['all','전체'],['food','먹거리'],['found','주운 것'],['looks','꾸미기'],['keep','소중한 것']];
+ const day=(ms=Date.now())=>Math.floor((ms+9*H)/86400e3);
+ function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');const out={};if(v&&v.items&&typeof v.items==='object')for(const[k,n]of Object.entries(v.items))if(ITEMS[k]&&Number.isInteger(n)&&n>0)out[k]=Math.min(STACK,n);return{items:out};}catch{return{items:{}};}}
+ let bag=load();const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(bag));}catch{}};
+ const count=id=>bag.items[id]||0,slotsUsed=()=>Object.keys(bag.items).length;
+ function add(id,n=1){if(!ITEMS[id]||n<=0)return 0;if(!bag.items[id]&&slotsUsed()>=SLOTS){toast('가방이 가득 찼어요');return 0;}const room=STACK-count(id),got=Math.min(room,n);if(got<=0){toast(ITEMS[id].name+'은(는) 더 담을 수 없어요');return 0;}bag.items[id]=count(id)+got;save();refresh();return got;}
+ function take(id,n=1){if(count(id)<n)return false;bag.items[id]-=n;if(!bag.items[id])delete bag.items[id];save();refresh();return true;}
+ function eat(id){const it=ITEMS[id];if(!it||!it.eat||!take(id))return false;toast(it.eat);if(typeof villagePlay==='object'&&villagePlay)villagePlay.say(0);return true;}
+ function trade(id){const it=ITEMS[id];if(!it||it.tab!=='found'||count(id)<TRADE)return 0;const got=typeof villageMarket==='object'&&villageMarket?villageMarket.earn(1,it.name+' 바꾸기'):0;if(!got){toast('오늘은 조개를 더 받을 수 없어요');return 0;}take(id,TRADE);toast(it.name+' '+TRADE+'개를 조개껍데기로 바꿨어요');return got;}
+ // Pick-up spots: a fresh set each Seoul day, the same in every browser; what you took today stays taken here.
+ let spots=[],spotDay=-1,picked=new Set();const pickKey=d=>'village-bag-picked:'+WORLD+':'+d;
+ const group=new THREE.Group();group.name='bag-pickups';scene.add(group);
+ const geo={cone:new THREE.ConeGeometry(.13,.26,7),star:new THREE.OctahedronGeometry(.15,0),leaf:new THREE.SphereGeometry(.13,8,5),gem:new THREE.OctahedronGeometry(.13,0),shell:new THREE.SphereGeometry(.13,8,6),berry:new THREE.SphereGeometry(.08,8,6),card:new THREE.BoxGeometry(.24,.04,.12)},glowGeo=new THREE.CircleGeometry(.36,16);
+ function seedFor(d){let s=(d*2654435761^[...WORLD].reduce((h,c)=>h*31+c.charCodeAt(0),7))>>>0;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};}
+ function placeSpots(d){group.clear();spots=[];spotDay=d;try{picked=new Set(JSON.parse(localStorage.getItem(pickKey(d))||'[]'));}catch{picked=new Set();}
+  const r=seedFor(d),pool=POOLS[WORLD]||POOLS.winter,n=WORLD==='winter'?22:12,D=typeof villageDistricts==='object'&&villageDistricts?villageDistricts.DISTRICTS:null;
+  for(let i=0,tries=0;i<n&&tries<600;tries++){let x,z;if(D){const home=D[i%D.length],a=r()*Math.PI*2,rr=r()*home.r*.85;x=home.x+Math.cos(a)*rr;z=home.z+Math.sin(a)*rr;}else{const lim=WORLD==='aquarium'?17:15;x=(r()*2-1)*lim;z=(r()*2-1)*(WORLD==='library'?13:lim);if(WORLD==='aquarium'&&Math.hypot(x,z)>18)continue;}
+   if(blocked(x,z,.5))continue;const id=pool[Math.floor(r()*pool.length)],key=i+':'+id;i++;if(picked.has(key))continue;
+   const it=ITEMS[id],y=typeof groundHeight==='function'?groundHeight(x,z):0,g=new THREE.Group();g.position.set(x,y,z);const m=new THREE.Mesh(geo[it.shape],new THREE.MeshLambertMaterial({color:it.color,emissive:it.color,emissiveIntensity:.25}));m.position.y=.32;g.add(m);
+   const glow=new THREE.Mesh(glowGeo,new THREE.MeshBasicMaterial({color:0xfff2c6,transparent:true,opacity:.35,depthWrite:false}));glow.rotation.x=-Math.PI/2;glow.position.y=.03;g.add(glow);group.add(g);spots.push({key,id,x,z,g,m});}}
+ function pickUp(s){const got=add(s.id);if(!got)return false;picked.add(s.key);try{localStorage.setItem(pickKey(spotDay),JSON.stringify([...picked]));}catch{}group.remove(s.g);spots=spots.filter(o=>o!==s);toast(ITEMS[s.id].name+'을(를) 주웠어요 · 가방(I)');if(typeof villageJournal==='object'&&villageJournal&&villageJournal.note)villageJournal.note('first-pickup');return true;}
+ // Window.
+ const style=document.createElement('style');style.textContent='.bag-toggle{position:fixed;right:16px;top:calc(max(22px,env(safe-area-inset-top)) + 194px);z-index:3;width:46px;height:46px;border:0;border-radius:50%;background:rgba(255,247,232,.92);color:#5f5050;display:grid;place-items:center;box-shadow:0 3px 12px rgba(40,40,70,.18);cursor:pointer}.bag-toggle[hidden],.village-bag[hidden]{display:none}.bag-toggle svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.bag-toggle i{position:absolute;right:2px;top:2px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#d98c7a;color:#fff;font:700 10px/16px "Winter Jua",sans-serif;font-style:normal}.bag-toggle i:empty{display:none}.sky-weather-badge{top:calc(max(22px,env(safe-area-inset-top)) + 248px)!important}'+
+  '.village-bag{position:fixed;inset:0;z-index:13;display:grid;place-items:center;padding:16px;background:rgba(41,33,50,.38)}.bag-card{position:relative;width:min(420px,100%);max-height:min(640px,calc(100vh - 32px));overflow:auto;padding:20px 18px 16px;border-radius:24px;background:#fff3e3;color:#69534f;box-shadow:0 10px 34px rgba(42,34,51,.3)}.bag-card h2{margin:0 0 4px;font-size:19px;text-align:center}.bag-card .bag-sub{margin:0 0 12px;text-align:center;font-size:11px;color:#a18c78}.bag-tabs{display:flex;gap:5px;overflow-x:auto;margin-bottom:10px}.bag-card button{font:700 12px "Winter Jua",sans-serif;border:0;cursor:pointer;color:#6a5350}.bag-tabs button{flex:none;min-height:36px;padding:6px 11px;border-radius:999px;background:#efe1cb}.bag-tabs button[aria-pressed="true"]{background:#8e9d83;color:#fff8e8}.bag-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.bag-grid button{position:relative;aspect-ratio:1;border-radius:14px;background:#efe1cb;display:grid;place-items:center;padding:4px}.bag-grid button[aria-pressed="true"]{outline:3px solid #8e9d83}.bag-grid button span{width:24px;height:24px;border-radius:50%}.bag-grid button b{position:absolute;right:5px;bottom:3px;font-size:10px}.bag-grid button small{position:absolute;left:3px;right:3px;top:4px;font-size:9px;opacity:.75;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bag-grid .empty{background:#f6ead8;cursor:default}.bag-detail{margin-top:12px;padding:12px;border-radius:16px;background:#f8ecda;font-size:12px;line-height:1.7;min-height:64px}.bag-detail strong{display:block;font-size:14px}.bag-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.bag-actions button{min-height:40px;padding:6px 12px;border-radius:12px;background:#8e9d83;color:#fff8e8}.bag-close{position:absolute;right:8px;top:7px;width:40px;min-height:40px;background:transparent!important;color:#a18b7d!important;font-size:24px!important}.bag-tabs .bag-sort{margin-left:auto;background:transparent;border:1px solid #e3d2bb;font-size:11px}'+
+  '@media(max-width:600px){.bag-toggle{top:calc(max(19px,env(safe-area-inset-top)) + 164px)}.sky-weather-badge{top:calc(max(19px,env(safe-area-inset-top)) + 216px)!important}.bag-grid{grid-template-columns:repeat(4,1fr)}}';(document.head||document.body).append(style);
+ const toggle=document.createElement('button');toggle.className='bag-toggle';toggle.setAttribute('aria-label','가방 열기 (I)');toggle.title='가방 (I)';toggle.hidden=true;toggle.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l1 12H5Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2M9 12h6"/></svg>';const badge=document.createElement('i');toggle.append(badge);document.body.append(toggle);
+ const sheet=document.createElement('section');sheet.className='village-bag';sheet.hidden=true;const card=document.createElement('div');card.className='bag-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label','가방');
+ const closeButton=document.createElement('button');closeButton.className='bag-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','가방 닫기 (I)');const title=document.createElement('h2'),sub=document.createElement('p'),tabs=document.createElement('div'),grid=document.createElement('div'),detail=document.createElement('div'),sortButton=document.createElement('button');
+ title.textContent='가방';sub.className='bag-sub';tabs.className='bag-tabs';tabs.setAttribute('role','tablist');grid.className='bag-grid';detail.className='bag-detail';sortButton.className='bag-sort';card.append(closeButton,title,sub,tabs,grid,detail);sheet.append(card);document.body.append(sheet);
+ let tab='all',sort=0,chosen=null,fresh=0;const SORTS=['종류순','많은 순','이름순'];
+ // Everything shown in the bag: picked-up stacks plus things kept elsewhere in the village.
+ function entries(){const out=Object.entries(bag.items).map(([id,n])=>({id,n,name:ITEMS[id].name,tab:ITEMS[id].tab,color:ITEMS[id].color,note:ITEMS[id].note,item:ITEMS[id]}));
+  if(typeof villageMarket==='object'&&villageMarket)for(const it of villageMarket.ITEMS)if(villageMarket.owns(it.id))out.push({id:'shop:'+it.id,n:1,name:it.name,tab:'looks',color:it.color||0xe6dccb,note:it.kind==='paper'?'편지를 쓸 때 고를 수 있는 편지지.':'마을 가게에서 산 '+it.name+'. 쓰면 바로 바뀌어요.',shop:it});
+  if(typeof villageExpedition==='object'&&villageExpedition&&villageExpedition.state.cards.length)out.push({id:'keep:cards',n:villageExpedition.state.cards.length,name:'원정 이야기 카드',tab:'keep',color:0xb5d0a4,note:'원정에서 돌아온 친구들이 들려준 이야기. 최근 '+villageExpedition.state.cards.length+'장을 간직하고 있어요.'});
+  if(typeof creatureBook==='object'&&creatureBook){const n=Object.keys(creatureBook.entries()).length;if(n)out.push({id:'keep:book',n,name:'생물 도감 그림',tab:'keep',color:0x97b5c5,note:'만난 생물 '+n+'종의 그림이 도감에 있어요.',book:true});}
+  if(typeof villageMarket==='object'&&villageMarket){const s=villageMarket.purse().shells;if(s)out.push({id:'keep:shells',n:s,name:'조개껍데기',tab:'keep',color:0xf1c9b8,note:'마을 가게에서 쓰는 조개껍데기.'});}
+  return out;}
+ function shown(){const list=entries().filter(e=>tab==='all'||e.tab===tab);const order=TABS.map(t=>t[0]);if(sort===0)list.sort((a,b)=>order.indexOf(a.tab)-order.indexOf(b.tab)||a.name.localeCompare(b.name,'ko'));else if(sort===1)list.sort((a,b)=>b.n-a.n);else list.sort((a,b)=>a.name.localeCompare(b.name,'ko'));return list;}
+ const hex=c=>'#'+(c>>>0).toString(16).padStart(6,'0');
+ function render(){sub.textContent='칸 '+slotsUsed()+' / '+SLOTS+' · 같은 물건은 한 칸에 '+STACK+'개까지';sortButton.textContent=SORTS[sort];
+  tabs.replaceChildren(...TABS.map(([id,label])=>{const b=document.createElement('button');b.setAttribute('role','tab');b.textContent=label;b.setAttribute('aria-pressed',String(id===tab));b.addEventListener('click',()=>{tab=id;chosen=null;render();});return b;}),sortButton);
+  const list=shown(),cells=list.map(e=>{const b=document.createElement('button'),dot=document.createElement('span'),n=document.createElement('b'),nm=document.createElement('small');dot.style.background=hex(e.color);n.textContent=e.n>1?String(e.n):'';nm.textContent=e.name;b.append(nm,dot,n);b.setAttribute('aria-label',e.name+(e.n>1?' '+e.n+'개':''));b.setAttribute('aria-pressed',String(chosen===e.id));b.addEventListener('click',()=>{chosen=e.id;render();});return b;});
+  const fill=Math.max(0,(tab==='all'?Math.max(10,Math.ceil((list.length+1)/5)*5):Math.ceil(Math.max(list.length,5)/5)*5)-list.length);for(let i=0;i<fill;i++){const e=document.createElement('button');e.className='empty';e.disabled=true;e.setAttribute('aria-hidden','true');cells.push(e);}grid.replaceChildren(...cells);
+  const e=list.find(x=>x.id===chosen);if(!e){detail.textContent=list.length?'물건을 누르면 설명이 나와요.':'아직 비어 있어요. 마을 곳곳에서 반짝이는 걸 주워 보세요.';return;}
+  const h=document.createElement('strong'),p=document.createElement('span'),acts=document.createElement('div');h.textContent=e.name+(e.n>1?' × '+e.n:'');p.textContent=e.note;acts.className='bag-actions';
+  const act=(label,fn)=>{const b=document.createElement('button');b.textContent=label;b.addEventListener('click',()=>{fn();render();});acts.append(b);};
+  if(e.item&&e.item.eat)act('먹기',()=>eat(e.id));if(e.item&&e.item.tab==='found')act(TRADE+'개를 조개 1개로',()=>{if(count(e.id)<TRADE)toast(TRADE+'개가 모이면 바꿀 수 있어요');else trade(e.id);});
+  if(e.shop&&e.shop.kind!=='paper')act(villageMarket.choice(e.shop.kind)===e.shop.color?'쓰는 중 · 빼기':'쓰기',()=>villageMarket.use(e.shop.id));if(e.book&&creatureBook.open)act('도감 열기',()=>{close();creatureBook.open();});
+  detail.replaceChildren(h,p,acts);}
+ function refresh(){if(!sheet.hidden)render();badge.textContent=fresh?String(fresh):'';}
+ function open(){if(!entered)return false;fresh=0;refresh();render();sheet.hidden=false;closeButton.focus();return true;}
+ function close(){sheet.hidden=true;chosen=null;}
+ closeButton.addEventListener('click',close);sheet.addEventListener('click',e=>{if(e.target===sheet)close();});sortButton.addEventListener('click',()=>{sort=(sort+1)%SORTS.length;render();});toggle.addEventListener('click',()=>sheet.hidden?open():close());
+ addEventListener('keydown',e=>{if(e.repeat||e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;if(e.key==='Escape'&&!sheet.hidden){close();return;}if(e.key==='i'||e.key==='I'||e.key==='ㅑ'){if(!sheet.hidden){e.preventDefault();close();}else if(!(typeof helpOpen==='function'&&helpOpen())&&open())e.preventDefault();}});
+ return{ITEMS,POOLS,TABS,SLOTS,STACK,TRADE,add,take,eat,trade,count,entries,open,close,isOpen:()=>!sheet.hidden,get spots(){return spots;},pickUp,toggle,sheet,grid,detail,setTab(t){tab=t;render();},choose(id){chosen=id;render();},
+  tick(dt){toggle.hidden=!entered||(typeof photoMode==='object'&&photoMode&&photoMode.on);const d=day();if(d!==spotDay)placeSpots(d);if(!entered)return;const t=performance.now()/1000,p=player.position;
+   for(const s of[...spots]){s.m.rotation.y=t*1.4;s.m.position.y=.32+Math.sin(t*2+s.x)*.05;if(Math.hypot(s.x-p.x,s.z-p.z)<REACH&&pickUp(s)){fresh++;refresh();}}}};
+}
+const villageBag=createVillageBag();
 
 // The visitor reports their own confirmed join; the owner's browser is never the notification server.
 const ARRIVAL_SERVICE={"endpoint":"https://my-little-village-arrivals.seonyoungyoo16.workers.dev","partyId":"0946f302b9cf8449c6970809"},arrivalRequests=new Map();

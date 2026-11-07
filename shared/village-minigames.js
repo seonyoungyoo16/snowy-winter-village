@@ -42,7 +42,7 @@ function createVillageMinigames(){
  function render(){const title=el('h2','',GAME.title),hint=el('p','creature-count',GAME.hint);status=sig();body.replaceChildren(title,hint,...view());}
  function open(){if(CURRENT_WORLD==='library'&&!memory.cards.length)memory.deal();if(CURRENT_WORLD==='winter'&&!dice.target.length)dice.deal();render();sheet.hidden=false;closeButton.focus();if(typeof villageJournal==='object'&&villageJournal&&villageJournal.note)villageJournal.note('first-minigame');}
  if(residentGuide.addAction)residentGuide.addAction('함께 놀기',()=>{residentGuide.close();open();});
- if(typeof radialMenu==='object'&&radialMenu)radialMenu.addItem({icon:'⚄',label:'놀이',run:open});
+ if(typeof radialMenu==='object'&&radialMenu)radialMenu.addItem({icon:'dice',label:'놀이',run:open});
  return{GAME,BOOKS,FACES,ARCADE,memory,dice,arcade,open,close,isOpen:()=>!sheet.hidden,
   // The arcade redraws only when what it shows changes.
   tick(dt){if(!arcade.running)return;arcade.step(dt);if(!sheet.hidden&&status!==sig())render();}};

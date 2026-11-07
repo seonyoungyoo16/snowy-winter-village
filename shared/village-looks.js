@@ -22,7 +22,7 @@ function lookDress(head,look,p){
  const color=look.a==='glasses'?0x4d4552:look.a==='flower'?0xf2c1cf:p.scarf,mesh=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color}));mesh.name='look-accessory-'+look.a;head.add(mesh);return mesh;
 }
 function createVillageLooks(){
- const KEY='village-look',SETS='village-look-sets',MIRROR={x:-6.5,z:10},REACH=3.4,DEFAULT={c:0,s:0,a:'none'};
+ const KEY='village-look',SETS='village-look-sets',MIRROR=CURRENT_WORLD==='winter'?{x:-13.2,z:8.6}:{x:-6.5,z:10},REACH=3.4,DEFAULT={c:0,s:0,a:'none'};
  const valid=l=>Boolean(l)&&Number.isInteger(l.c)&&l.c>=0&&l.c<LOOK_COATS.length&&Number.isInteger(l.s)&&l.s>=0&&l.s<LOOK_SCARVES.length&&LOOK_ACCESSORIES.includes(l.a);
  const clean=l=>valid(l)?{c:l.c,s:l.s,a:l.a}:{...DEFAULT};
  function read(key,fallback){try{const v=JSON.parse(localStorage.getItem(key)||'null');return v===null?fallback:v;}catch{return fallback;}}

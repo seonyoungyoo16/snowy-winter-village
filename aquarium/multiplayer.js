@@ -205,7 +205,12 @@ setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 /* SNOWBALL_CODE */
 /* TOGETHER_CODE */
 /* HOTBAR_CODE */
+/* TIDY_CODE */
+/* RUN_CODE */
 /* EXPEDITION_CODE */
 /* EXHIBIT_CODE */
+/* FOLK_CODE */
+/* MAP_CODE */
+/* BAG_CODE */
 /* ARRIVAL_CLIENT_CODE */
 setupWorldTravel();

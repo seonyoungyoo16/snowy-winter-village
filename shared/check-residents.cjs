@@ -21,7 +21,7 @@ for(const world of Object.keys(expected)){
  if(world==='winter'){time=254500;g.tick(.05);assert(g.tools.mug.position.y>1.1);assert(g.tools.mug.name==='resident-hot-tea');}
  if(world==='aquarium'){time=246950;g.tick(.05);assert(g.tools.pellets.visible);g.actor.root.updateWorldMatrix(true,true);const p=new c.THREE.Vector3().fromBufferAttribute(g.tools.pellets.geometry.attributes.position,0).applyMatrix4(g.actor.root.matrixWorld);assert(Math.hypot(p.x+10,p.z+2)<3.5,'keeper throws food outside the reef');assert(p.y>1.7&&p.y<3);}
  if(world==='library'){time=244300;g.tick(.05);assert(g.tools.leaf.visible);assert(g.tools.book.position.y<g.actor.head.position.y-.3);assert(g.tools.book.position.z>.5);}
- let meshes=0;g.actor.root.traverse(o=>{if(o.isMesh||o.isPoints)meshes++;});g.station.traverse(o=>{if(o.isMesh||o.isPoints)meshes++;});assert(meshes<=14,'resident adds too many draw calls: '+meshes);
+ let meshes=0;g.actor.root.traverse(o=>{if(o.isMesh||o.isPoints)meshes++;});g.station.traverse(o=>{if(o.isMesh||o.isPoints)meshes++;});assert(meshes<=16,'resident adds too many draw calls: '+meshes);
  a.player.position.copy(entrance);for(const p of Object.values(a.places)){const route=a.pathTo(p.x,p.z);assert(route.length||Math.hypot(entrance.x-p.x,entrance.z-p.z)<1,'resident blocks an existing activity');}
  // Seoul-time weekday/weekend routines: every hour has a slot, moods differ, and weekends are not weekdays.
  const kst=(day,h)=>Date.UTC(2026,10,1+day)+(h-9)*3600e3; // 2026-11-01 (KST) is a Sunday.

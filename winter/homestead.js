@@ -1,7 +1,7 @@
 // A small homestead west of the fire: a shared winter garden, a snow-rabbit pen to look after, and a yard the friend group decorates together.
 // Garden beds and yard cells are group-owned slots in the village store (anyone may tend or rearrange them); rabbit care stays in this browser.
 function createHomestead(){
- const GARDEN={x:-13,z:4},PEN={x:-9,z:6.5,r:1.5},YARD={x:4,z:14,cell:1.2},REACH=3.4;
+ const GARDEN={x:-13,z:4},PEN={x:-9,z:6.5,r:1.5},YARD={x:-12.4,z:12.2,cell:1.2},REACH=3.4;
  const CROPS={pansy:['겨울 팬지',0xb59ad6],camellia:['동백',0xd9555f],snowdrop:['설강화',0xf4f6f2]},BLOOM=3;
  const DECOR={snowman:'작은 눈사람',lantern:'등불',pot:'화분',bench:'나무 벤치',wreath:'리스 기둥',sledge:'썰매 장식'};
  const day=(ms=Date.now())=>Math.floor((ms+9*3600e3)/86400e3),here=p=>Math.hypot(player.position.x-p.x,player.position.z-p.z)<REACH;
@@ -23,7 +23,7 @@ function createHomestead(){
  function care(kind){if(!CARE[kind])return false;const done=read(careKey(),[]);if(done.includes(kind)){toast('오늘은 이미 '+CARE[kind]+'를 했어요');return false;}done.push(kind);write(careKey(),done);toast('눈토끼들이 좋아해요 · '+CARE[kind]);note('first-rabbit');if(done.length===3)shells(1,'눈토끼 돌보기');return true;}
  // Yard: a 3×3 grid of decorations the whole group arranges.
  const yard=new THREE.Group();yard.name='homestead-yard';scene.add(yard);const cellPos=i=>({x:YARD.x+((i%3)-1)*YARD.cell,z:YARD.z+(Math.floor(i/3)-1)*YARD.cell});
- const mat0=mesh(geom.box,0xe9dcc4,scene,YARD.x,groundHeight(YARD.x,YARD.z)+.01,YARD.z,YARD.cell*3.2,.02,YARD.cell*3.2);mat0.name='homestead-yard-mat';for(let i=0;i<9;i++){const p=cellPos(i);pickBox('cell',i,p.x,p.z,YARD.cell*.95,.6,YARD.cell*.95);}
+ const floor=groundHeight(YARD.x,YARD.z),mat0=mesh(geom.box,0xa98a6c,scene,YARD.x,floor+.02,YARD.z,YARD.cell*3.3,.05,YARD.cell*3.3);mat0.name='homestead-yard-mat';for(let i=0;i<9;i++){const p=cellPos(i);mesh(geom.box,i%2?0xe2cfb2:0xeadbc2,scene,p.x,floor+.06,p.z,YARD.cell*.9,.04,YARD.cell*.9);pickBox('cell',i,p.x,p.z,YARD.cell*.95,.6,YARD.cell*.95);}
  function decor(id){const g=new THREE.Group();g.name='decor-'+id;if(id==='snowman'){sphere(g,0xffffff,0,.22,0,.22);sphere(g,0xffffff,0,.52,0,.15);sphere(g,0xe58a4a,0,.53,.14,.02,.02,.06);}else if(id==='lantern'){mesh(geom.cyl,0x6b5b50,g,0,.4,0,.03,.8,.03);sphere(g,mat(0xffd99c,true),0,.85,0,.12,.15,.12);}else if(id==='pot'){mesh(geom.cyl,0xb5714f,g,0,.14,0,.16,.28,.16);sphere(g,0x7fa77a,0,.36,0,.17,.13,.17);}else if(id==='bench'){box(g,0x9b7c67,0,.3,0,.9,.07,.32);for(const x of[-.38,.38])box(g,0x7f6857,x,.15,0,.06,.3,.28);}else if(id==='wreath'){mesh(geom.cyl,0x7f6857,g,0,.45,0,.03,.9,.03);const w=mesh(new THREE.TorusGeometry(.17,.05,6,16),0x5f8f5f,g,0,.85,.05);sphere(g,0xd9555f,0,.7,.08,.04);}else{box(g,0xc9705f,0,.12,0,.35,.08,.6);for(const x of[-.15,.15])box(g,0x8f6a50,x,.04,0,.03,.03,.66);}return g;}
  let cells={};function drawYard(){yard.clear();for(let i=0;i<9;i++){const c=cells['cell-'+i];if(!c||!DECOR[c.i])continue;const p=cellPos(i),g=decor(c.i);g.position.set(p.x,groundHeight(p.x,p.z),p.z);yard.add(g);}}
  villageStore.subscribe('yard',v=>{cells=v||{};drawYard();});

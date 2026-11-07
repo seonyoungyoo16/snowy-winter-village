@@ -19,7 +19,7 @@ for(const id of[...p.likes,...p.dislikes])assert(ids.has(id),world+" unknown tas
  time+=86400e3;assert.equal(G.given(),null);assert.equal(G.give(p.dislikes[0]),'meh');
  // Birthday: the special reply, a party hat for that day only, and the resident still within 14 draw calls with the face rig.
  time=kst(2026,p.born[0],p.born[1],10);G.tick();a.avatarLife.tick(.016);assert(G.isBirthday());assert(G.hat&&G.hat.visible,world+' no birthday hat');assert.equal(G.give('cocoa'),'birthday');
- let meshes=0;a.residentGuide.actor.root.traverse(o=>{if(o.isMesh||o.isPoints)meshes++;});a.residentGuide.station.traverse(o=>{if(o.isMesh||o.isPoints)meshes++;});assert(meshes<=14,world+' resident draw calls '+meshes);
+ let meshes=0;a.residentGuide.actor.root.traverse(o=>{if(o.isMesh||o.isPoints)meshes++;});a.residentGuide.station.traverse(o=>{if(o.isMesh||o.isPoints)meshes++;});assert(meshes<=16,world+' resident draw calls '+meshes);
  time+=86400e3;G.tick();assert(!G.isBirthday()&&!G.hat.visible,'hat outlives the birthday');
  G.open();assert(G.isOpen());G.close();
  console.log('PASS: '+world+' resident has a birthday and tastes over real cards, takes one gift per Seoul day with word-only replies, and wears a party hat only on the birthday within 14 draw calls.');

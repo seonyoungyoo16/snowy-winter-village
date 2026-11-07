@@ -16,7 +16,7 @@ for(const world of['winter','aquarium','library']){
  // The bands sit in free idle/walk values: ping .05–.25, carry .30, cocoa .33; none collide with kite, lantern, throws or library seats.
  for(let k=0;k<=20;k++)assert.equal(T.decode('walk',.05+k*.01).ping,k);assert(T.decode('idle',.30).carry);assert(T.decode('idle',.33).cocoa);
  for(const b of[0,.41,.45,.47,.54,.6,.67])assert.equal(T.decode('walk',b),null,'band overlaps '+b);assert.equal(T.decode('celebrate',.1),null);assert.equal(T.decode('warm',.3),null);
- assert(labels().includes('여기!'));assert(!labels().includes('코코아 건네기'),'cocoa without a friend nearby');
+ assert(labels().includes('여기!'));assert(!labels().includes('코코아 건네기'),'cocoa is handed over from the hotbar, not the ring');
  // Ping: needs the village; I face the spot, friends get the distance for 1.5 s, and pings are 4 s apart.
  assert.equal(T.ping(),false);a.setEntered();P.position.set(0,0,0);P.rotation.y=0;const p=T.ping(6,8);assert.equal(p.d,10);assert(Math.abs(P.rotation.y-Math.atan2(6,8))<1e-9);assert.equal(T.pings.length,1);
  assert.equal(a.wireBody().b,.15);assert.equal(T.ping(1,1),false,'pings closer than 4 s apart');run(T,1.6);assert.equal(a.wireBody().b,0,'the ping signal should end');
@@ -37,7 +37,7 @@ for(const world of['winter','aquarium','library']){
  a.remotePlayers.clear();P.position.x+=8;run(T,.1);assert(!T.carrying,'still carrying from 8 m away');run(T,2.5);const kept=JSON.parse(store.get('village-carry:'+world));assert(Math.abs(kept.x-B.position.x)<.01&&Math.abs(kept.z-B.position.z)<.01);
  assert(Math.abs(load(world,store).T.big.position.z-B.position.z)<.01,'the spot was not restored');assert.equal(load(world,new Map([['village-carry:'+world,'{"x":99,"z":0}']])).T.big.position.x,T.BIG.x,'an outside spot was restored');
  // Cocoa: only with a friend within 3 m, 5 s apart; the receiver warms up with a heart only if they are the nearest friend.
- P.position.set(0,0,0);assert.equal(T.cocoa(),false);const pal=fakePeer(a,'p3','여우',0,2.5);assert(labels().includes('코코아 건네기'));assert.equal(T.cocoa(),pal);assert.equal(a.wireBody().b,T.COCOA_B);assert.equal(T.cocoa(),false,'cocoa closer than 5 s apart');run(T,1.6);assert.equal(a.wireBody().b,0);
+ P.position.set(0,0,0);assert.equal(T.cocoa(),false);const pal=fakePeer(a,'p3','여우',0,2.5);assert(!labels().includes('코코아 건네기'));assert.equal(T.cocoa(),pal);assert.equal(a.wireBody().b,T.COCOA_B);assert.equal(T.cocoa(),false,'cocoa closer than 5 s apart');run(T,1.6);assert.equal(a.wireBody().b,0);
  a.remotePlayers.clear();P.position.set(0,0,2);const giver=fakePeer(a,'p4','다람',0,0,{m:'idle',b:T.COCOA_B});fakePeer(a,'p5','먼 친구',0,6);T.peer(giver);assert.equal(a.villagePlay.activeEmote(),0,'no heart for the received cocoa');assert(toast().includes('다람'));
  a.remotePlayers.clear();run(T,3);P.position.set(0,0,2);const giver2=fakePeer(a,'p6','곰',0,0,{m:'idle',b:T.COCOA_B});fakePeer(a,'p7','더 가까운 친구',0,.5);T.peer(giver2);assert(!toast().includes('곰 님이 건넨'),'cocoa went to someone who was not the nearest');
  console.log('PASS: '+world+' together: pings reach friends through b .05–.25 and fade after ten seconds, the '+T.BIG.name+' creeps alone and sits between two carriers without passing walls, and cocoa warms only the nearest friend.');
