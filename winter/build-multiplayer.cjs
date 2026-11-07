@@ -25,6 +25,8 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),esbuild=require('es
   source=source.replace('/* VILLAGE_NEWSPAPER_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-newspaper.js'),'utf8'));
   source=source.replace('/* VILLAGE_RADIO_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-radio.js'),'utf8'));
   source=source.replace('/* PHOTO_MODE_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/photo-mode.js'),'utf8'));
+  source=source.replace('/* COMPANIONS_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-companions.js'),'utf8'));
+  source=source.replace('/* RADIAL_MENU_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/radial-menu.js'),'utf8'));
   source=source.replace('/* HOMESTEAD_CODE */',()=>fs.readFileSync(path.join(__dirname,'homestead.js'),'utf8'));
   source=source.replace('/* WORLD_TRAVEL_CODE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.js'),'utf8').replace('/* WORLD_CONFIG */',JSON.stringify({current:'winter',winterPath:'/snowy-winter-village/',aquariumPath:'/snowy-winter-village/aquarium/',libraryPath:'/snowy-winter-village/library/',publicOrigin:'https://seonyoungyoo16.github.io'})));
   source=source.replace('/* WORLD_TRAVEL_STYLE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.css'),'utf8'));

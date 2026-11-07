@@ -3778,7 +3778,7 @@ function updateUI(){const nearFire=dist(firePos)<3.5,nearSled=dist(sledStart)<2.
 $('entry-form').addEventListener('submit',e=>{e.preventDefault();if(entered)return;nickname=$('nickname').value.trim().replace(/[\u0000-\u001f\u007f]/g,'').slice(0,12)||'겨울 손님';entered=true;$('welcome').hidden=true;for(const id of['controls','status','keyboard','saved-note'])$(id).hidden=false;$('nickname-label').textContent=nickname;save();updateUI();toast('어서 와요, '+nickname+' 님');renderer.domElement.focus({preventScroll:true});startNetwork();});
 document.querySelectorAll('[data-character]').forEach(b=>b.addEventListener('click',()=>chooseCharacter(Number(b.dataset.character))));
 $('main-action').addEventListener('click',action);$('cancel-action').addEventListener('click',()=>{if(ball)scene.remove(ball);ball=null;mode='idle';rollDistance=0;path=[];updateUI();});document.querySelectorAll('[data-place]').forEach(b=>b.addEventListener('click',()=>{if(mode==='rolling'&&b.dataset.place!=='snow'){toast('눈덩이를 마저 굴리고 가볼까요?');return;}const p=b.dataset.place;if(p==='fire'){const spot=fireApproach();navigate(spot[0],spot[1]);}else if(p==='sled')navigate(13,-12);else if(p==='ice')navigate(8.6,9.2);else navigate(3,9); }));
-function closeHelp(){$('help-modal').hidden=true;$('help').focus();}function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||residentGuide.isOpen()||creatureBook.isOpen()||villageNotes.isOpen()||villageLooks.isOpen()||residentGifts.isOpen()||villageNewspaper.isOpen()||villageMarket.isOpen()||villageJournal.isOpen()||villageGoals.isOpen()||homestead.isOpen();}$('help').addEventListener('click',()=>{$('help-modal').hidden=false;keys.clear();$('close-help').focus();});$('close-help').addEventListener('click',closeHelp);$('return-village').addEventListener('click',closeHelp);$('help-modal').addEventListener('click',e=>{if(e.target===$('help-modal'))closeHelp();});
+function closeHelp(){$('help-modal').hidden=true;$('help').focus();}function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||residentGuide.isOpen()||creatureBook.isOpen()||villageNotes.isOpen()||villageLooks.isOpen()||residentGifts.isOpen()||villageNewspaper.isOpen()||photoMode.isOpen()||villageCompanions.isOpen()||radialMenu.isOpen()||villageMarket.isOpen()||villageJournal.isOpen()||villageGoals.isOpen()||homestead.isOpen();}$('help').addEventListener('click',()=>{$('help-modal').hidden=false;keys.clear();$('close-help').focus();});$('close-help').addEventListener('click',closeHelp);$('return-village').addEventListener('click',closeHelp);$('help-modal').addEventListener('click',e=>{if(e.target===$('help-modal'))closeHelp();});
 // Gentle locally synthesized ambience, only after an explicit sound tap.
 let audio=null,audioOn=false;function soundToggle(){try{if(!audio){const ctx=new(window.AudioContext||window.webkitAudioContext)(),master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);const noise=ctx.createBuffer(1,ctx.sampleRate*3,ctx.sampleRate),data=noise.getChannelData(0);let brown=0;for(let i=0;i<data.length;i++){brown=(brown+(Math.random()*2-1)*.02)/1.02;data[i]=brown*2;}const src=ctx.createBufferSource();src.buffer=noise;src.loop=true;const filter=ctx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=600;src.connect(filter);filter.connect(master);src.start();audio={ctx,master,filter};}audioOn=!audioOn;audio.ctx.resume();audio.master.gain.setTargetAtTime(audioOn?.12:0,audio.ctx.currentTime,.4);$('sound').setAttribute('aria-pressed',String(audioOn));$('sound').setAttribute('aria-label',audioOn?'소리 끄기':'소리 켜기');$('sound-wave').setAttribute('d',audioOn?'M16 8c3 2 3 6 0 8m3-11c5 4 5 10 0 14':'m16 9 5 6m0-6-5 6');}catch{toast('이 브라우저에서는 소리를 켤 수 없어요');}}$('sound').addEventListener('click',soundToggle);
 const ray=new THREE.Raycaster(),pointer=new THREE.Vector2(),clickPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);let down=null;
@@ -3809,7 +3809,7 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
  const sky=skyWeather.state,snowShown=Math.round(snowCount*(SNOW_SHARE[sky.kind]||.65)),snowFall=(reduced?.4:1)*(sky.kind==='heavy'?1.3:1),windX=reduced?0:sky.wind.x*.9,windZ=reduced?0:sky.wind.z*.9;snowGeo.setDrawRange(0,snowShown);
  for(let i=0;i<snowShown;i++){snowArray[i*3]+=(Math.sin(elapsed*.25+i)*.16+windX)*dt;snowArray[i*3+2]+=windZ*dt;for(const k of[0,2]){if(snowArray[i*3+k]>31)snowArray[i*3+k]-=62;else if(snowArray[i*3+k]< -31)snowArray[i*3+k]+=62;}snowArray[i*3+1]-=snowSpeed[i]*dt*snowFall;if(snowArray[i*3+1]<groundHeight(snowArray[i*3],snowArray[i*3+2]))snowArray[i*3+1]=24;}snowGeo.attributes.position.needsUpdate=true;
  if(ringTimer>0){ringTimer-=dt;ring.scale.setScalar(1+Math.sin(elapsed*5)*.1);ring.material.opacity=clamp(ringTimer,0,.75);if(ringTimer<=0)ring.visible=false;}
- residentGuide.tick(dt);skyWeather.tick(dt);villagePlay.tick(dt);seasonalEvents.tick(dt);avatarLife.tick(dt);residentGifts.tick();villageRadio.tick();homestead.tick(elapsed);updateCamera(dt);if(frameCount++%4===0){label('label-fire',-5,2.7,-1.5);label('label-sled',13,6.3,-12);label('label-tree',-1,7.3,-10);if(entered)updateUI();}if(elapsed-lastSave>15){melt(Date.now());lastSave=elapsed;}
+ residentGuide.tick(dt);skyWeather.tick(dt);villagePlay.tick(dt);seasonalEvents.tick(dt);avatarLife.tick(dt);residentGifts.tick();villageRadio.tick();villageCompanions.tick(dt);radialMenu.tick(dt);homestead.tick(elapsed);updateCamera(dt);if(frameCount++%4===0){label('label-fire',-5,2.7,-1.5);label('label-sled',13,6.3,-12);label('label-tree',-1,7.3,-10);if(entered)updateUI();}if(elapsed-lastSave>15){melt(Date.now());lastSave=elapsed;}
  if(audio&&audioOn){const gain=mode==='warm'?.24:.085;audio.master.gain.setTargetAtTime(gain,audio.ctx.currentTime,.5);audio.filter.frequency.setTargetAtTime(mode==='warm'?1300:450,audio.ctx.currentTime,.5);}
  renderer.render(scene,camera);
 }
@@ -4828,6 +4828,108 @@ function createPhotoMode(){
  return{MAX,FOV,enter,exit,zoom,shoot,album,openAlbum,closeAlbum,button,get on(){return on;},isOpen:()=>!sheet.hidden};
 }
 const photoMode=createPhotoMode();
+
+// Eggs and small companions: the resident hands over one egg a Seoul day, it hatches after about ten minutes of play
+// (three times faster near this space's warm spot) and the new friend trots behind you. Leaving it alone costs nothing.
+// Companions stay in this browser; friends do not see them because the shared rules have no field for them.
+function createVillageCompanions(){
+ const KINDS=[
+  {id:'puff',name:'눈송이 병아리',body:0xf7e6b5,accent:0xf0b46a},
+  {id:'drift',name:'둥실 해파리',body:0xcbbbe8,accent:0xf4e3a3,floats:true},
+  {id:'moth',name:'책갈피 나방',body:0xe8d6b0,accent:0x8a9b7a,floats:true},
+  {id:'pine',name:'솔방울 고슴도치',body:0x9a7353,accent:0xe9dcc4}
+ ],WARM={winter:{x:-5,z:1.3,name:'모닥불'},aquarium:{x:12.5,z:2.5,name:'해파리 쉼터'},library:{x:6.2,z:-13.5,name:'창가 햇볕'}}[CURRENT_WORLD],
+  KEY='village-companions',HATCH=600,WARM_RANGE=4,WARM_RATE=3;
+ const seoulDay=(ms=Date.now())=>Math.floor((ms+9*3600e3)/86400e3),kind=id=>KINDS.find(k=>k.id===id);
+ function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null')||{},owned=Array.isArray(s.owned)?[...new Set(s.owned.filter(kind))]:[],p=s.egg&&Number.isFinite(s.egg.p)?Math.max(0,Math.min(1,s.egg.p)):null;
+  return{owned,egg:p===null?null:{p},eggDay:Number.isFinite(s.eggDay)?s.eggDay:null,out:owned.includes(s.out)?s.out:null};}catch{return{owned:[],egg:null,eggDay:null,out:null};}}
+ let state=load(),saveIn=0,clock=0,calmFor=0,joy=0,lx=null,lz=null;
+ function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch{}}
+ const note=id=>{if(typeof villageJournal==='object'&&villageJournal&&villageJournal.note)villageJournal.note(id);};
+ function canTakeEgg(){return!state.egg&&state.eggDay!==seoulDay()&&state.owned.length<KINDS.length;}
+ function takeEgg(){if(!canTakeEgg())return false;state.egg={p:0};state.eggDay=seoulDay();save();note('first-egg');toast(residentGuide.role.name+': 따뜻한 곳 곁에 있으면 더 빨리 깨어날 거예요.');return true;}
+ function warmNow(){return Math.hypot(player.position.x-WARM.x,player.position.z-WARM.z)<WARM_RANGE;}
+ // A new egg always brings a friend not met yet, chosen by the day so it does not depend on luck.
+ function nextKind(){const left=KINDS.filter(k=>!state.owned.includes(k.id));return left[seoulDay()%left.length];}
+ function hatch(){const k=nextKind();state.owned.push(k.id);state.out=k.id;state.egg=null;save();note('first-hatch');toast('알이 깨어났어요! '+k.name+'이(가) 뒤를 따라와요');return k.id;}
+ function setOut(id){if(id!==null&&!state.owned.includes(id))return false;state.out=id;save();syncMeshes();return true;}
+ // Small figures made from a few basic shapes; each one is a single group following the visitor.
+ const M=c=>new THREE.MeshLambertMaterial({color:c}),eye=new THREE.MeshBasicMaterial({color:0x3d3438});
+ function build(k){const g=new THREE.Group();g.name='companion-'+k.id;const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);g.add(m);return m;};
+  if(k.id==='puff'){add(new THREE.SphereGeometry(.2,12,10),M(k.body),0,.2,0);add(new THREE.ConeGeometry(.05,.1,6),M(k.accent),0,.22,.21).rotation.x=Math.PI/2;}
+  else if(k.id==='drift'){add(new THREE.SphereGeometry(.18,12,8,0,Math.PI*2,0,Math.PI/2),M(k.body),0,.1,0);for(const x of[-.08,0,.08])add(new THREE.CylinderGeometry(.012,.012,.2,4),M(k.accent),x,0,0);}
+  else if(k.id==='moth'){add(new THREE.CapsuleGeometry?new THREE.CapsuleGeometry(.05,.14,4,8):new THREE.SphereGeometry(.07,8,6),M(k.accent),0,.1,0).rotation.x=Math.PI/2;for(const s of[-1,1]){const w=add(new THREE.CircleGeometry(.15,10),M(k.body),s*.13,.12,0);w.rotation.x=-Math.PI/2;w.material.side=THREE.DoubleSide;w.userData.wing=s;}}
+  else{add(new THREE.SphereGeometry(.2,10,8),M(k.body),0,.18,0).scale.set(1,.8,1.15);add(new THREE.SphereGeometry(.09,8,6),M(k.accent),0,.16,.2);}
+  for(const s of[-1,1])add(new THREE.SphereGeometry(.025,6,5),eye,s*.07,k.id==='drift'?.16:.26,k.id==='moth'?.08:.17);
+  g.scale.setScalar(1.3);g.userData.kind=k;scene.add(g);return g;}
+ function eggMesh(){const m=new THREE.Mesh(new THREE.SphereGeometry(.13,12,10),M(0xf3ead8));m.scale.y=1.3;m.name='companion-egg';scene.add(m);return m;}
+ let pet=null,egg=null;
+ const ground=(x,z)=>typeof groundHeight==='function'?groundHeight(x,z):player.position.y;
+ function follow(obj,dt,floats,back){const yaw=player.rotation.y,tx=player.position.x-Math.sin(yaw)*back+Math.cos(yaw)*.45,tz=player.position.z-Math.cos(yaw)*back-Math.sin(yaw)*.45,dx=tx-obj.position.x,dz=tz-obj.position.z,far=Math.hypot(dx,dz);
+  // Snap after a jump across the map (travel, reset); otherwise ease along behind.
+  if(far>12){obj.position.x=tx;obj.position.z=tz;}else{const k=1-Math.exp(-dt*3);obj.position.x+=dx*k;obj.position.z+=dz*k;}
+  const moving=far>.25;if(moving)obj.rotation.y=Math.atan2(dx,dz);else if(calmFor>6)obj.rotation.y=Math.atan2(player.position.x-obj.position.x,player.position.z-obj.position.z);
+  const hop=floats?.45+Math.sin(clock*2)*.08:(moving?Math.abs(Math.sin(clock*10))*.1:0)+(joy>0?Math.abs(Math.sin(joy*9))*.25:0);obj.position.y=ground(obj.position.x,obj.position.z)+hop;return moving;}
+ function syncMeshes(){const want=state.out&&kind(state.out);if(pet&&(!want||pet.userData.kind.id!==want.id)){scene.remove(pet);pet=null;}if(want&&!pet){pet=build(want);pet.position.copy(player.position);}
+  if(state.egg&&!egg){egg=eggMesh();egg.position.copy(player.position);}if(!state.egg&&egg){scene.remove(egg);egg=null;}}
+ const sheet=document.createElement('section');sheet.className='creature-book village-companions';sheet.hidden=true;const card=document.createElement('div');card.className='creature-book-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');const closeButton=document.createElement('button');closeButton.className='creature-book-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','동반 친구 창 닫기');const body=document.createElement('div');card.append(closeButton,body);sheet.append(card);document.body.append(sheet);
+ function close(){sheet.hidden=true;}closeButton.addEventListener('click',close);sheet.addEventListener('click',e=>{if(e.target===sheet)close();});addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)close();});
+ const button=(text,fn,disabled)=>{const b=document.createElement('button');b.className='resident-next';b.textContent=text;b.disabled=Boolean(disabled);b.addEventListener('click',()=>{fn();render();});return b;};
+ function render(){const title=document.createElement('h2'),note=document.createElement('p'),list=document.createElement('ul');title.textContent='동반 친구';note.className='creature-count';
+  note.textContent=state.egg?'품고 있는 알 '+Math.floor(state.egg.p*100)+'% · '+WARM.name+' 곁에 있으면 세 배 빨리 따뜻해져요':state.owned.length>=KINDS.length?'네 친구를 모두 만났어요':canTakeEgg()?residentGuide.role.name+'에게 오늘의 알을 받을 수 있어요':'내일 또 알을 받을 수 있어요';
+  const rows=[];if(!state.egg&&state.owned.length<KINDS.length){const li=document.createElement('li');li.append(button('알 받기',takeEgg,!canTakeEgg()));rows.push(li);}
+  for(const k of KINDS){const li=document.createElement('li'),h=document.createElement('small');if(!state.owned.includes(k.id)){li.className='unseen';h.textContent='아직 만나지 않은 친구';li.append(h);}else{li.className='seen';h.textContent=k.name;li.append(h,state.out===k.id?button('쉬게 하기',()=>setOut(null)):button('함께 걷기',()=>setOut(k.id)));}rows.push(li);}
+  list.replaceChildren(...rows);body.replaceChildren(title,note,list);}
+ function open(){render();sheet.hidden=false;closeButton.focus();}
+ if(residentGuide.addAction)residentGuide.addAction('동반 친구',()=>{residentGuide.close();open();});
+ return{KINDS,WARM,HATCH,WARM_RATE,get state(){return state;},canTakeEgg,takeEgg,warmNow,setOut,open,close,isOpen:()=>!sheet.hidden,get pet(){return pet;},get egg(){return egg;},
+  // Cycles who walks along, for the radial menu: nobody → each friend met → nobody.
+  cycle(){const list=[null,...state.owned],next=list[(list.indexOf(state.out)+1)%list.length];setOut(next);toast(next?kind(next).name+'와(과) 함께 걸어요':'동반 친구가 쉬러 갔어요');return next;},
+  tick(dt){clock+=dt;syncMeshes();if(!entered)return;const moving=lx!==null&&Math.hypot(player.position.x-lx,player.position.z-lz)>.001;lx=player.position.x;lz=player.position.z;calmFor=moving?0:calmFor+dt;
+   // An emote makes the companion hop for joy.
+   if(typeof villagePlay==='object'&&villagePlay&&villagePlay.activeEmote&&villagePlay.activeEmote()!==null)joy=Math.max(joy,.01);if(joy>0){joy+=dt;if(joy>1.2)joy=0;}
+   if(state.egg){const warm=warmNow();state.egg.p=Math.min(1,state.egg.p+dt*(warm?WARM_RATE:1)/HATCH);saveIn-=dt;if(state.egg.p>=1)hatch();else if(saveIn<=0){saveIn=5;save();}}
+   syncMeshes();if(pet){const k=pet.userData.kind;follow(pet,dt,k.floats,1);if(k.id==='moth')for(const w of pet.children)if(w.userData.wing)w.rotation.z=w.userData.wing*Math.sin(clock*12)*.6;}
+   if(egg){follow(egg,dt,false,pet?1.6:1);egg.rotation.z=Math.sin(clock*(warmNow()?9:3))*.15;}}
+ };
+}
+const villageCompanions=createVillageCompanions();
+
+// A ring menu for one-finger choices: hold the scene still for half a second (or press Q) and pick an emote,
+// sky play, the camera or a companion. Arrow keys move around the ring, Enter picks, Esc closes.
+function createRadialMenu(){
+ const HOLD=.48,SLOP=10,RADIUS=104,extra=[];
+ const ring=document.createElement('div');ring.className='radial-menu';ring.hidden=true;ring.setAttribute('role','menu');ring.setAttribute('aria-label','빠른 메뉴');
+ const style=document.createElement('style');style.textContent='.radial-menu{position:fixed;inset:0;z-index:30;background:rgba(40,40,70,.12)}.radial-menu button{position:absolute;width:52px;height:52px;margin:-26px 0 0 -26px;border:0;border-radius:50%;background:rgba(255,247,232,.95);color:#5f5050;font:700 19px/1 "Winter Jua",sans-serif;box-shadow:0 3px 12px rgba(40,40,70,.22);cursor:pointer;display:grid;place-items:center}.radial-menu button small{display:none;position:absolute;top:56px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;color:#fff8e8;text-shadow:0 1px 3px rgba(0,0,0,.6)}.radial-menu button:focus small,.radial-menu button:hover small{display:block}.radial-menu button:focus-visible{outline:3px solid #8e9d83;outline-offset:2px}.radial-menu .radial-close{background:#8e9d83;color:#fff8e8;width:44px;height:44px;margin:-22px 0 0 -22px}';(document.head||document.body).append(style);document.body.append(ring);
+ // Built fresh each time so a winter-only or newly hatched choice shows up when it applies.
+ function items(){const out=[];if(typeof villagePlay==='object'&&villagePlay){villagePlay.EMOTES.forEach((e,i)=>out.push({icon:e[0],label:e[1],run:()=>villagePlay.say(i)}));if(CURRENT_WORLD==='winter'){out.push({icon:'◇',label:villagePlay.kiteOn?'연 내리기':'연',run:()=>villagePlay.toggleKite()});out.push({icon:'✦',label:'풍등',run:()=>villagePlay.lantern()});}}
+  if(typeof photoMode==='object'&&photoMode)out.push({icon:'▣',label:'사진',run:()=>photoMode.enter()});
+  if(typeof villageCompanions==='object'&&villageCompanions&&villageCompanions.state.owned.length)out.push({icon:'✿',label:'동반 친구',run:()=>villageCompanions.cycle()});
+  for(const it of extra)if(!it.when||it.when())out.push(it);return out;}
+ let buttons=[],shown=[],press=null,suppress=false,restore=null;
+ function busy(){return!entered||(typeof photoMode==='object'&&photoMode&&photoMode.on)||[...document.querySelectorAll('.creature-book')].some(s=>!s.hidden)||(typeof helpOpen==='function'&&helpOpen());}
+ function open(x=innerWidth/2,y=innerHeight/2){if(busy())return false;shown=items();const r=shown.length>8?RADIUS+16:RADIUS,cx=Math.max(r+30,Math.min(innerWidth-r-30,x)),cy=Math.max(r+30,Math.min(innerHeight-r-40,y));
+  buttons=shown.map((it,i)=>{const a=-Math.PI/2+i*Math.PI*2/shown.length,b=document.createElement('button'),label=document.createElement('small');b.setAttribute('role','menuitem');b.setAttribute('aria-label',it.label);b.textContent=it.icon;label.textContent=it.label;b.append(label);b.style.left=(cx+Math.cos(a)*r)+'px';b.style.top=(cy+Math.sin(a)*r)+'px';b.addEventListener('click',()=>pick(i));return b;});
+  const x0=document.createElement('button');x0.className='radial-close';x0.textContent='×';x0.setAttribute('aria-label','빠른 메뉴 닫기');x0.style.left=cx+'px';x0.style.top=cy+'px';x0.addEventListener('click',close);
+  restore=document.activeElement;ring.replaceChildren(...buttons,x0);ring.hidden=false;if(buttons[0])buttons[0].focus();return true;}
+ function close(){if(ring.hidden)return;ring.hidden=true;ring.replaceChildren();buttons=[];if(restore&&restore.focus)restore.focus({preventScroll:true});restore=null;}
+ function pick(i){const it=shown[i];close();if(it)it.run();return Boolean(it);}
+ function focusStep(d){const i=buttons.indexOf(document.activeElement),n=buttons.length;if(n)buttons[((i<0?0:i+d)%n+n)%n].focus();}
+ ring.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();close();}else if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();focusStep(1);}else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();focusStep(-1);}else if(/^[1-9]$/.test(e.key)&&Number(e.key)<=buttons.length){e.preventDefault();pick(Number(e.key)-1);}});
+ ring.addEventListener('click',e=>{if(e.target===ring)close();});
+ addEventListener('keydown',e=>{if((e.key==='q'||e.key==='Q')&&!e.repeat&&ring.hidden&&e.target.tagName!=='INPUT'&&e.target.tagName!=='TEXTAREA'){if(open())e.preventDefault();}});
+ // Long press on the scene: a still hold opens the ring there, and the release that follows does not walk.
+ function pressStart(x,y,id){press={x,y,id,t:0};}
+ function pressMove(x,y){if(press&&Math.hypot(x-press.x,y-press.y)>SLOP)press=null;}
+ function pressEnd(){press=null;if(suppress){suppress=false;return true;}return false;}
+ addEventListener('pointerdown',e=>{if(e.target===renderer.domElement&&e.isPrimary!==false&&(e.button===0||e.button===undefined))pressStart(e.clientX,e.clientY,e.pointerId);},true);
+ addEventListener('pointermove',e=>{if(suppress){e.stopImmediatePropagation();return;}pressMove(e.clientX,e.clientY);},true);
+ for(const k of['pointerup','pointercancel'])addEventListener(k,e=>{if(pressEnd())e.stopImmediatePropagation();},true);
+ addEventListener('contextmenu',e=>{if(e.target===renderer.domElement&&(press||suppress||!ring.hidden))e.preventDefault();},true);
+ return{HOLD,items,open,close,pick,isOpen:()=>!ring.hidden,addItem(it){extra.push(it);},pressStart,pressMove,pressEnd,
+  tick(dt){if(!press)return;press.t+=dt;if(press.t>=HOLD){const p=press;press=null;if(open(p.x,p.y))suppress=true;}}};
+}
+const radialMenu=createRadialMenu();
 
 // A small homestead west of the fire: a shared winter garden, a snow-rabbit pen to look after, and a yard the friend group decorates together.
 // Garden beds and yard cells are group-owned slots in the village store (anyone may tend or rearrange them); rabbit care stays in this browser.
