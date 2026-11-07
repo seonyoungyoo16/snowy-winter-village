@@ -57,6 +57,32 @@
           }
         }
       }
+    },
+    "village": {
+      "$party": {
+        ".read": "auth != null && $party.matches(/^[a-f0-9]{24}$/)",
+        "exhibits": {
+          "$id": {
+            ".write": "auth != null && $party.matches(/^[a-f0-9]{24}$/) && $id.matches(/^[a-z-]{2,20}$/) && !data.exists()",
+            ".validate": "newData.hasChildren(['c','n','u','t'])",
+            "c": {
+              ".validate": "newData.isString() && newData.val() === $id"
+            },
+            "n": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 12"
+            },
+            "u": {
+              ".validate": "newData.isString() && newData.val() === auth.uid"
+            },
+            "t": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      }
     }
   }
 }

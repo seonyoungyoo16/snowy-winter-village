@@ -3825,7 +3825,7 @@ function animatePose(dt,moving,actor=character,state=mode,phase=elapsed,celebrat
  }
  b.position.y=lerp(b.position.y,by+bob,1-Math.exp(-dt*12));b.rotation.x=lerp(b.rotation.x,pitch,1-Math.exp(-dt*10));actor.head.rotation.z=state==='warm'?Math.sin(t*.6)*.025:Math.sin(t*1.1)*.02;
 }
-function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||residentGuide.isOpen()||creatureBook.isOpen();}
+function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||residentGuide.isOpen()||creatureBook.isOpen()||exhibit.isOpen();}
 function closeHelp(){$('help-modal').hidden=true;$('help').focus();}
 $('help').addEventListener('click',()=>{$('help-modal').hidden=false;keys.clear();$('close-help').focus();});$('close-help').addEventListener('click',closeHelp);$('return-village').addEventListener('click',closeHelp);$('help-modal').addEventListener('click',e=>{if(e.target===$('help-modal'))closeHelp();});
 $('entry-form').addEventListener('submit',e=>{e.preventDefault();if(entered)return;nickname=$('nickname').value.trim().replace(/[\u0000-\u001f\u007f]/g,'').slice(0,12)||'바다 손님';entered=true;$('welcome').hidden=true;for(const id of['controls','status','keyboard'])$(id).hidden=false;$('nickname-label').textContent=nickname;save();updateUI();toast('어서 와요, '+nickname+' 님');renderer.domElement.focus({preventScroll:true});startNetwork();});document.querySelectorAll('[data-character]').forEach(b=>b.addEventListener('click',()=>chooseCharacter(Number(b.dataset.character))));$('main-action').addEventListener('click',action);$('cancel-action').addEventListener('click',()=>{stopActivity();updateUI();});$('wave-action').addEventListener('click',wave);document.querySelectorAll('[data-place]').forEach(b=>b.addEventListener('click',()=>travel(b.dataset.place)));
@@ -3850,7 +3850,7 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
   }
  }
  networkTick(dt,moving);animatePose(dt,moving);animateWater(dt);playerShadow.position.set(player.position.x,.035,player.position.z);if(ringTimer>0){ringTimer-=dt;targetRing.scale.setScalar(1+Math.sin(elapsed*5)*.08);targetRing.material.opacity=clamp(ringTimer,0,.75);if(ringTimer<=0)targetRing.visible=false;}
- residentGuide.tick(dt);skyWeather.tick(dt);updateCamera(dt);if(frameCount++%5===0){label('label-ocean',0,7.8,-10);label('label-reef',-10,2.8,-2);label('label-jelly',10,6.6,-2);if(entered)updateUI();}renderer.render(scene,camera);
+ residentGuide.tick(dt);skyWeather.tick(dt);exhibit.tick(elapsed);updateCamera(dt);if(frameCount++%5===0){label('label-ocean',0,7.8,-10);label('label-reef',-10,2.8,-2);label('label-jelly',10,6.6,-2);if(entered)updateUI();}renderer.render(scene,camera);
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();$('error').hidden=false;$('error-text').textContent='수족관이 잠깐 쉬고 있어요. 페이지를 다시 열어주세요.';});
 // Only virtual visitor state leaves this browser. The aq_ room prefix separates aquarium coordinates within the same party.
@@ -4160,7 +4160,9 @@ function createResidentGuide(){
  place(spotFor(slot.at));
  const moodText=()=>slot.mood==='work'?role:routines.moods[slot.mood];const pick=mesh(new THREE.SphereGeometry(.66,8,6),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}),root,0,1,0,1,1.55,1);
  const style=document.createElement('style');style.textContent='.resident-bubble{position:fixed;white-space:nowrap;z-index:3;transform:translate(-50%,-100%);padding:8px 12px;border:0;border-radius:17px;background:#f1dfbfee;color:#655346;font:inherit;font-size:11px;min-height:36px;box-shadow:0 3px 12px #302c3326;cursor:pointer}.resident-dialog{position:fixed;inset:0;z-index:12;display:grid;align-items:end;justify-items:center;padding:18px;background:linear-gradient(0deg,#29213266,transparent 65%)}.resident-card{position:relative;width:min(360px,100%);padding:25px 23px 20px;border-radius:25px;background:#fff3e3f5;color:#69534f;text-align:center}.resident-card h2{margin:0 0 12px;font-size:21px}.resident-card p{font-size:13px;line-height:1.8;margin:0 0 16px}.resident-card small{font-size:10px;color:#a18c78}.resident-card button{font:inherit;min-height:44px;border:0;border-radius:14px;cursor:pointer}.resident-card .resident-close{position:absolute;right:8px;top:7px;width:40px;background:transparent;color:#a18b7d;font-size:24px}.resident-next{display:block;width:100%;margin-bottom:14px;padding:12px;background:#8e9d83;color:#fff8e8}';document.body.append(style);
- const titleText=role.title+' '+role.name,bubble=document.createElement('button');bubble.className='resident-bubble';bubble.textContent=titleText;bubble.setAttribute('aria-label',titleText+'에게 말 걸기');bubble.hidden=true;document.body.append(bubble);const dialog=document.createElement('section');dialog.className='resident-dialog';dialog.setAttribute('aria-label',titleText);dialog.hidden=true;const card=document.createElement('div');card.className='resident-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label',titleText);const closeButton=document.createElement('button');closeButton.className='resident-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','주민 이야기 닫기');const title=document.createElement('h2');title.textContent=titleText;const line=document.createElement('p'),next=document.createElement('button');next.className='resident-next';next.textContent='이야기 더 듣기';const note=document.createElement('small');note.textContent=role.note;card.append(closeButton,title,line,next,note);dialog.append(card);document.body.append(dialog);
+ const titleText=role.title+' '+role.name,bubble=document.createElement('button');bubble.className='resident-bubble';bubble.textContent=titleText;bubble.setAttribute('aria-label',titleText+'에게 말 걸기');bubble.hidden=true;document.body.append(bubble);const dialog=document.createElement('section');dialog.className='resident-dialog';dialog.setAttribute('aria-label',titleText);dialog.hidden=true;const card=document.createElement('div');card.className='resident-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label',titleText);const closeButton=document.createElement('button');closeButton.className='resident-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','주민 이야기 닫기');const title=document.createElement('h2');title.textContent=titleText;const line=document.createElement('p'),next=document.createElement('button');next.className='resident-next';next.textContent='이야기 더 듣기';const note=document.createElement('small');note.textContent=role.note;card.append(closeButton,title,line,next,note);dialog.append(card);
+ // Worlds can add their own conversation choices (e.g. the aquarium's donations) above the note.
+ function addAction(label,run){const b=document.createElement('button');b.className='resident-next';b.textContent=label;b.addEventListener('click',run);if(card.insertBefore)card.insertBefore(b,note);else card.append(b);return b;}document.body.append(dialog);
  let lineIndex=0,nodUntil=0,lastSight=-Infinity,occluded=false;const project=new THREE.Vector3(),screenRay=new THREE.Raycaster(),viewDirection=new THREE.Vector3(),clockNow=()=>((Date.now()+serverOffset)/1000),distanceToResident=()=>Math.hypot(player.position.x-here.x,player.position.z-here.z);
  function close(){dialog.hidden=true;renderer.domElement.focus({preventScroll:true});}
  function open(){if(!entered||mode!=='idle'||helpOpen())return;if(distanceToResident()>talkRange){toast(role.name+' 가까이에서 이야기해요.');return;}path=[];keys.clear();line.textContent=moodText().intro;note.textContent=moodText().note;lineIndex=0;nodUntil=clockNow()+1.3;dialog.hidden=false;closeButton.focus();}
@@ -4182,7 +4184,7 @@ function createResidentGuide(){
   bubble.hidden=!near||mode!=='idle'||path.length>0||helpOpen()||occluded||project.z<-1||project.z>1||x<58||x>innerWidth-58||y<190||y>innerHeight-210;bubble.style.left=x+'px';bubble.style.top=y+'px';label.visible=entered&&distanceToResident()<11&&bubble.hidden&&(!near||!occluded)&&project.z>-1&&project.z<1;shade.visible=true;
  }
  function hit(ray){root.updateWorldMatrix(true,true);const contact=ray.intersectObject(pick,false)[0];if(!contact)return false;const obstacle=ray.intersectObject(world,true)[0];return !obstacle||contact.distance<obstacle.distance;}
- return{actor:{root,body,head,arms,legs},role,spawn,routines,slotAt,get slot(){return slot;},get here(){return here;},workSpot,station,tools:{mug,book,leaf,scoop,pellets},tick,open,close,pick:hit,isOpen:()=>!dialog.hidden};
+ return{actor:{root,body,head,arms,legs},role,spawn,addAction,routines,slotAt,get slot(){return slot;},get here(){return here;},workSpot,station,tools:{mug,book,leaf,scoop,pellets},tick,open,close,pick:hit,isOpen:()=>!dialog.hidden};
 }
 const residentGuide=createResidentGuide();
 
@@ -4286,6 +4288,80 @@ function createCreatureBook(){
 const creatureBook=createCreatureBook();
 // Winter's ice fishing reports each catch here.
 function onFishCaught(fish){creatureBook.record(fish.id,{cm:fish.cm});}
+
+// Friend-group storage for things that stay in the village (exhibits, letters, signs…): Firebase under village/{party}/{collection}.
+// Until those rules are deployed the reads and writes are refused, so everything falls back to this browser and keeps working.
+function createVillageStore(){
+ const party=partyId(roomId),cache=new Map(),listeners=new Map(),live=new Set();let mode='pending';
+ const localKey=c=>'village-store:'+party+':'+c;
+ function readLocal(c){try{const v=JSON.parse(localStorage.getItem(localKey(c))||'{}');return v&&typeof v==='object'?v:{};}catch{return{};}}
+ function writeLocal(c,data){try{localStorage.setItem(localKey(c),JSON.stringify(data));}catch{}}
+ function items(c){return{...readLocal(c),...(cache.get(c)||{})};}
+ function emit(c){for(const f of listeners.get(c)||[])f(items(c));}
+ function ready(){return typeof networkDB!=='undefined'&&networkDB&&networkAuth&&networkAuth.currentUser&&window.WinterFirebase;}
+ function connect(c){
+  if(live.has(c)||mode==='local'||!ready())return;live.add(c);const F=window.WinterFirebase;
+  try{F.onValue(F.ref(networkDB,'village/'+party+'/'+c),snapshot=>{mode='shared';cache.set(c,snapshot.val()||{});emit(c);},()=>{mode='local';live.delete(c);emit(c);});}catch{mode='local';live.delete(c);}
+ }
+ // The network signs in after the page loads; keep trying quietly until it is ready or refused.
+ setInterval(()=>{for(const c of listeners.keys())connect(c);},4000);
+ return{
+  party,
+  get mode(){return mode;},
+  list(c){connect(c);return items(c);},
+  subscribe(c,f){if(!listeners.has(c))listeners.set(c,[]);listeners.get(c).push(f);connect(c);f(items(c));},
+  // Resolves 'shared' when friends will see it, 'local' when only this browser keeps it.
+  async put(c,id,value){const local=readLocal(c);local[id]=value;writeLocal(c,local);cache.set(c,{...(cache.get(c)||{}),[id]:value});emit(c);
+   if(mode==='local'||!ready())return'local';const F=window.WinterFirebase;
+   try{await F.set(F.ref(networkDB,'village/'+party+'/'+c+'/'+id),value);mode='shared';return'shared';}catch{mode='local';return'local';}},
+  uid(){return ready()?networkAuth.currentUser.uid:'';}
+ };
+}
+const villageStore=createVillageStore();
+
+// A friend-group exhibit tank: creatures met anywhere in the village can be donated through Harry, and each one swims here with its donor's name.
+// 을/를 by whether the last syllable has a final consonant.
+function objectParticle(name){const code=name.charCodeAt(name.length-1)-0xac00;return name+(code>=0&&code<11172&&code%28?'을':'를');}
+function createExhibit(){
+ const TANK={x:12.8,z:-7.6,r:1.25},VIEW={x:12.6,z:-5.4};
+ const LOOKS={smelt:[0xc9d8e0,'fish',.7],minnow:[0xb7a88a,'fish',.6],trout:[0xa98f7c,'fish',1.1],'cherry-salmon':[0xc49a8c,'fish',1],lenok:[0x9b8f86,'fish',1.2],bullhead:[0x8f7f62,'fish',.9],'snow-loach':[0xe9eef2,'eel',.8],'star-smelt':[0xd9e4ff,'fish',.75],
+  clownfish:[0xe99a5c,'fish',.7],filefish:[0xe6cf73,'fish',.8],seahorse:[0xe0b47c,'horse',.8],sardine:[0xb8c7cf,'fish',.6],turtle:[0x7f9c7c,'turtle',1.3],'moon-jelly':[0xe7ecf5,'jelly',.9],'lantern-jelly':[0xffd8a8,'jelly',.8],
+  sparrow:[0xa48a6c,'bird',.7],'moon-moth':[0xd8d2bd,'moth',.7],'rain-snail':[0xb59a83,'snail',.6]};
+ const tank=new THREE.Group();tank.name='exhibit-tank';tank.position.set(TANK.x,0,TANK.z);scene.add(tank);
+ mesh(geom.cyl,0x5f6f7a,tank,0,.22,0,TANK.r+.1,.44,TANK.r+.1);mesh(geom.cyl,0xd9c9a2,tank,0,.47,0,TANK.r,.06,TANK.r);
+ const water=new THREE.Mesh(geom.cyl,new THREE.MeshLambertMaterial({color:0x8fd3e0,transparent:true,opacity:.32,depthWrite:false}));water.position.y=1.45;water.scale.set(TANK.r,1.9,TANK.r);tank.add(water);
+ mesh(new THREE.TorusGeometry(1,.035,6,40),0xd8e9ea,tank,0,2.42,0,TANK.r,TANK.r,1).rotation.x=Math.PI/2;block(TANK.x,TANK.z,TANK.r+.12);
+ const sign=nameSprite('함께 꾸민 전시 수조');sign.position.set(0,3.05,0);tank.add(sign);
+ const swimmers=new Map();
+ function model(id){const[color,kind,s]=LOOKS[id]||[0xcccccc,'fish',.8],g=new THREE.Group();g.name='exhibit-'+id;
+  if(kind==='jelly'){const m=new THREE.Mesh(geom.ball,new THREE.MeshBasicMaterial({color,transparent:true,opacity:.7}));m.scale.set(.16,.12,.16);g.add(m);for(let i=0;i<3;i++)mesh(geom.cyl,color,g,(i-1)*.05,-.13,0,.008,.16,.008);}
+  else if(kind==='turtle'){sphere(g,color,0,0,0,.22,.08,.17);sphere(g,0x9fb89a,0,0,.2,.06);}
+  else if(kind==='horse'){sphere(g,color,0,0,0,.05,.13,.05);sphere(g,color,0,.13,.04,.05,.045,.07);}
+  else if(kind==='eel'){sphere(g,color,0,0,0,.035,.035,.22);}
+  else if(kind==='bird'||kind==='moth'){sphere(g,color,0,0,0,.07,.06,.09);for(const x of[-1,1]){const w=sphere(g,color,x*.09,.02,0,.08,.012,.06);w.rotation.z=x*.3;}}
+  else if(kind==='snail'){sphere(g,color,0,.04,0,.07);sphere(g,0xd8c4a8,0,-.02,.05,.03,.025,.09);}
+  else{sphere(g,color,0,0,0,.06,.06,.16);const t=mesh(geom.cone,color,g,0,0,-.19,.06,.1,.02);t.rotation.x=-Math.PI/2;}
+  g.scale.setScalar(s);return g;}
+ let exhibits={};
+ function rebuild(next){exhibits=next||{};for(const[id,g]of swimmers)if(!exhibits[id]){tank.remove(g);swimmers.delete(id);}let i=0;for(const id of Object.keys(exhibits).sort()){if(!LOOKS[id])continue;if(!swimmers.has(id)){const g=model(id);g.userData.seed=i*1.7+.4;tank.add(g);swimmers.set(id,g);}i++;}sign.visible=true;}
+ villageStore.subscribe('exhibits',rebuild);
+ // Calm loops inside the glass; jellies drift up and down instead.
+ function tick(t){let i=0;for(const[id,g]of swimmers){const seed=g.userData.seed,kind=(LOOKS[id]||[])[1],r=.35+((i*.37)%.6),a=t*(.25+(i%3)*.06)+seed;i++;if(kind==='jelly'){g.position.set(Math.cos(seed)*r,1.3+Math.sin(t*.5+seed)*.5,Math.sin(seed)*r);continue;}if(kind==='turtle'||kind==='snail'||kind==='horse'){g.position.set(Math.cos(a*.5)*r,kind==='horse'?1.2+Math.sin(t+seed)*.1:.62,Math.sin(a*.5)*r);g.rotation.y=-a*.5;continue;}g.position.set(Math.cos(a)*r,.9+((seed*3)%1)*1.1+Math.sin(t*.8+seed)*.08,Math.sin(a)*r);g.rotation.y=-a+Math.PI;}}
+ // Donation sheet: everything this visitor has met and the group has not yet shown.
+ const dialog=document.createElement('section');dialog.className='creature-book exhibit-donate';dialog.hidden=true;dialog.setAttribute('aria-label','전시 수조에 기증하기');
+ const card=document.createElement('div');card.className='creature-book-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');
+ const title=document.createElement('h2');title.textContent='전시 수조에 기증하기';const note=document.createElement('p');note.className='creature-count';const list=document.createElement('ul');const shown=document.createElement('ul');const shownTitle=document.createElement('h3');shownTitle.textContent='전시 중';
+ const closeButton=document.createElement('button');closeButton.className='creature-book-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','기증 창 닫기');card.append(closeButton,title,note,list,shownTitle,shown);dialog.append(card);document.body.append(dialog);
+ function close(){dialog.hidden=true;}closeButton.addEventListener('click',close);dialog.addEventListener('click',e=>{if(e.target===dialog)close();});addEventListener('keydown',e=>{if(e.key==='Escape'&&!dialog.hidden)close();});
+ function render(){const met=creatureBook.entries(),pages=creatureBook.ENTRIES,ready=pages.filter(p=>met[p.id]&&!exhibits[p.id]);note.textContent=villageStore.mode==='shared'?'기증하면 친구들 화면의 수조에도 함께 헤엄쳐요.':'지금은 이 브라우저의 수조에만 보여요. 공유 저장이 켜지면 친구와 함께 봐요.';
+  list.replaceChildren(...(ready.length?ready.map(p=>{const item=document.createElement('li'),b=document.createElement('button');b.className='resident-next';b.textContent=p.name+' 기증하기';b.addEventListener('click',()=>donate(p.id));item.append(b);return item;}):[Object.assign(document.createElement('li'),{className:'unseen',textContent:'도감에서 만난 생물 중 기증할 수 있는 친구가 아직 없어요.'})]));
+  shown.replaceChildren(...Object.values(exhibits).sort((a,b)=>a.t-b.t).map(e=>Object.assign(document.createElement('li'),{className:'seen',textContent:(pages.find(p=>p.id===e.c)||{name:e.c}).name+' · '+e.n+' 님'})));}
+ async function donate(id){if(exhibits[id]||!creatureBook.entries()[id])return null;const page=creatureBook.ENTRIES.find(p=>p.id===id),result=await villageStore.put('exhibits',id,{c:id,n:nickname,u:villageStore.uid(),t:Date.now()});toast(objectParticle(page.name)+' 전시 수조에 기증했어요'+(result==='shared'?'':' · 이 브라우저에만 보여요'));render();return result;}
+ function open(){if(!entered)return;render();dialog.hidden=false;closeButton.focus();}
+ if(residentGuide.addAction)residentGuide.addAction('전시 수조에 기증하기',()=>{residentGuide.close();open();});
+ return{TANK,VIEW,LOOKS,tick,open,close,donate,isOpen:()=>!dialog.hidden,swimmers,get exhibits(){return exhibits;}};
+}
+const exhibit=createExhibit();
 
 // The visitor reports their own confirmed join; the owner's browser is never the notification server.
 const ARRIVAL_SERVICE={"endpoint":"","partyId":"0946f302b9cf8449c6970809"},arrivalRequests=new Map();

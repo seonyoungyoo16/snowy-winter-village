@@ -4123,7 +4123,9 @@ function createResidentGuide(){
  place(spotFor(slot.at));
  const moodText=()=>slot.mood==='work'?role:routines.moods[slot.mood];const pick=mesh(new THREE.SphereGeometry(.66,8,6),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}),root,0,1,0,1,1.55,1);
  const style=document.createElement('style');style.textContent='.resident-bubble{position:fixed;white-space:nowrap;z-index:3;transform:translate(-50%,-100%);padding:8px 12px;border:0;border-radius:17px;background:#f1dfbfee;color:#655346;font:inherit;font-size:11px;min-height:36px;box-shadow:0 3px 12px #302c3326;cursor:pointer}.resident-dialog{position:fixed;inset:0;z-index:12;display:grid;align-items:end;justify-items:center;padding:18px;background:linear-gradient(0deg,#29213266,transparent 65%)}.resident-card{position:relative;width:min(360px,100%);padding:25px 23px 20px;border-radius:25px;background:#fff3e3f5;color:#69534f;text-align:center}.resident-card h2{margin:0 0 12px;font-size:21px}.resident-card p{font-size:13px;line-height:1.8;margin:0 0 16px}.resident-card small{font-size:10px;color:#a18c78}.resident-card button{font:inherit;min-height:44px;border:0;border-radius:14px;cursor:pointer}.resident-card .resident-close{position:absolute;right:8px;top:7px;width:40px;background:transparent;color:#a18b7d;font-size:24px}.resident-next{display:block;width:100%;margin-bottom:14px;padding:12px;background:#8e9d83;color:#fff8e8}';document.body.append(style);
- const titleText=role.title+' '+role.name,bubble=document.createElement('button');bubble.className='resident-bubble';bubble.textContent=titleText;bubble.setAttribute('aria-label',titleText+'에게 말 걸기');bubble.hidden=true;document.body.append(bubble);const dialog=document.createElement('section');dialog.className='resident-dialog';dialog.setAttribute('aria-label',titleText);dialog.hidden=true;const card=document.createElement('div');card.className='resident-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label',titleText);const closeButton=document.createElement('button');closeButton.className='resident-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','주민 이야기 닫기');const title=document.createElement('h2');title.textContent=titleText;const line=document.createElement('p'),next=document.createElement('button');next.className='resident-next';next.textContent='이야기 더 듣기';const note=document.createElement('small');note.textContent=role.note;card.append(closeButton,title,line,next,note);dialog.append(card);document.body.append(dialog);
+ const titleText=role.title+' '+role.name,bubble=document.createElement('button');bubble.className='resident-bubble';bubble.textContent=titleText;bubble.setAttribute('aria-label',titleText+'에게 말 걸기');bubble.hidden=true;document.body.append(bubble);const dialog=document.createElement('section');dialog.className='resident-dialog';dialog.setAttribute('aria-label',titleText);dialog.hidden=true;const card=document.createElement('div');card.className='resident-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label',titleText);const closeButton=document.createElement('button');closeButton.className='resident-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','주민 이야기 닫기');const title=document.createElement('h2');title.textContent=titleText;const line=document.createElement('p'),next=document.createElement('button');next.className='resident-next';next.textContent='이야기 더 듣기';const note=document.createElement('small');note.textContent=role.note;card.append(closeButton,title,line,next,note);dialog.append(card);
+ // Worlds can add their own conversation choices (e.g. the aquarium's donations) above the note.
+ function addAction(label,run){const b=document.createElement('button');b.className='resident-next';b.textContent=label;b.addEventListener('click',run);if(card.insertBefore)card.insertBefore(b,note);else card.append(b);return b;}document.body.append(dialog);
  let lineIndex=0,nodUntil=0,lastSight=-Infinity,occluded=false;const project=new THREE.Vector3(),screenRay=new THREE.Raycaster(),viewDirection=new THREE.Vector3(),clockNow=()=>((Date.now()+serverOffset)/1000),distanceToResident=()=>Math.hypot(player.position.x-here.x,player.position.z-here.z);
  function close(){dialog.hidden=true;renderer.domElement.focus({preventScroll:true});}
  function open(){if(!entered||mode!=='idle'||helpOpen())return;if(distanceToResident()>talkRange){toast(role.name+' 가까이에서 이야기해요.');return;}path=[];keys.clear();line.textContent=moodText().intro;note.textContent=moodText().note;lineIndex=0;nodUntil=clockNow()+1.3;dialog.hidden=false;closeButton.focus();}
@@ -4145,7 +4147,7 @@ function createResidentGuide(){
   bubble.hidden=!near||mode!=='idle'||path.length>0||helpOpen()||occluded||project.z<-1||project.z>1||x<58||x>innerWidth-58||y<190||y>innerHeight-210;bubble.style.left=x+'px';bubble.style.top=y+'px';label.visible=entered&&distanceToResident()<11&&bubble.hidden&&(!near||!occluded)&&project.z>-1&&project.z<1;shade.visible=true;
  }
  function hit(ray){root.updateWorldMatrix(true,true);const contact=ray.intersectObject(pick,false)[0];if(!contact)return false;const obstacle=ray.intersectObject(world,true)[0];return !obstacle||contact.distance<obstacle.distance;}
- return{actor:{root,body,head,arms,legs},role,spawn,routines,slotAt,get slot(){return slot;},get here(){return here;},workSpot,station,tools:{mug,book,leaf,scoop,pellets},tick,open,close,pick:hit,isOpen:()=>!dialog.hidden};
+ return{actor:{root,body,head,arms,legs},role,spawn,addAction,routines,slotAt,get slot(){return slot;},get here(){return here;},workSpot,station,tools:{mug,book,leaf,scoop,pellets},tick,open,close,pick:hit,isOpen:()=>!dialog.hidden};
 }
 const residentGuide=createResidentGuide();
 
@@ -4249,6 +4251,36 @@ function createCreatureBook(){
 const creatureBook=createCreatureBook();
 // Winter's ice fishing reports each catch here.
 function onFishCaught(fish){creatureBook.record(fish.id,{cm:fish.cm});}
+
+// Friend-group storage for things that stay in the village (exhibits, letters, signs…): Firebase under village/{party}/{collection}.
+// Until those rules are deployed the reads and writes are refused, so everything falls back to this browser and keeps working.
+function createVillageStore(){
+ const party=partyId(roomId),cache=new Map(),listeners=new Map(),live=new Set();let mode='pending';
+ const localKey=c=>'village-store:'+party+':'+c;
+ function readLocal(c){try{const v=JSON.parse(localStorage.getItem(localKey(c))||'{}');return v&&typeof v==='object'?v:{};}catch{return{};}}
+ function writeLocal(c,data){try{localStorage.setItem(localKey(c),JSON.stringify(data));}catch{}}
+ function items(c){return{...readLocal(c),...(cache.get(c)||{})};}
+ function emit(c){for(const f of listeners.get(c)||[])f(items(c));}
+ function ready(){return typeof networkDB!=='undefined'&&networkDB&&networkAuth&&networkAuth.currentUser&&window.WinterFirebase;}
+ function connect(c){
+  if(live.has(c)||mode==='local'||!ready())return;live.add(c);const F=window.WinterFirebase;
+  try{F.onValue(F.ref(networkDB,'village/'+party+'/'+c),snapshot=>{mode='shared';cache.set(c,snapshot.val()||{});emit(c);},()=>{mode='local';live.delete(c);emit(c);});}catch{mode='local';live.delete(c);}
+ }
+ // The network signs in after the page loads; keep trying quietly until it is ready or refused.
+ setInterval(()=>{for(const c of listeners.keys())connect(c);},4000);
+ return{
+  party,
+  get mode(){return mode;},
+  list(c){connect(c);return items(c);},
+  subscribe(c,f){if(!listeners.has(c))listeners.set(c,[]);listeners.get(c).push(f);connect(c);f(items(c));},
+  // Resolves 'shared' when friends will see it, 'local' when only this browser keeps it.
+  async put(c,id,value){const local=readLocal(c);local[id]=value;writeLocal(c,local);cache.set(c,{...(cache.get(c)||{}),[id]:value});emit(c);
+   if(mode==='local'||!ready())return'local';const F=window.WinterFirebase;
+   try{await F.set(F.ref(networkDB,'village/'+party+'/'+c+'/'+id),value);mode='shared';return'shared';}catch{mode='local';return'local';}},
+  uid(){return ready()?networkAuth.currentUser.uid:'';}
+ };
+}
+const villageStore=createVillageStore();
 
 // The visitor reports their own confirmed join; the owner's browser is never the notification server.
 const ARRIVAL_SERVICE={"endpoint":"","partyId":"0946f302b9cf8449c6970809"},arrivalRequests=new Map();

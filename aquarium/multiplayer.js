@@ -186,5 +186,7 @@ setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 /* RESIDENT_CODE */
 /* SKY_WEATHER_CODE */
 /* CREATURE_BOOK_CODE */
+/* VILLAGE_STORE_CODE */
+/* EXHIBIT_CODE */
 /* ARRIVAL_CLIENT_CODE */
 setupWorldTravel();

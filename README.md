@@ -39,6 +39,12 @@ npm run preview
 
 오른쪽 위 책 모양 버튼은 세 공간 공통 **생물 도감**입니다. 겨울 연못에서 낚은 물고기, 수족관 수조에서 만난 생물, 도서관 창가에 찾아온 손님이 이 브라우저에 기록되고 공간을 옮겨도 이어집니다.
 
+## 친구와 함께 남기는 기록 (공유 저장)
+
+수족관 **전시 수조**처럼 친구 그룹이 함께 보는 기록은 Firebase `village/{친구 그룹}/…` 아래에 저장합니다. 새 규칙은 세 공간의 `database.rules.json`에 같은 내용으로 들어 있습니다. 로그인한 방문자만 읽고, 항목마다 작성자 본인이 정해진 모양으로 한 번만 쓸 수 있습니다.
+
+**규칙이 실제 프로젝트에 배포되기 전까지는** 쓰기가 거절되므로 각자 브라우저에만 저장되고 화면에 '이 브라우저에만 보여요'라고 안내합니다. 저장소 주인이 Firebase 콘솔(Realtime Database → 규칙)에 `winter/database.rules.json` 내용을 붙여 넣거나 Firebase CLI로 배포하면 그때부터 친구와 함께 보입니다. 배포 전에는 `npm run test:live`로 기존 규칙이 그대로인지 확인하세요.
+
 휴대폰 접속 알림은 선택 기능입니다. [알림 서버 설정](services/arrival-notifier/README.md)에 Cloudflare Workers 무료 계정과 Telegram 봇을 연결하는 방법을 정리했습니다. `shared/arrival-config.json`의 `endpoint`가 비어 있으면 알림 요청을 보내지 않습니다. 봇 토큰은 배포 HTML·저장소에 넣지 않습니다. 알림 연결에는 별도 Cloudflare 서버를 사용하며 Firebase 요금제는 바꾸지 않습니다.
 
 실제 휴대폰·Safari·Windows 알림 배너는 별도 확인 범위입니다. 각 공간의 `QA.md`에 자동 검사와 브라우저 확인 범위를 구분해 두었습니다.

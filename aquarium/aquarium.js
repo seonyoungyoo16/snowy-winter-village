@@ -119,7 +119,7 @@ function animatePose(dt,moving,actor=character,state=mode,phase=elapsed,celebrat
  }
  b.position.y=lerp(b.position.y,by+bob,1-Math.exp(-dt*12));b.rotation.x=lerp(b.rotation.x,pitch,1-Math.exp(-dt*10));actor.head.rotation.z=state==='warm'?Math.sin(t*.6)*.025:Math.sin(t*1.1)*.02;
 }
-function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||residentGuide.isOpen()||creatureBook.isOpen();}
+function helpOpen(){return !$('help-modal').hidden||!$('invite-modal').hidden||residentGuide.isOpen()||creatureBook.isOpen()||exhibit.isOpen();}
 function closeHelp(){$('help-modal').hidden=true;$('help').focus();}
 $('help').addEventListener('click',()=>{$('help-modal').hidden=false;keys.clear();$('close-help').focus();});$('close-help').addEventListener('click',closeHelp);$('return-village').addEventListener('click',closeHelp);$('help-modal').addEventListener('click',e=>{if(e.target===$('help-modal'))closeHelp();});
 $('entry-form').addEventListener('submit',e=>{e.preventDefault();if(entered)return;nickname=$('nickname').value.trim().replace(/[\u0000-\u001f\u007f]/g,'').slice(0,12)||'바다 손님';entered=true;$('welcome').hidden=true;for(const id of['controls','status','keyboard'])$(id).hidden=false;$('nickname-label').textContent=nickname;save();updateUI();toast('어서 와요, '+nickname+' 님');renderer.domElement.focus({preventScroll:true});startNetwork();});document.querySelectorAll('[data-character]').forEach(b=>b.addEventListener('click',()=>chooseCharacter(Number(b.dataset.character))));$('main-action').addEventListener('click',action);$('cancel-action').addEventListener('click',()=>{stopActivity();updateUI();});$('wave-action').addEventListener('click',wave);document.querySelectorAll('[data-place]').forEach(b=>b.addEventListener('click',()=>travel(b.dataset.place)));
@@ -144,7 +144,7 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
   }
  }
  networkTick(dt,moving);animatePose(dt,moving);animateWater(dt);playerShadow.position.set(player.position.x,.035,player.position.z);if(ringTimer>0){ringTimer-=dt;targetRing.scale.setScalar(1+Math.sin(elapsed*5)*.08);targetRing.material.opacity=clamp(ringTimer,0,.75);if(ringTimer<=0)targetRing.visible=false;}
- residentGuide.tick(dt);skyWeather.tick(dt);updateCamera(dt);if(frameCount++%5===0){label('label-ocean',0,7.8,-10);label('label-reef',-10,2.8,-2);label('label-jelly',10,6.6,-2);if(entered)updateUI();}renderer.render(scene,camera);
+ residentGuide.tick(dt);skyWeather.tick(dt);exhibit.tick(elapsed);updateCamera(dt);if(frameCount++%5===0){label('label-ocean',0,7.8,-10);label('label-reef',-10,2.8,-2);label('label-jelly',10,6.6,-2);if(entered)updateUI();}renderer.render(scene,camera);
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();$('error').hidden=false;$('error-text').textContent='수족관이 잠깐 쉬고 있어요. 페이지를 다시 열어주세요.';});
 /* MULTIPLAYER_CODE */
