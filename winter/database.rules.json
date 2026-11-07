@@ -231,6 +231,30 @@
               ".validate": false
             }
           }
+        },
+        "looks": {
+          "$uid": {
+            ".write": "auth != null && $party.matches(/^[a-f0-9]{24}$/) && $uid === auth.uid",
+            ".validate": "newData.hasChildren(['c','s','a','u','t'])",
+            "c": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 6 && newData.val() % 1 === 0"
+            },
+            "s": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 6 && newData.val() % 1 === 0"
+            },
+            "a": {
+              ".validate": "newData.val() === 'none' || newData.val() === 'beanie' || newData.val() === 'earmuffs' || newData.val() === 'flower' || newData.val() === 'glasses'"
+            },
+            "u": {
+              ".validate": "newData.isString() && newData.val() === auth.uid"
+            },
+            "t": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
         }
       }
     }

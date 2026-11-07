@@ -88,7 +88,7 @@ function disposeActor(root){root.traverse(o=>{if(!o.isMesh)return;if(!Object.val
 function removePeer(id){const peer=remotePlayers.get(id);if(!peer)return;villagePlay.drop(peer);disposeActor(peer.actor.root);scene.remove(peer.shadow);peer.label.material.map.dispose();peer.label.material.dispose();remotePlayers.delete(id);}
 function clearPeers(){for(const id of Array.from(remotePlayers.keys()))removePeer(id);}
 function makePeer(id,data){
- const actor=avatar(data.k);actor.root.position.set(data.x,data.y,data.z);actor.root.rotation.set(data.p,data.a,0);scene.add(actor.root);
+ const actor=avatar(data.k,peerLook(data.u));actor.lookSig=peerLookSig(data.u);actor.root.position.set(data.x,data.y,data.z);actor.root.rotation.set(data.p,data.a,0);scene.add(actor.root);
  const label=nameSprite(data.n);label.scale.set(2.15,.403,1);label.position.y=2.8;actor.root.add(label);
  const peer={id,actor,label,shadow:shadow(scene,data.x,data.z,.58,.18),data,phase:0,celebration:0,feedBeat:-1,target:new THREE.Vector3(data.x,data.y,data.z)};
  remotePlayers.set(id,peer);return peer;
@@ -101,7 +101,7 @@ function reconcileRoom(){
  if(selfIndex>=MAX_VISITORS){roomFull=true;networkJoined=false;arrivalTracker.pause();if(selfRef)window.WinterFirebase.remove(selfRef).catch(()=>{});clearPeers();updateNetworkStatus('도서관이 가득해요');toast('이 도서관에는 네 명까지 함께할 수 있어요');return;}
  const visible=active.filter(([id])=>id!==sessionKey).slice(0,MAX_VISITORS-1),ids=new Set(visible.map(([id])=>id));
  for(const id of remotePlayers.keys())if(!ids.has(id))removePeer(id);
- for(const[id,data]of visible){let peer=remotePlayers.get(id);if(peer&&peer.actor.kind!==data.k){removePeer(id);peer=null;}if(!peer)peer=makePeer(id,data);if(peer.data.m!==data.m){peer.celebration=0;peer.feedBeat=-1;}if(peer.data.n!==data.n){peer.actor.root.remove(peer.label);peer.label.material.map.dispose();peer.label.material.dispose();peer.label=nameSprite(data.n);peer.label.scale.set(2.15,.403,1);peer.label.position.y=2.8;peer.actor.root.add(peer.label);}peer.data=data;peer.target.set(data.x,data.y,data.z);}
+ for(const[id,data]of visible){let peer=remotePlayers.get(id);if(peer&&(peer.actor.kind!==data.k||peer.actor.lookSig!==peerLookSig(data.u))){removePeer(id);peer=null;}if(!peer)peer=makePeer(id,data);if(peer.data.m!==data.m){peer.celebration=0;peer.feedBeat=-1;}if(peer.data.n!==data.n){peer.actor.root.remove(peer.label);peer.label.material.map.dispose();peer.label.material.dispose();peer.label=nameSprite(data.n);peer.label.scale.set(2.15,.403,1);peer.label.position.y=2.8;peer.actor.root.add(peer.label);}peer.data=data;peer.target.set(data.x,data.y,data.z);}
  for(const arrival of arrivalTracker.observe(visible))announceArrival(arrival.id,arrival.data);
  updateNetworkStatus();
 }
@@ -194,5 +194,6 @@ setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 /* VILLAGE_JOURNAL_CODE */
 /* VILLAGE_GOALS_CODE */
 /* AVATAR_LIFE_CODE */
+/* VILLAGE_LOOKS_CODE */
 /* ARRIVAL_CLIENT_CODE */
 setupWorldTravel();
