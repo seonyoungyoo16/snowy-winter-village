@@ -14,3 +14,13 @@ CREATE TABLE IF NOT EXISTS connection_failures (
 );
 CREATE INDEX IF NOT EXISTS connection_failures_room_time ON connection_failures (room, occurred_at);
 CREATE TABLE IF NOT EXISTS connection_alerts (room TEXT PRIMARY KEY, acquired_at INTEGER NOT NULL, lease TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS visit_events (
+  room TEXT NOT NULL,
+  session_key TEXT NOT NULL,
+  visitor_key TEXT NOT NULL,
+  visited_at INTEGER NOT NULL,
+  PRIMARY KEY (room, session_key)
+);
+CREATE INDEX IF NOT EXISTS visit_events_room_visitor_time ON visit_events (room, visitor_key, visited_at);
+CREATE INDEX IF NOT EXISTS visit_events_time ON visit_events (visited_at);
+INSERT OR IGNORE INTO settings (key, value) VALUES ('visit_summary_started_at', CAST(strftime('%s', 'now') AS INTEGER) * 1000);

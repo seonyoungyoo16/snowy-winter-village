@@ -1,4 +1,7 @@
 const QUIET_MS=5*60*1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const VISIT_RETENTION_MS = 7 * DAY_MS;
 const FAILURE_WINDOW_MS = 5 * 60 * 1000;
 const FAILURE_THRESHOLD = 5;
 const FAILURE_ALERT_COOLDOWN_MS = 15 * 60 * 1000;
@@ -17,23 +20,7 @@ const FAILURE_CAUSES = {
 };
 const json=(value,status=200,headers={})=>new Response(JSON.stringify(value),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers}});
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const KOREAN_REGIONS={'11':'서울','26':'부산','27':'대구','28':'인천','29':'광주','30':'대전','31':'울산','41':'경기','42':'강원','43':'충북','44':'충남','45':'전북','46':'전남','47':'경북','48':'경남','49':'제주','50':'세종','51':'강원','52':'전북'};
-function deviceLabel(request,hint){
- if(hint==='mobile')return '📱 모바일';
- if(hint==='pc')return '🖥️ PC';
- const agent=request.headers.get('user-agent')||'',mobile=request.headers.get('sec-ch-ua-mobile');
- if(/Android|iPhone|iPad|iPod|Mobile|IEMobile|Opera Mini/i.test(agent)||mobile==='?1')return '📱 모바일';
- if(mobile==='?0'||/Windows NT|Macintosh|X11|CrOS|Linux/i.test(agent))return '🖥️ PC';
- return '기기 확인 불가';
-}
-function regionLabel(request){
- const cf=request.cf,country=cf?.country;
- if(typeof country!=='string'||!/^[A-Z]{2}$/.test(country)||country==='XX')return '지역 확인 불가';
- let name=country;try{name=new Intl.DisplayNames(['ko'],{type:'region'}).of(country)||country;}catch{}
- const rawRegion=typeof cf.region==='string'?cf.region.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,60):'';
- const region=(country==='KR'&&KOREAN_REGIONS[cf.regionCode])||rawRegion;
- return name+(region?' · '+region:'')+' (IP 추정)';
-}
+const messageEmoji = /[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}\u200d\ufe0e\ufe0f\u20e3\u{e0020}-\u{e007f}]/gu;
 async function body(request){const text=await request.text();if(text.length>8192)throw new Error('payload');return JSON.parse(text);}
 async function telegram(env,fetchImpl,method,payload){
  const result=await fetchImpl('https://api.telegram.org/bot'+env.TELEGRAM_BOT_TOKEN+'/'+method,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(8000)});
@@ -78,32 +65,79 @@ async function bindTelegram(request,env,fetchImpl,now){
  const recipient=await env.DB.prepare("SELECT value FROM settings WHERE key='telegram_chat'").first('value');
  if(recipient!==String(chat.id))return json({ok:true});
  const welcomed=await env.DB.prepare("SELECT value FROM settings WHERE key='telegram_welcomed'").first('value');
- if(!welcomed){await telegram(env,fetchImpl,'sendMessage',{chat_id:recipient,text:'작은 마을 알림이 연결됐어요 🌿\n친구가 들어오면 이 대화로 알려드릴게요. PC와 게임 탭을 꺼두어도 받을 수 있어요.'});await env.DB.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES('telegram_welcomed','yes')").run();}
+ if(!welcomed){await telegram(env,fetchImpl,'sendMessage',{chat_id:recipient,text:'🌿 작은 마을 알림이 연결됐어요\n매일 오전 9시(한국 시간)에 전날 방문 요약을 보내드려요. 반복 접속 오류는 바로 알려드려요.'});await env.DB.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES('telegram_welcomed','yes')").run();}
  return json({ok:true,connected:inserted.meta?.changes===1});
 }
-async function arrival(request,env,fetchImpl,now,sleep){
+async function arrival(request,env,fetchImpl,now){
  if(!ready(env))return json({error:'not_ready'},503);
- const chat=await env.DB.prepare("SELECT value FROM settings WHERE key='telegram_chat'").first('value');if(!chat)return json({error:'not_ready'},503);
- const input=await body(request),place=roomDetails(input.room,env);
- if(!place||!/^[a-f0-9]{24}$/.test(input.session||'')||Object.keys(input).some(k=>!['room','session','device'].includes(k))||(input.device!==undefined&&!['mobile','pc','unknown'].includes(input.device)))return json({error:'invalid_visit'},400);
+ const input=await body(request);
+ if(!roomDetails(input?.room,env)||typeof input.session!=='string'||!/^[a-f0-9]{24}$/.test(input.session)||Object.keys(input).some(k=>!['room','session','device'].includes(k))||(input.device!==undefined&&!['mobile','pc','unknown'].includes(input.device)))return json({error:'invalid_visit'},400);
  const {uid,idToken,status}=await authenticateVisitor(request,env,fetchImpl);
  if(status)return json({error:'sign_in_required'},status);
  const presenceURL=new URL('/rooms/'+input.room+'/players/'+input.session+'.json',env.DATABASE_URL);presenceURL.searchParams.set('auth',idToken);
  const result=await fetchImpl(presenceURL,{signal:AbortSignal.timeout(8000)});if(!result.ok)return json({error:'visit_not_confirmed'},403);
  const visitor=await result.json();
  if(!visitor||visitor.u!==uid||visitor.v!==1||typeof visitor.n!=='string'||!visitor.n.trim()||visitor.n.length>12||!Number.isFinite(visitor.t)||now-visitor.t>45000||visitor.t>now+10000)return json({error:'visit_not_confirmed'},403);
- const visitorKey=await hashKey(env.PARTY_ID+':'+uid),lease=crypto.randomUUID();
- const claim=await env.DB.prepare('INSERT INTO arrival_locks(visitor_key,acquired_at,lease) VALUES(?,?,?) ON CONFLICT(visitor_key) DO UPDATE SET acquired_at=excluded.acquired_at,lease=excluded.lease WHERE arrival_locks.acquired_at<? RETURNING lease').bind(visitorKey,now,lease,now-QUIET_MS).first();
- if(!claim)return json({status:'already_received'},202);
- try{
-  const returning=Boolean(await env.DB.prepare('SELECT first_seen FROM visitor_history WHERE visitor_key=?').bind(visitorKey).first());
-  if(!await waitForTelegramSlot(env,now,sleep)){await env.DB.prepare('DELETE FROM arrival_locks WHERE visitor_key=? AND lease=?').bind(visitorKey,lease).run();return json({error:'try_later'},429,{'retry-after':'5'});}
-  const name=visitor.n.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,12),url=new URL(place.path,env.SITE_BASE);url.hash='room='+input.room;
-  const koreaTime=new Date(now+9*60*60*1000).toISOString().slice(0,16).replace('T',' ')+' KST';
-  await telegram(env,fetchImpl,'sendMessage',{chat_id:chat,text:'마을에 손님이 왔어요 🌿\n'+name+' 님 · '+place.name+'\n'+(returning?'🔁 재방문':'🌱 첫 방문')+' · '+deviceLabel(request,input.device)+'\n📍 '+regionLabel(request)+'\n'+koreaTime,reply_markup:{inline_keyboard:[[{text:'같이 만나러 가기',url:url.href}]]}});
-  await env.DB.prepare('INSERT OR IGNORE INTO visitor_history(visitor_key,first_seen) VALUES(?,?)').bind(visitorKey,now).run();
-  await env.DB.prepare('DELETE FROM arrival_locks WHERE acquired_at<?').bind(now-86400000).run();return json({status:'sent'});
- }catch{await env.DB.prepare('DELETE FROM arrival_locks WHERE visitor_key=? AND lease=?').bind(visitorKey,lease).run();return json({error:'delivery_retry'},502);}
+ const room = input.room;
+ const visitorKey = await hashKey(env.PARTY_ID + ':' + uid);
+ const sessionKey = await hashKey(uid + ':' + input.session);
+ const [event] = await env.DB.batch([
+  env.DB.prepare(`
+   INSERT OR IGNORE INTO visit_events(room,session_key,visitor_key,visited_at)
+   SELECT ?,?,?,? WHERE NOT EXISTS (
+    SELECT 1 FROM visit_events WHERE room=? AND visitor_key=? AND visited_at>?
+   )
+  `).bind(room,sessionKey,visitorKey,now,room,visitorKey,now-QUIET_MS),
+  env.DB.prepare(`
+   INSERT INTO visitor_history(visitor_key,first_seen) VALUES(?,?)
+   ON CONFLICT(visitor_key) DO UPDATE SET first_seen=excluded.first_seen
+   WHERE visitor_history.first_seen>excluded.first_seen
+  `).bind(visitorKey,now)
+ ]);
+ return event.meta.changes ? json({status:'recorded'}) : json({status:'already_received'},202);
+}
+
+export async function handleScheduled(controller, env, dependencies = {}) {
+ if (!ready(env)) return;
+ const fetchImpl = dependencies.fetch || fetch;
+ const now = (dependencies.now || Date.now)();
+ const sleep = dependencies.sleep || pause;
+ const end = Math.floor((controller.scheduledTime + KST_OFFSET_MS) / DAY_MS) * DAY_MS - KST_OFFSET_MS;
+ const start = end - DAY_MS;
+ const startedAt = Number(await env.DB.prepare("SELECT value FROM settings WHERE key='visit_summary_started_at'").first('value'));
+ if (!startedAt || startedAt >= end) return;
+ const chat = await env.DB.prepare("SELECT value FROM settings WHERE key='telegram_chat'").first('value');
+ if (!chat) return;
+
+ const day = new Date(start + KST_OFFSET_MS).toISOString().slice(0,10);
+ const key = 'visit_digest:' + day;
+ const lease = crypto.randomUUID();
+ const claim = await env.DB.prepare('INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)').bind(key,lease).run();
+ if (!claim.meta.changes) return;
+ try {
+  const counts = await env.DB.prepare(`
+   SELECT COUNT(*) AS visits, COUNT(DISTINCT v.visitor_key) AS visitors,
+    COUNT(DISTINCT CASE WHEN h.first_seen>=? AND h.first_seen<? THEN v.visitor_key END) AS first_visitors,
+    COALESCE(SUM(v.room=?),0) AS winter,
+    COALESCE(SUM(v.room=?),0) AS aquarium,
+    COALESCE(SUM(v.room=?),0) AS library
+   FROM visit_events v JOIN visitor_history h ON h.visitor_key=v.visitor_key
+   WHERE v.visited_at>=? AND v.visited_at<?
+  `).bind(start,end,env.PARTY_ID,'aq_'+env.PARTY_ID,'lb_'+env.PARTY_ID,start,end).first();
+  const lines = [
+   '📋 하루 방문 요약', day + ' (한국 시간)',
+   `방문자 ${counts.visitors}명 · 첫 방문 ${counts.first_visitors}명 · 재방문 ${counts.visitors-counts.first_visitors}명`,
+   `공간 입장 합계 ${counts.visits}회`,
+   `겨울 마을 ${counts.winter}회 · 물결 수족관 ${counts.aquarium}회 · 책숲 도서관 ${counts.library}회`
+  ];
+  if (startedAt > start) lines.push('집계 시작 ' + new Date(startedAt + KST_OFFSET_MS).toISOString().slice(11,16));
+  await env.DB.prepare('DELETE FROM visit_events WHERE visited_at<?').bind(end-VISIT_RETENTION_MS).run();
+  if (!await waitForTelegramSlot(env, now, sleep)) throw new Error('telegram_busy');
+  await telegram(env, fetchImpl, 'sendMessage', {chat_id:chat,text:lines.join('\n')});
+ } catch (error) {
+  await env.DB.prepare('DELETE FROM settings WHERE key=? AND value=?').bind(key,lease).run();
+  throw error;
+ }
 }
 async function connectionFailure(request, env, fetchImpl, now, sleep) {
  if (!ready(env)) return json({ error: 'not_ready' }, 503);
@@ -154,7 +188,8 @@ async function connectionFailure(request, env, fetchImpl, now, sleep) {
   const lines = details.map(({ nickname, stage, code, count }) => {
    const cause = FAILURE_CAUSES[code];
    const label = code === 'UNKNOWN' || code === 'TIMEOUT' ? cause : `${cause} (${code})`;
-   return `• ${nickname || '닉네임 미확인'} · ${FAILURE_STAGES[stage]} · ${label} · ${count}회`;
+   const name = nickname?.replace(messageEmoji, '').trim() || '닉네임 미확인';
+   return `• ${name} · ${FAILURE_STAGES[stage]} · ${label} · ${count}회`;
   });
   const remaining = failures - details.reduce((sum, row) => sum + row.count, 0);
   if (remaining > 0) lines.push(`• 그 외 ${remaining}회`);
@@ -183,4 +218,4 @@ export async function handleRequest(request,env,dependencies={}){
   const response=await handler(request,env,fetchImpl,now,sleep);for(const[key,value]of Object.entries(cors))response.headers.set(key,value);return response;
  }catch{return json({error:'request_failed'},503,cors);}
 }
-export default{fetch:handleRequest};
+export default{fetch:handleRequest,scheduled:handleScheduled};

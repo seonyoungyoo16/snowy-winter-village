@@ -4,6 +4,7 @@
   "compatibility_date": "2026-11-07",
   "workers_dev": true,
   "observability": {"enabled": false},
+  "triggers": {"crons": ["0,10,20 0 * * *"]},
   "d1_databases": [{"binding": "DB", "database_name": "my-little-village-notifications", "database_id": "SET_BY_SETUP"}],
   "vars": {
     "SITE_ORIGIN": "https://seonyoungyoo16.github.io",
