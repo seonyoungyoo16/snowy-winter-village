@@ -64,7 +64,7 @@ console.log('PASS: automatic finding reaches every point in the cat routine and 
 function assertSeparateBodies(actor,kind,phase){
  a.scene.updateMatrixWorld(true);
  // Measure both models in the visitor's frame, so turning together cannot create false world-AABB intersections.
- const inverse=actor.root.matrixWorld.clone().invert(),bounds=part=>{const box=new c.THREE.Box3(),point=new c.THREE.Vector3();part.traverse(mesh=>{if(!mesh.isMesh)return;const vertices=mesh.geometry.attributes.position,matrix=new c.THREE.Matrix4().multiplyMatrices(inverse,mesh.matrixWorld);for(let i=0;i<vertices.count;i++)box.expandByPoint(point.fromBufferAttribute(vertices,i).applyMatrix4(matrix));});return box;};
+ const inverse=actor.root.matrixWorld.clone().invert(),bounds=part=>{const box=new c.THREE.Box3(),point=new c.THREE.Vector3();part.traverse(mesh=>{if(!mesh.isMesh||mesh.name==='look-outline')return;const vertices=mesh.geometry.attributes.position,matrix=new c.THREE.Matrix4().multiplyMatrices(inverse,mesh.matrixWorld);for(let i=0;i<vertices.count;i++)box.expandByPoint(point.fromBufferAttribute(vertices,i).applyMatrix4(matrix));});return box;};
  const visitor=[actor.head,...actor.body.children.filter(o=>o.isMesh)],cat=[a.residentCat.torso,...a.residentCat.head.children.filter(o=>o.isMesh)];
  for(const part of visitor)for(const fur of cat){const x=bounds(part),y=bounds(fur);assert(!x.intersectsBox(y),'body/head overlap '+JSON.stringify({kind,phase,visitor:{min:x.min,max:x.max},cat:{min:y.min,max:y.max}}));}
 }

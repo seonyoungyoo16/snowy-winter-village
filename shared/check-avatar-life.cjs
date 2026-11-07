@@ -13,6 +13,8 @@ for(const world of['winter','aquarium','library']){
  const w=load(world,'?sky=day&weather=clear'),a=w.a,L=a.avatarLife;
  L.tick(.016);const me=a.getCharacter(),f=faceOf(me.head);assert(f.lids&&f.arcs&&f.mouth,world+' face rig missing');
  let faceMeshes=0;me.head.traverse(o=>{if(o.isMesh&&o.name.startsWith('face-'))faceMeshes++;});assert.equal(faceMeshes,3,'face rig must stay at three draw calls');
+ // Finishing touches: eye sparkle that hides on a blink, blush, a tail and a soft outline on head and body, added once.
+ assert(me.head.getObjectByName('look-shine').visible&&me.head.getObjectByName('look-blush'),'no sparkle or blush');assert(me.body.getObjectByName('look-tail'),'no tail');let hulls=0;me.root.traverse(o=>{if(o.name==='look-outline')hulls++;});assert.equal(hulls,2,'outline should be head and body only');L.tick(.016);let again=0;me.root.traverse(o=>{if(o.name==='look-outline')again++;});assert.equal(again,2,'dressed twice');
  // Blinking: a short close every three to six seconds, open otherwise.
  let closed=0,frames=0,gaps=[],last=null;for(let i=0;i<800;i++){w.advance(.02);L.tick(.02);frames++;if(f.lids.visible){closed++;if(last!==null&&w.t-last>.3)gaps.push(w.t-last);last=w.t;}}
  assert(closed>0,world+' never blinks');assert(closed/frames<.12,world+' eyes are mostly closed');assert(gaps.length>=2&&gaps.every(g=>g>2.8&&g<6.4),world+' blink spacing '+gaps.map(g=>g.toFixed(1)));
@@ -28,10 +30,10 @@ for(const world of['winter','aquarium','library']){
  a.setMode('warm');for(let i=0;i<300;i++){w.advance(.02);L.tick(.02);}assert(Math.abs(me.head.rotation.y)<.01,'glancing during an activity');a.setMode('idle');
  // Residents: asleep at night, mouth moving while talking, never glancing, and still within their draw-call budget.
  const r=a.residentGuide,rf=faceOf(r.actor.head);r.actor.head.rotation.y=0;for(let i=0;i<300;i++){w.advance(.02);L.tick(.02);}assert.equal(r.actor.head.rotation.y,0,'resident glanced at a visitor');
- let meshes=0;r.actor.root.traverse(o=>{if(o.isMesh||o.isPoints)meshes++;});r.station.traverse(o=>{if(o.isMesh||o.isPoints)meshes++;});assert(meshes<=14,world+' resident draw calls '+meshes);
+ let meshes=0;r.actor.root.traverse(o=>{if(o.isMesh||o.isPoints)meshes++;});r.station.traverse(o=>{if(o.isMesh||o.isPoints)meshes++;});assert(meshes<=16,world+' resident draw calls '+meshes);assert(r.actor.head.getObjectByName('look-shine')&&r.actor.head.getObjectByName('look-blush'),'resident face has no sparkle or blush');
  // Breath only in the cold outdoor winter.
  assert.equal(L.puffs.filter(p=>p.sprite.visible).length,0,world+' breathes on a clear day');
- console.log('PASS: '+world+' faces blink every 3-6 s, show emote smiles, surprise and sleepiness for visitors and friends, glance briefly only when calm, and keep residents within 14 draw calls.');
+ console.log('PASS: '+world+' faces blink every 3-6 s, show emote smiles, surprise and sleepiness for visitors and friends, glance briefly only when calm, and keep residents (now with eye sparkle and blush) within 16 draw calls.');
 }
 {
  const w=load('winter','?sky=night&weather=clear&routine=sleep'),a=w.a,L=a.avatarLife;for(let i=0;i<300;i++){w.advance(.02);L.tick(.02);}
