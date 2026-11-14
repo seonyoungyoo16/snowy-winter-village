@@ -24,7 +24,9 @@ function createVillageFolk(){
  const day=(ms=now())=>Math.floor((ms+9*H)/86400e3),now=()=>Date.now()+(typeof serverOffset==='number'?serverOffset:0);
  const folk=[];const used=new Set();
  for(let i=0;i<COUNT;i++){let n;do{n=NAMES[Math.floor(rnd()*NAMES.length)];}while(used.has(n));used.add(n);
-  const home=districts?districts[i%districts.length]:null,stops=[0,1,2].map(()=>freeSpot(home)),type=TYPE_IDS[Math.floor(rnd()*TYPE_IDS.length)];
+  const home=districts?districts[i%districts.length]:null;
+  const walkingArea=home?.id==='plaza'?{x:-19,z:-1.2,r:17}:home;
+  const stops=[0,1,2].map(()=>freeSpot(walkingArea)),type=TYPE_IDS[Math.floor(rnd()*TYPE_IDS.length)];
   const look={c:1+Math.floor(rnd()*6),s:1+Math.floor(rnd()*6),a:ACCESSORIES[Math.floor(rnd()*ACCESSORIES.length)]},kind=Math.floor(rnd()*3),scale=.84+rnd()*.2,offset=rnd()*3600;
   const legs=stops.map((a,k)=>{const b=stops[(k+1)%stops.length];return{a,b,walk:Math.hypot(b.x-a.x,b.z-a.z)*1.3/SPEED,rest:16+rnd()*26};});
   folk.push({id:WORLD+'-'+i,name:n,type,look,kind,scale,home:home&&home.id,stops,legs,offset,cycle:legs.reduce((s,l)=>s+l.walk+l.rest,0),night:rnd()<.35,actor:null,pos:{x:stops[0].x,z:stops[0].z},yaw:0,walking:false});}

@@ -11,10 +11,9 @@ function handleVillageKeyDown(event){
   action();
  }
 }
-function repaintWithVillageFont(paint){
- const font='24px "Gangwon Edu Saeeum"';
- if(document.fonts&&!document.fonts.check(font,'겨울 마을')){
-  document.fonts.load(font,'겨울 마을').then(paint,()=>{});
+function repaintWithVillageFont(paint,font='24px "Gangwon Edu Saeeum"',sample='겨울 마을'){
+ if(document.fonts&&!document.fonts.check(font,sample)){
+  document.fonts.load(font,sample).then(paint,()=>{});
  }
 }
 

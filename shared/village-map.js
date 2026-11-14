@@ -9,7 +9,10 @@ function createVillageMap(){
  // Named spots: winter districts and landmarks, or the walk buttons' places elsewhere.
  const LABELS=[];
  if(D)for(const d of D.DISTRICTS)LABELS.push({x:d.x,z:d.id==='plaza'?-4:d.z,name:d.name,big:true,id:d.id});
- if(WORLD==='winter')for(const[name,x,z]of[['모닥불',-5,-1.5],['썰매 언덕',13,-12],['얼음 연못',8.6,10.5],['소원 나무',-1,-10]])LABELS.push({x,z,name});
+ if(WORLD==='winter'){
+  const spots=[['모닥불',firePos],['썰매 언덕',sledStart],['얼음 연못',iceFishing.POND],['소원 나무',wishTree]];
+  for(const[name,{x,z}]of spots)LABELS.push({x,z,name});
+ }
  else{const NAMES={ocean:'바다 수조',reef:'산호 정원',jelly:'해파리 쉼터',books:'책의 숲',window:'달빛 창가',desk:'책갈피 책상'};if(typeof places==='object'&&places)for(const k in places)LABELS.push({x:places[k].x,z:places[k].z,name:NAMES[k]||k,big:true});}
  // Snow mist: one bit per 4 m cell, revealed around you as you walk.
  const N=Math.ceil(EXTENT*2/CELL)+1,seen=new Uint8Array(N*N);

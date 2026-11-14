@@ -1,0 +1,69 @@
+:root {
+  --village-font: "NanumSquareRound", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --village-text: 16px;
+  --village-text-small: 14px;
+  --village-text-action: 18px;
+  --village-text-panel: 24px;
+  --village-leading: 1.5;
+  --village-gap: 8px;
+  --village-stack: 12px;
+  --village-panel-padding: clamp(16px, 5vw, 24px);
+  --village-hit: 44px;
+  font-family: var(--village-font);
+}
+
+.topbar { gap: var(--village-gap); }
+.village-place { font-size: clamp(14px, 4.5vw, 21px); font-weight: 700; }
+#invite, #village-dock button, #controls .actions button {
+  gap: var(--village-gap);
+  min-height: var(--village-hit);
+  font-size: var(--village-text);
+  font-weight: 700;
+}
+#controls #main-text { font-size: var(--village-text-action); }
+#pond-action, .landmark, .toast, .progress-wrap {
+  font-size: var(--village-text-small);
+  line-height: var(--village-leading);
+}
+#pond-action { min-height: var(--village-hit); font-weight: 700; }
+
+:is(#entry-form, #village-menu, #invite-modal .welcome, #help-modal .welcome,
+    .creature-book-card, .resident-card, .bag-card) {
+  padding: var(--village-panel-padding);
+  font: var(--village-text)/var(--village-leading) var(--village-font);
+}
+:is(#entry-title, #invite-title, #village-menu-title, #help-title,
+    .creature-book-card h2, .resident-card h2, .bag-card h2) {
+  font-size: var(--village-text-panel);
+  font-weight: 700;
+  letter-spacing: -.02em;
+  line-height: 1.25;
+}
+#entry-title { font-size: clamp(24px, 6vw, 32px); }
+#entry-caption { margin: var(--village-gap) 0 var(--village-stack); }
+#invite-modal p { margin: var(--village-gap) 0; }
+#invite-modal .invite-label { margin: var(--village-stack) 0 var(--village-gap); }
+#invite-modal #invite-link { margin-bottom: var(--village-stack); }
+#village-menu header, #village-characters { gap: var(--village-gap); margin-bottom: var(--village-stack); }
+#village-menu .village-menu-page > button:not(.enter):not(.village-plain),
+#village-menu .world-switch { gap: var(--village-gap); padding: var(--village-gap); }
+#village-menu .village-plain, #entry-form .village-plain,
+#entry-caption, #invite-modal p, #invite-modal .invite-label, #invite-modal #invite-link,
+#village-menu .village-menu-page > button, #village-menu .world-switch,
+#village-characters button, #village-menu-profile label, #village-profile-name, #village-recovery {
+  font: var(--village-text)/var(--village-leading) var(--village-font);
+}
+#village-menu .other-world-status, #village-current-space, #village-sound-state, #help-modal small {
+  font-size: var(--village-text-small);
+  line-height: var(--village-leading);
+}
+#entry-form .enter, #invite-modal #copy-invite, #village-menu .enter, #help-modal .enter {
+  font-size: var(--village-text-action);
+  font-weight: 700;
+}
+
+@media (max-height: 530px) {
+  #entry-form { padding-block: var(--village-stack); }
+  #entry-title { font-size: var(--village-text-panel); }
+  #entry-caption { margin: var(--village-gap) 0; }
+}

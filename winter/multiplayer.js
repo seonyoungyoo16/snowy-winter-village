@@ -35,7 +35,13 @@ let desktopAlertsEnabled=false,desktopUnsupported=false;
 try{desktopAlertsEnabled=localStorage.getItem(DESKTOP_ALERT_KEY)==='on';}catch{}
 history.replaceState(null,'',location.pathname+location.search+'#room='+roomId);
 function inviteURL(){return location.href.split('#')[0]+'#room='+roomId;}
-function fireApproach(){const spots=[[-4.8,1.65],[-7.85,-1.4],[-2.1,-1.5],[-5,-4.2]];return spots.find(([x,z])=>Array.from(remotePlayers.values()).every(peer=>Math.hypot(peer.data.x-x,peer.data.z-z)>1))||spots[0];}
+function fireApproach(peers=Array.from(remotePlayers.values(),peer=>peer.data)){
+ return meetingSpots.find(spot=>peers.every(p=>Math.hypot(p.x-spot.x,p.z-spot.z)>=1.1))||meetingSpots[0];
+}
+function placeAtMeetingSpot(peers){
+ const spot=fireApproach(peers);
+ player.position.set(spot.x,groundHeight(spot.x,spot.z),spot.z);player.rotation.y=spot.yaw;
+}
 function roundState(v){return Math.round(v*1000)/1000;}
 function desktopPermission(){try{return window.isSecureContext&&typeof window.Notification==='function'?window.Notification.permission:'unsupported';}catch{return'unsupported';}}
 function refreshDesktopAlerts(){
@@ -76,7 +82,7 @@ function updateNetworkStatus(message){
  $('village-state').textContent=message||(networkJoined?(count>1?count+'명이 함께':'친구를 기다려요'):roomFull?'마을이 가득해요':'혼자 산책 중');
  $('connection-state').textContent=networkJoined?'연결됨':networkStarting?'연결 중':'연결 대기';
  $('status').dataset.connected=String(networkJoined);
- const members=Array.from(remotePlayers.values()).map(p=>p.data.n+' · '+activityNames[p.data.m]);
+ const members=Array.from(remotePlayers.values()).map(p=>p.data.n+' · '+(iceFishing.fromWire(p.data.m,p.data.b)?'얼음낚시 중':activityNames[p.data.m]));
  const roster=[nickname+' · 나',...members].join(' / ');
  if($('online-players').textContent!==roster)$('online-players').textContent=roster;
  $('new-room').hidden=!roomFull;
@@ -103,6 +109,13 @@ function reconcileRoom(){
  const active=Array.from(roomMembers.entries()).filter(([,d])=>validState(d)&&now-d.t<STALE_MS).sort((a,b)=>a[1].j-b[1].j||a[0].localeCompare(b[0]));
  const selfIndex=active.findIndex(([id])=>id===sessionKey);
  if(selfIndex>=MAX_VISITORS){roomFull=true;networkJoined=false;arrivalTracker.pause();if(selfRef)window.WinterFirebase.remove(selfRef).catch(()=>{});clearPeers();updateNetworkStatus('마을이 가득해요');toast('이 마을에는 네 명까지 함께할 수 있어요');return;}
+ const others=active.filter(([id])=>id!==sessionKey).map(([,data])=>data);
+ const earlier=selfIndex>0?active.slice(0,selfIndex).map(([,data])=>data):[];
+ if(atMeetingSpot()&&earlier.some(p=>Math.hypot(p.x-player.position.x,p.z-player.position.z)<1))placeAtMeetingSpot(others);
+ if(mode==='fish'&&earlier.some(p=>iceFishing.remoteSeat(p)===iceFishing.seat)){
+  if(iceFishing.makeRoom(player.position,others))aimAtFishingSeat();
+  else{stopFishing();toast('얼음 연못 자리가 잠깐 가득해요');}
+ }
  const visible=active.filter(([id])=>id!==sessionKey).slice(0,MAX_VISITORS-1),ids=new Set(visible.map(([id])=>id));
  for(const id of remotePlayers.keys())if(!ids.has(id))removePeer(id);
  for(const[id,data]of visible){let peer=remotePlayers.get(id);if(peer&&(peer.actor.kind!==data.k||peer.actor.lookSig!==peerLookSig(data.u))){removePeer(id);peer=null;}if(!peer)peer=makePeer(id,data);if(peer.data.m!==data.m)peer.celebration=0;if(peer.data.n!==data.n){peer.actor.root.remove(peer.label);peer.label.material.map.dispose();peer.label.material.dispose();peer.label=nameSprite(data.n);peer.label.scale.set(2.15,.403,1);peer.label.position.y=2.8;peer.actor.root.add(peer.label);}peer.data=data;peer.target.set(data.x,data.y,data.z);}
@@ -134,8 +147,8 @@ async function registerPresence(generation){
   const active=Object.entries(current.val()||{}).filter(([id,d])=>id!==sessionKey&&validState(d)&&Date.now()+serverOffset-d.t<STALE_MS);
   if(active.length>=MAX_VISITORS){roomFull=true;networkJoined=false;finishVillageConnection(generation);updateNetworkStatus('마을이 가득해요');toast('이 마을에는 네 명까지 함께할 수 있어요');return;}
   if(!joinedAt)joinedAt=Date.now()+serverOffset;
-  if(mode==='idle'&&!path.length&&Math.hypot(player.position.x,player.position.z-7)<2&&active.some(([,d])=>Math.hypot(d.x*WIRE_SCALE-player.position.x,d.z*WIRE_SCALE-player.position.z)<1)){
-   const spawn=[[-1.5,7],[1.5,7],[0,5.2],[0,8.8]].find(([x,z])=>active.every(([,d])=>Math.hypot(d.x-x,d.z-z)>1));if(spawn)player.position.set(spawn[0],0,spawn[1]);
+  if(!networkJoined&&active.some(([,d])=>Math.hypot(d.x*WIRE_SCALE-player.position.x,d.z*WIRE_SCALE-player.position.z)<1)&&atMeetingSpot()){
+   placeAtMeetingSpot(active.map(([,data])=>fromWire(data)));
   }
   disconnectJob=F.onDisconnect(selfRef);await disconnectJob.remove();if(generation!==networkGeneration)return;
   arrivalTracker.seed(active);networkJoined=true;watchVillageConnection(generation,'presence');
@@ -180,7 +193,7 @@ function updatePeers(dt){
   const root=peer.actor.root,distance=root.position.distanceTo(peer.target),blend=1-Math.exp(-dt*12);if(distance>6)root.position.copy(peer.target);else root.position.lerp(peer.target,blend);
   root.rotation.y+=Math.atan2(Math.sin(data.a-root.rotation.y),Math.cos(data.a-root.rotation.y))*blend;root.rotation.x=lerp(root.rotation.x,data.p,blend);villagePlay.peer(peer,dt);villageSnowball.peer(peer);villageTogether.peer(peer);
   peer.phase+=dt;peer.celebration+=dt;const moving=data.m==='walk'||data.m==='sled'||(data.m==='rolling'&&distance>.025);
-  const peerFishing=iceFishing.fromWire(data.m,data.b);animatePose(dt,moving,peer.actor,peerFishing?'fish':data.m==='walk'?'idle':data.m,peer.phase,peer.celebration);if(peerFishing)iceFishing.pose(peer.actor,peerFishing,peer.phase);iceFishing.show(peer.actor,peerFishing,peer.phase);
+  const peerFishing=iceFishing.fromWire(data.m,data.b);animatePose(dt,moving,peer.actor,peerFishing?'fish':data.m==='walk'?'idle':data.m,peer.phase,peer.celebration);if(peerFishing)iceFishing.pose(peer.actor,peerFishing,peer.phase);iceFishing.show(peer.actor,peerFishing,peer.phase,iceFishing.remoteSeat(data));
   peer.shadow.position.set(root.position.x,groundHeight(root.position.x,root.position.z)+.025,root.position.z);peer.shadow.visible=data.m!=='sled';
   peer.ball.visible=data.m==='rolling';if(peer.ball.visible){const r=clamp(data.b,.22,.65),x=root.position.x+Math.sin(root.rotation.y)*(r+.6),z=root.position.z+Math.cos(root.rotation.y)*(r+.6);peer.ball.position.set(x,groundHeight(x,z)+r,z);peer.ball.scale.setScalar(r);if(moving)peer.ball.rotation.x+=dt*2;}
   peer.sled.visible=data.m==='sled';if(peer.sled.visible){peer.sled.position.copy(root.position);peer.sled.position.y-=.405;peer.sled.rotation.set(root.rotation.x,root.rotation.y,Math.sin(peer.phase*7)*.025);}
