@@ -1,5 +1,25 @@
 const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
 const {loadWorld}=require('./test-harness.cjs');
+
+async function checkCanvasRepaint(){
+ const source=fs.readFileSync(__dirname+'/village-shell.js','utf8');
+ const helper=source.slice(source.indexOf('function repaintWithVillageFont'),source.indexOf('function createVillageShell'));
+ const font='700 54px "NanumSquareRound","Malgun Gothic",sans-serif',sample='눈송이 친구';
+ let loaded=false,paints=0,loads=0;
+ const context=vm.createContext({document:{fonts:{check(style,text){assert.equal(style,font);assert.equal(text,sample);return loaded;},
+  async load(style,text){assert.equal(style,font);assert.equal(text,sample);loads++;loaded=true;}}}});
+ vm.runInContext(helper,context);
+ context.repaintWithVillageFont(()=>paints++,font,sample);
+ await Promise.resolve();
+ assert.equal(paints,1);
+ context.repaintWithVillageFont(()=>paints++,font,sample);
+ assert.equal(loads,1,'a loaded canvas font does not need another redraw');
+ console.log('PASS: a cold canvas font repaints using the requested face, weight and nickname.');
+}
+
+checkCanvasRepaint().catch(error=>{console.error(error);process.exitCode=1;});
 
 for(const world of ['winter','aquarium','library']){
  const {a,node,storage}=loadWorld(world,{expose:['villageShell','villageEvent','villageNotes','creatureBook','villageMarket','inviteURL','roomId','keys','handleVillageKeyDown'],extra:',setConnection(connected,full=false){networkJoined=connected;roomFull=full;}',

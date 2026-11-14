@@ -2,8 +2,13 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),esbuild=require('es
 (async()=>{
   const sdk=await esbuild.build({entryPoints:[path.join(__dirname,'firebase-sdk.mjs')],bundle:true,write:false,minify:true,format:'iife',platform:'browser',target:['es2020'],legalComments:'inline'});
   const lib=fs.readFileSync(path.join(__dirname,'three.min.js'),'utf8');
-  const font=fs.readFileSync(path.join(__dirname,'../shared/gangwon-edu-saeeum.woff2')).toString('base64');
-  const license=fs.readFileSync(path.join(__dirname,'../shared/GANGWON-FONT-NOTICE.txt'),'utf8');
+  const fontDir=path.join(__dirname,'../shared/fonts');
+  const fontFamily='NanumSquareRound';
+  const fontFaces=[[400,'R'],[700,'B']].map(([weight,suffix])=>{
+    const font=fs.readFileSync(path.join(fontDir,fontFamily+suffix+'.woff2')).toString('base64');
+    return `@font-face{font-family:"${fontFamily}";src:url(data:font/woff2;base64,${font}) format("woff2");font-style:normal;font-weight:${weight};font-display:swap}`;
+  }).join('\n');
+  const license=fs.readFileSync(path.join(fontDir,fontFamily+'-OFL.txt'),'utf8');
   let source=fs.readFileSync(path.join(__dirname,'multiplayer.html'),'utf8');
   source=source.replace('<!-- THREE_LIBRARY -->',()=>'<script>\n'+lib.replace(/<\/script/gi,'<\\/script')+'\n</script>\n<script>\n'+sdk.outputFiles[0].text.replace(/<\/script/gi,'<\\/script')+'\n</script>');
   source=source.replace('/* ICE_FISHING_CODE */',()=>fs.readFileSync(path.join(__dirname,'ice-fishing.js'),'utf8'));
@@ -45,8 +50,10 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),esbuild=require('es
     source=source.replace(marker,()=>fs.readFileSync(path.join(__dirname,'../shared/village-shell.'+file),'utf8'));
   }
   source=source.replace('/* FIREBASE_CONFIG */',()=>JSON.stringify(JSON.parse(fs.readFileSync(path.join(__dirname,'firebase-config.json'),'utf8'))));
-  source=source.replace('<style>',()=>'<style>\n@font-face{font-family:"Gangwon Edu Saeeum";src:url(data:font/woff2;base64,'+font+') format("woff2");font-style:normal;font-weight:400;font-display:swap}\n').replace('font-family:"NanumSquareRound"','font-family:"Gangwon Edu Saeeum","NanumSquareRound"').replace('</head>',()=>'<!--\n'+license+'\n-->\n</head>');
-  source=source.replaceAll('Winter Jua','Gangwon Edu Saeeum');
+  source=source.replace('<style>',()=>'<style>\n'+fontFaces+'\n')
+    .replace('/* VILLAGE_TYPE_STYLE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-type.css'),'utf8'))
+    .replace('</head>',()=>'<!--\n'+license+'\n-->\n</head>');
+  source=source.replaceAll('Winter Jua',fontFamily).replaceAll('Gangwon Edu Saeeum',fontFamily);
   for(const [,js]of source.matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(js);
   fs.mkdirSync(path.join(__dirname,'dist'),{recursive:true});
   fs.writeFileSync(path.join(__dirname,'dist','index.html'),source);
