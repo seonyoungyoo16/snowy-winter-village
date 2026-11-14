@@ -22,10 +22,10 @@ for(const world of['winter','aquarium','library']){
  assert(titles.includes('전시 수조에 새 친구 1마리')&&text.includes('빙어(곰돌이 님)')&&!text.includes('옛날'),'exhibits outside the week leak in');
  assert(titles.includes('모두에게 온 편지 1통')&&!text.includes('비밀 편지')&&!text.includes('지난주 편지'),'private or old letters printed');
  assert(text.includes('「다들 이번 주말에 썰매 타러 와요 정말 재밌…」'),'letters are not shortened to 24 characters');
- assert(titles.includes('표지판에 새 글')&&titles.includes('게시판 메모 1장')&&titles.includes('이번 주 날씨'));assert(titles.includes('이번 주 함께 목표'),'current goal missing');
+ assert(titles.includes('표지판에 새 글')&&titles.includes('게시판 메모 1장')&&titles.includes('이번 주 날씨'));assert(!titles.includes('이번 주 함께 목표'),'retired weekly goal is still shown');
  assert(last.articles.some(a=>a.title==='모두에게 온 편지 1통'&&a.body.includes('지난주 편지')),'last week loses its letter');assert(!last.articles.some(a=>a.title==='이번 주 함께 목표'),'past issues should not print the current goal');
  N.open();assert(N.isOpen());N.close();
- console.log('PASS: '+world+' newspaper numbers Seoul Monday weeks, prints only that week\'s donations, letters to everyone, signs, memos, weather and the current goal, keeps two past issues and shortens friend words.');
+ console.log('PASS: '+world+' newspaper numbers Seoul Monday weeks, prints only that week\'s donations, letters to everyone, signs, memos, and weather, keeps two past issues and shortens friend words.');
 }
 {
  // Birthday and event weeks: Bami's birthday (21 Dec) and the winter lights fall in the week of 21 December.

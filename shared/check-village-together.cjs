@@ -26,19 +26,32 @@ for(const world of['winter','aquarium','library']){
  const pinger=fakePeer(a,'p1','토끼',2,2,{m:'walk',b:.05+5*.01,a:Math.PI/2});T.peer(pinger);T.peer(pinger);assert.equal(T.pings.length,1,'one signal should ping once');
  const fp=T.pings[0];assert(Math.abs(fp.x-7)<1e-9&&Math.abs(fp.z-2)<1e-9,'friend ping at '+fp.x+','+fp.z);assert(toast().includes('토끼'));run(T,.1);assert(fp.tag.textContent.includes('토끼 · 여기!'));
  pinger.data.b=0;T.peer(pinger);a.remotePlayers.clear();run(T,11);
- // The big object: grab it only nearby; alone it creeps forward at most 0.8 m/s, and never through a wall.
- const B=T.big,start={x:B.position.x,z:B.position.z};assert.equal(T.grab(),false,'grabbed from far away');P.position.set(start.x,0,start.z-1.6);P.rotation.y=0;assert(labels().some(l=>l.endsWith('잡기')));assert(T.grab());assert(T.carrying);
- assert.equal(a.wireBody().b,T.CARRY_B);run(T,1);const solo=Math.hypot(B.position.x-start.x,B.position.z-start.z);assert(solo>.2&&solo<=.81,'solo push moved '+solo);
- // With a friend carrying on the other side it sits between both of us and keeps up.
- const friend=fakePeer(a,'p2','곰',start.x,start.z+1.6,{m:'walk',b:T.CARRY_B,a:Math.PI});assert.equal(T.carriers().length,2);
- P.position.z+=1;friend.actor.root.position.z+=1;run(T,1);assert(Math.abs(B.position.z-(P.position.z+friend.actor.root.position.z)/2)<.05,'pair carry should sit between the two');
- assert(!a.blocked(B.position.x,B.position.z,T.BIG.r*.8));
- // Walking far away puts it down gently; the spot is remembered in this browser.
- a.remotePlayers.clear();P.position.x+=8;run(T,.1);assert(!T.carrying,'still carrying from 8 m away');run(T,2.5);const kept=JSON.parse(store.get('village-carry:'+world));assert(Math.abs(kept.x-B.position.x)<.01&&Math.abs(kept.z-B.position.z)<.01);
- assert(Math.abs(load(world,store).T.big.position.z-B.position.z)<.01,'the spot was not restored');assert.equal(load(world,new Map([['village-carry:'+world,'{"x":99,"z":0}']])).T.big.position.x,T.BIG.x,'an outside spot was restored');
+ if(world==='winter'){
+  assert.equal(T.big,null,'idle snowball was created');
+  assert.equal(a.scene.getObjectByName('carry-object'),undefined);
+  P.position.set(6.4,0,5.6);
+  assert(!labels().some(l=>l.endsWith('잡기')));
+  assert.equal(T.grab(),false);
+  fakePeer(a,'old-client','친구',6.4,5.6,{m:'walk',b:T.CARRY_B});
+  run(T,1);
+  assert.equal(T.carriers().length,0);
+  assert.equal(a.wireBody().b,0);
+  a.remotePlayers.clear();
+ }else{
+  // The big object: grab it only nearby; alone it creeps forward at most 0.8 m/s, and never through a wall.
+  const B=T.big,start={x:B.position.x,z:B.position.z};assert.equal(T.grab(),false,'grabbed from far away');P.position.set(start.x,0,start.z-1.6);P.rotation.y=0;assert(labels().some(l=>l.endsWith('잡기')));assert(T.grab());assert(T.carrying);
+  assert.equal(a.wireBody().b,T.CARRY_B);run(T,1);const solo=Math.hypot(B.position.x-start.x,B.position.z-start.z);assert(solo>.2&&solo<=.81,'solo push moved '+solo);
+  // With a friend carrying on the other side it sits between both of us and keeps up.
+  const friend=fakePeer(a,'p2','곰',start.x,start.z+1.6,{m:'walk',b:T.CARRY_B,a:Math.PI});assert.equal(T.carriers().length,2);
+  P.position.z+=1;friend.actor.root.position.z+=1;run(T,1);assert(Math.abs(B.position.z-(P.position.z+friend.actor.root.position.z)/2)<.05,'pair carry should sit between the two');
+  assert(!a.blocked(B.position.x,B.position.z,T.BIG.r*.8));
+  // Walking far away puts it down gently; the spot is remembered in this browser.
+  a.remotePlayers.clear();P.position.x+=8;run(T,.1);assert(!T.carrying,'still carrying from 8 m away');run(T,2.5);const kept=JSON.parse(store.get('village-carry:'+world));assert(Math.abs(kept.x-B.position.x)<.01&&Math.abs(kept.z-B.position.z)<.01);
+  assert(Math.abs(load(world,store).T.big.position.z-B.position.z)<.01,'the spot was not restored');assert.equal(load(world,new Map([['village-carry:'+world,'{"x":99,"z":0}']])).T.big.position.x,T.BIG.x,'an outside spot was restored');
+ }
  // Cocoa: only with a friend within 3 m, 5 s apart; the receiver warms up with a heart only if they are the nearest friend.
  P.position.set(0,0,0);assert.equal(T.cocoa(),false);const pal=fakePeer(a,'p3','여우',0,2.5);assert(!labels().includes('코코아 건네기'));assert.equal(T.cocoa(),pal);assert.equal(a.wireBody().b,T.COCOA_B);assert.equal(T.cocoa(),false,'cocoa closer than 5 s apart');run(T,1.6);assert.equal(a.wireBody().b,0);
  a.remotePlayers.clear();P.position.set(0,0,2);const giver=fakePeer(a,'p4','다람',0,0,{m:'idle',b:T.COCOA_B});fakePeer(a,'p5','먼 친구',0,6);T.peer(giver);assert.equal(a.villagePlay.activeEmote(),0,'no heart for the received cocoa');assert(toast().includes('다람'));
  a.remotePlayers.clear();run(T,3);P.position.set(0,0,2);const giver2=fakePeer(a,'p6','곰',0,0,{m:'idle',b:T.COCOA_B});fakePeer(a,'p7','더 가까운 친구',0,.5);T.peer(giver2);assert(!toast().includes('곰 님이 건넨'),'cocoa went to someone who was not the nearest');
- console.log('PASS: '+world+' together: pings reach friends through b .05–.25 and fade after ten seconds, the '+T.BIG.name+' creeps alone and sits between two carriers without passing walls, and cocoa warms only the nearest friend.');
+ console.log('PASS: '+world+' together: ping and cocoa remain; '+(T.big?T.BIG.name+' retains its carry behavior.':'the idle snowball is absent.'));
 }

@@ -27,6 +27,7 @@ const remotePlayers = new Map(), roomMembers = new Map();
 const activityNames={idle:'바다 구경 중',walk:'산책 중',rolling:'먹이 주는 중',warm:'해파리 멍',sled:'사진 찍는 중',celebrate:'손 흔드는 중'};
 function token(){const bytes=new Uint8Array(12);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}
 function aquariumRoom(){return 'aq_'+token();}
+const villageInvitation=!incomingWorldTravel&&/^(?:aq_|lb_)?[a-f0-9]{24}$/.test(new URLSearchParams(location.hash.slice(1)).get("room")||"");
 let roomId=readRoom(),sessionKey=token(),networkDB=null,networkAuth=null,selfRef=null,disconnectJob=null;
 let networkStarting=false,networkConnected=false,networkJoined=false,roomFull=false,networkGeneration=0,serverOffset=0;
 let lastNetworkSend=0,lastNetworkBody='',lastNetworkMovement=false,networkSequence=0,joinedAt=0,networkStops=[];
@@ -80,6 +81,7 @@ function updateNetworkStatus(message){
  if($('online-players').textContent!==roster)$('online-players').textContent=roster;
  $('friend-roster').textContent=roster;
  $('new-room').hidden=!roomFull;
+ if(typeof villageShell!=='undefined')villageShell.connectionChanged();
  updateWorldTravelUI();
 }
 function validState(data){return data&&data.v===1&&typeof data.u==='string'&&typeof data.n==='string'&&data.n.length>0&&data.n.length<=12&&Number.isInteger(data.k)&&data.k>=0&&data.k<=2&&['x','y','z','a','p','b','t','j','s'].every(k=>Number.isFinite(data[k]))&&Math.abs(data.x)<=26&&Math.abs(data.z)<=26&&data.y>=-1&&data.y<=10&&Math.abs(data.a)<=3.142&&Math.abs(data.p)<=1.6&&data.b>=0&&data.b<=.7&&Object.hasOwn(activityNames,data.m);}
@@ -185,7 +187,7 @@ function networkTick(dt,moving){lastNetworkMovement=moving;updatePeers(dt);publi
 $('invite').addEventListener('click',()=>{if(!entered){toast('수족관에 들어온 뒤 친구를 초대해요');return;}$('invite-link').value=inviteURL();$('invite-modal').hidden=false;$('copy-invite').focus();if(!networkJoined&&!roomFull)startNetwork();});
 function closeInvite(){$('invite-modal').hidden=true;$('invite').focus();}
 $('close-invite').addEventListener('click',closeInvite);$('invite-modal').addEventListener('click',e=>{if(e.target===$('invite-modal'))closeInvite();});
-$('copy-invite').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(inviteURL());toast('초대 주소를 복사했어요. 친구에게 보내주세요');$('copy-invite').textContent='복사했어요 ✓';setTimeout(()=>$('copy-invite').textContent='초대 주소 복사',2000);}catch{$('invite-link').focus();$('invite-link').select();toast('주소를 길게 눌러 복사해 주세요');}});
+$('copy-invite').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(inviteURL());toast('초대 주소를 복사했어요. 친구에게 보내주세요');$('copy-invite').textContent='복사했어요 ✓';setTimeout(()=>$('copy-invite').textContent='초대 링크 복사',2000);}catch{$('invite-link').focus();$('invite-link').select();toast('주소를 길게 눌러 복사해 주세요');}});
 $('new-room').addEventListener('click',newRoom);
 $('desktop-alerts').addEventListener('click',toggleDesktopAlerts);
 addEventListener('focus',refreshDesktopAlerts);
@@ -206,7 +208,6 @@ setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 /* SEASONAL_EVENTS_CODE */
 /* VILLAGE_MARKET_CODE */
 /* VILLAGE_JOURNAL_CODE */
-/* VILLAGE_GOALS_CODE */
 /* AVATAR_LIFE_CODE */
 /* VILLAGE_LOOKS_CODE */
 /* RESIDENT_GIFTS_CODE */
@@ -227,4 +228,5 @@ setInterval(()=>{publishState();if(networkJoined)reconcileRoom();},5000);
 /* MAP_CODE */
 /* BAG_CODE */
 /* ARRIVAL_CLIENT_CODE */
+/* VILLAGE_SHELL_CODE */
 setupWorldTravel();

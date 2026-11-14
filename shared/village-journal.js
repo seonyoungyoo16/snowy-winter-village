@@ -21,7 +21,7 @@ function createVillageJournal(){
   ['did-window','도서관 창가에서 하늘을 봤어요','도서관 창가 자리에서 쉬기'],
   ['did-cat','귤이와 놀았어요','도서관 고양이 귤이와 놀기'],
   ['first-request','주민의 부탁을 처음 들어줬어요','게시판의 오늘 부탁 하나 들어주기'],
-  ['first-pickup','반짝이는 걸 주워 가방에 넣었어요','마을 곳곳의 반짝이는 물건 줍기'],
+  ['first-pickup','반짝이는 걸 주워 가방에 넣었어요',null],
   ['first-run','눈길을 신나게 달려 봤어요','Shift를 누르거나 달리기 버튼으로 달리기'],
   ['first-folk','마을 이웃과 처음 이야기를 나눴어요','돌아다니는 이웃에게 말 걸기'],
   ['first-beacon','마을 끝의 등불 표지를 밝혔어요','겨울 마을의 새 지역에서 등불 표지 만지기'],
@@ -49,14 +49,14 @@ function createVillageJournal(){
  ];
  function load(){const v=read(KEY,{});return v&&typeof v==='object'?v:{};}
  function save(v){try{localStorage.setItem(KEY,JSON.stringify(v));}catch{}}
- // Writes a page once; returns true for a new page so the world can celebrate it quietly.
- function note(id){const entry=ENTRIES.find(e=>e[0]===id);if(!entry)return false;const v=load();if(v[id])return false;v[id]=Date.now();save(v);toast('마을 일기에 적었어요 · '+entry[1]);refresh();return true;}
+ // Writes a page once and leaves it in the journal.
+ function note(id){const entry=ENTRIES.find(e=>e[0]===id);if(!entry)return false;const v=load();if(v[id])return false;v[id]=Date.now();save(v);refresh();return true;}
  function sync(){for(const[id,,,derive]of ENTRIES)if(derive&&derive())note(id);return load();}
  function done(){return sync();}
  const sheet=document.createElement('section');sheet.className='creature-book village-notes village-journal';sheet.hidden=true;const card=document.createElement('div');card.className='creature-book-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');const closeButton=document.createElement('button');closeButton.className='creature-book-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','일기 닫기');const body=document.createElement('div');card.append(closeButton,body);sheet.append(card);document.body.append(sheet);
  function close(){sheet.hidden=true;}closeButton.addEventListener('click',close);sheet.addEventListener('click',e=>{if(e.target===sheet)close();});addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)close();});
  const when=t=>{const d=new Date(t+9*3600e3);return(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일';};
- function refresh(){if(sheet.hidden)return;const v=load(),list=document.createElement('ul');for(const[id,title,hint]of ENTRIES){const li=document.createElement('li');li.className=v[id]?'seen':'unseen';const small=document.createElement('small');small.textContent=v[id]?when(v[id]):'아직이에요';li.append(small,document.createTextNode(v[id]?title:hint));list.append(li);}const h=document.createElement('h2');h.textContent='마을 일기';const p=document.createElement('p');p.className='creature-count';p.textContent=Object.keys(v).length+'가지를 해 봤어요 · 이 브라우저에만 적혀요';body.replaceChildren(h,p,list);}
+ function refresh(){if(sheet.hidden)return;const v=load(),list=document.createElement('ul');for(const[id,title,hint]of ENTRIES){if(!v[id]&&!hint)continue;const li=document.createElement('li');li.className=v[id]?'seen':'unseen';const small=document.createElement('small');small.textContent=v[id]?when(v[id]):'아직이에요';li.append(small,document.createTextNode(v[id]?title:hint));list.append(li);}const h=document.createElement('h2');h.textContent='마을 일기';const p=document.createElement('p');p.className='creature-count';p.textContent=Object.keys(v).length+'가지를 해 봤어요 · 이 브라우저에만 적혀요';body.replaceChildren(h,p,list);}
  function open(){if(!entered)return;sync();sheet.hidden=false;refresh();closeButton.focus();}
  if(typeof residentGuide==='object'&&residentGuide.addAction)residentGuide.addAction('마을 일기',()=>{residentGuide.close();open();});
  note('visit-'+CURRENT_WORLD);

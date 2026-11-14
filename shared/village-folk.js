@@ -59,16 +59,16 @@ function createVillageFolk(){
  const levelName=f=>f>=3?'친한 사이':f>=1?'아는 사이':'처음 만남';
  function recommend(){if(districts){const here=villageDistricts.current&&villageDistricts.current.id,pick=districts.filter(d=>d.id!==here)[day()%(districts.length-1)];return pick.name+'에 가 봐요. 등불도 밝혀 보고요!';}const list=PLACES[WORLD]||[];return list.length?list[day()%list.length]+' 쪽이 요즘 제일 좋아요.':'여기저기 다 좋아요.';}
  function weatherLine(){const s=typeof skyWeather==='object'&&skyWeather?skyWeather.state:null;if(!s)return'';if(s.kind==='heavy'||s.kind==='precip')return WORLD==='winter'?' 눈이 펑펑 와서 발자국이 금방 지워져요.':' 밖에 비가 오나 봐요.';if(s.kind==='rainbow')return' 무지개 봤어요?';return s.phase==='night'?' 밤이라 조금 졸려요.':'';}
- function choices(f){const t=TYPES[f.type];if(f.merchant)return[['구경할게요',()=>{close();if(typeof villageMarket==='object'&&villageMarket)villageMarket.open();return null;}],['어디서 왔어요?',()=>'눈 덮인 산 너머, 등불이 많은 마을에서요. 사흘마다 들르니까 또 봐요!'],['오늘의 이야기',()=>'오는 길에 얼음 호수에서 스케이트 타는 여우를 봤어요. 아주 능숙하던걸요.']];
+ function choices(f){const t=TYPES[f.type];if(f.merchant)return[['어디서 왔어요?',()=>'눈 덮인 산 너머, 등불이 많은 마을에서요. 사흘마다 들르니까 또 봐요!'],['오늘의 이야기',()=>'오는 길에 얼음 호수에서 스케이트 타는 여우를 봤어요. 아주 능숙하던걸요.']];
   return[['반가워요!',()=>t.glad],['요즘 어때요?',()=>t.how+weatherLine()],['추천할 곳 있어요?',recommend]];}
  function render(f){const b=bondOf(f.id),t=TYPES[f.type];title.textContent=f.name;tag.textContent=(f.merchant?'떠돌이 상인':t.label)+' · '+levelName(b.f);
-  line.textContent=f.merchant?'먼 마을에서 왔어요. 오늘만 가게를 열어요!':b.f>=3?nickname()+' 님 오셨네요! 기다렸어요.':t.hi[day()%t.hi.length];
+  line.textContent=f.merchant?'먼 마을에서 잠깐 놀러 왔어요.':b.f>=3?nickname()+' 님 오셨네요! 기다렸어요.':t.hi[day()%t.hi.length];
   replies.replaceChildren(...choices(f).map(([label,run],i)=>{const btn=document.createElement('button');btn.textContent=label;btn.addEventListener('click',()=>reply(i));return btn;}));}
  const nickname=()=>{try{return typeof myNickname==='function'?myNickname():(document.getElementById('nickname-label')||{}).textContent||'손님';}catch{return'손님';}};
  function open(id){const f=[...folk,merchant].find(x=>x&&x.id===id);if(!f||!entered)return false;talking=f;render(f);dialog.hidden=false;closeButton.focus();return true;}
- function reply(i){const f=talking;if(!f)return null;const said=choices(f)[i][1]();if(said===null)return'shop';const b=bondOf(f.id),d=day();let gift=false;
-  if(b.d!==d){b.f+=1;b.d=d;if(b.f>=3&&!b.g&&typeof villageMarket==='object'&&villageMarket){b.g=true;gift=villageMarket.earn(1,f.name+'의 선물')>0;}bond[f.id]=b;save();}
-  line.textContent=said+(gift?' 이건 작은 선물이에요!':'');tag.textContent=(f.merchant?'떠돌이 상인':TYPES[f.type].label)+' · '+levelName(b.f);const done=document.createElement('button');done.textContent='고마워요';done.addEventListener('click',close);replies.replaceChildren(done);
+ function reply(i){const f=talking;if(!f)return null;const said=choices(f)[i][1]();const b=bondOf(f.id),d=day();
+  if(b.d!==d){b.f+=1;b.d=d;bond[f.id]=b;save();}
+  line.textContent=said;tag.textContent=(f.merchant?'떠돌이 상인':TYPES[f.type].label)+' · '+levelName(b.f);const done=document.createElement('button');done.textContent='고마워요';done.addEventListener('click',close);replies.replaceChildren(done);
   if(typeof villageJournal==='object'&&villageJournal&&villageJournal.note)villageJournal.note('first-folk');return said;}
  bubble.addEventListener('click',()=>{if(near)open(near.id);});
  const project=new THREE.Vector3();

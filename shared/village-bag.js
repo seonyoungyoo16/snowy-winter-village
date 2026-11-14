@@ -1,9 +1,6 @@
-// The bag: one place for everything you carry. Little things picked up around each space (new spots every Seoul day)
-// stack in slots; things bought in the village shop, expedition cards and creature pictures show alongside them.
-// Open it with the bag button under the minimap or the I key. Tabs sort by kind; a picked-up thing can be eaten,
-// or three of a kind traded for a shell. The bag lives in this browser and is shared by all three spaces.
+// Keeps previously collected items and mementos in this browser across all three spaces.
 function createVillageBag(){
- const WORLD=CURRENT_WORLD,KEY='village-bag-v1',SLOTS=30,STACK=99,TRADE=3,REACH=1.4,H=3600e3;
+ const KEY='village-bag-v1',SLOTS=30,STACK=99,TRADE=3;
  const ITEMS={
   pinecone:{name:'솔방울',tab:'found',color:0x9b7653,shape:'cone',note:'눈숲에서 굴러온 단단한 솔방울.'},
   snowflake:{name:'눈꽃 결정',tab:'found',color:0xe6f4ff,shape:'star',note:'녹지 않는 신기한 눈꽃. 빛에 비추면 반짝여요.'},
@@ -15,9 +12,7 @@ function createVillageBag(){
   bookmark:{name:'헌 책갈피',tab:'found',color:0xd98c7a,shape:'card',note:'누군가 읽다 만 자리를 표시하던 책갈피.'},
   berry:{name:'겨울 열매',tab:'food',color:0xd9555f,shape:'berry',note:'새콤달콤한 빨간 열매. 먹으면 기운이 나요.',eat:'새콤달콤해서 기운이 났어요'},
   biscuit:{name:'별 비스킷',tab:'food',color:0xe6c27a,shape:'star',note:'도서관 간식 바구니에서 나온 별 모양 비스킷.',eat:'바삭바삭, 별 맛이 났어요'}};
- const POOLS={winter:['pinecone','snowflake','feather','glimmer','berry'],aquarium:['seashell','seaglass','glimmer','berry'],library:['leaf','bookmark','feather','biscuit']};
  const TABS=[['all','전체'],['food','먹거리'],['found','주운 것'],['looks','꾸미기'],['keep','소중한 것']];
- const day=(ms=Date.now())=>Math.floor((ms+9*H)/86400e3);
  function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');const out={};if(v&&v.items&&typeof v.items==='object')for(const[k,n]of Object.entries(v.items))if(ITEMS[k]&&Number.isInteger(n)&&n>0)out[k]=Math.min(STACK,n);return{items:out};}catch{return{items:{}};}}
  let bag=load();const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(bag));}catch{}};
  const count=id=>bag.items[id]||0,slotsUsed=()=>Object.keys(bag.items).length;
@@ -25,27 +20,15 @@ function createVillageBag(){
  function take(id,n=1){if(count(id)<n)return false;bag.items[id]-=n;if(!bag.items[id])delete bag.items[id];save();refresh();return true;}
  function eat(id){const it=ITEMS[id];if(!it||!it.eat||!take(id))return false;toast(it.eat);if(typeof villagePlay==='object'&&villagePlay)villagePlay.say(0);return true;}
  function trade(id){const it=ITEMS[id];if(!it||it.tab!=='found'||count(id)<TRADE)return 0;const got=typeof villageMarket==='object'&&villageMarket?villageMarket.earn(1,it.name+' 바꾸기'):0;if(!got){toast('오늘은 조개를 더 받을 수 없어요');return 0;}take(id,TRADE);toast(it.name+' '+TRADE+'개를 조개껍데기로 바꿨어요');return got;}
- // Pick-up spots: a fresh set each Seoul day, the same in every browser; what you took today stays taken here.
- let spots=[],spotDay=-1,picked=new Set();const pickKey=d=>'village-bag-picked:'+WORLD+':'+d;
- const group=new THREE.Group();group.name='bag-pickups';scene.add(group);
- const geo={cone:new THREE.ConeGeometry(.13,.26,7),star:new THREE.OctahedronGeometry(.15,0),leaf:new THREE.SphereGeometry(.13,8,5),gem:new THREE.OctahedronGeometry(.13,0),shell:new THREE.SphereGeometry(.13,8,6),berry:new THREE.SphereGeometry(.08,8,6),card:new THREE.BoxGeometry(.24,.04,.12)},glowGeo=new THREE.CircleGeometry(.36,16);
- function seedFor(d){let s=(d*2654435761^[...WORLD].reduce((h,c)=>h*31+c.charCodeAt(0),7))>>>0;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};}
- function placeSpots(d){group.clear();spots=[];spotDay=d;try{picked=new Set(JSON.parse(localStorage.getItem(pickKey(d))||'[]'));}catch{picked=new Set();}
-  const r=seedFor(d),pool=POOLS[WORLD]||POOLS.winter,n=WORLD==='winter'?22:12,D=typeof villageDistricts==='object'&&villageDistricts?villageDistricts.DISTRICTS:null;
-  for(let i=0,tries=0;i<n&&tries<600;tries++){let x,z;if(D){const home=D[i%D.length],a=r()*Math.PI*2,rr=r()*home.r*.85;x=home.x+Math.cos(a)*rr;z=home.z+Math.sin(a)*rr;}else{const lim=WORLD==='aquarium'?17:15;x=(r()*2-1)*lim;z=(r()*2-1)*(WORLD==='library'?13:lim);if(WORLD==='aquarium'&&Math.hypot(x,z)>18)continue;}
-   if(blocked(x,z,.5))continue;const id=pool[Math.floor(r()*pool.length)],key=i+':'+id;i++;if(picked.has(key))continue;
-   const it=ITEMS[id],y=typeof groundHeight==='function'?groundHeight(x,z):0,g=new THREE.Group();g.position.set(x,y,z);const m=new THREE.Mesh(geo[it.shape],new THREE.MeshLambertMaterial({color:it.color,emissive:it.color,emissiveIntensity:.25}));m.position.y=.32;g.add(m);
-   const glow=new THREE.Mesh(glowGeo,new THREE.MeshBasicMaterial({color:0xfff2c6,transparent:true,opacity:.35,depthWrite:false}));glow.rotation.x=-Math.PI/2;glow.position.y=.03;g.add(glow);group.add(g);spots.push({key,id,x,z,g,m});}}
- function pickUp(s){const got=add(s.id);if(!got)return false;picked.add(s.key);try{localStorage.setItem(pickKey(spotDay),JSON.stringify([...picked]));}catch{}group.remove(s.g);spots=spots.filter(o=>o!==s);toast(ITEMS[s.id].name+'을(를) 주웠어요 · 가방(I)');if(typeof villageJournal==='object'&&villageJournal&&villageJournal.note)villageJournal.note('first-pickup');return true;}
  // Window.
  const style=document.createElement('style');style.textContent='.bag-toggle{position:fixed;right:16px;top:calc(max(22px,env(safe-area-inset-top)) + 194px);z-index:3;width:46px;height:46px;border:0;border-radius:50%;background:rgba(255,247,232,.92);color:#5f5050;display:grid;place-items:center;box-shadow:0 3px 12px rgba(40,40,70,.18);cursor:pointer}.bag-toggle[hidden],.village-bag[hidden]{display:none}.bag-toggle svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.bag-toggle i{position:absolute;right:2px;top:2px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#d98c7a;color:#fff;font:700 10px/16px "Winter Jua",sans-serif;font-style:normal}.bag-toggle i:empty{display:none}.sky-weather-badge{top:calc(max(22px,env(safe-area-inset-top)) + 248px)!important}'+
   '.village-bag{position:fixed;inset:0;z-index:13;display:grid;place-items:center;padding:16px;background:rgba(41,33,50,.38)}.bag-card{position:relative;width:min(420px,100%);max-height:min(640px,calc(100vh - 32px));overflow:auto;padding:20px 18px 16px;border-radius:24px;background:#fff3e3;color:#69534f;box-shadow:0 10px 34px rgba(42,34,51,.3)}.bag-card h2{margin:0 0 4px;font-size:19px;text-align:center}.bag-card .bag-sub{margin:0 0 12px;text-align:center;font-size:11px;color:#a18c78}.bag-tabs{display:flex;gap:5px;overflow-x:auto;margin-bottom:10px}.bag-card button{font:700 12px "Winter Jua",sans-serif;border:0;cursor:pointer;color:#6a5350}.bag-tabs button{flex:none;min-height:36px;padding:6px 11px;border-radius:999px;background:#efe1cb}.bag-tabs button[aria-pressed="true"]{background:#8e9d83;color:#fff8e8}.bag-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.bag-grid button{position:relative;aspect-ratio:1;border-radius:14px;background:#efe1cb;display:grid;place-items:center;padding:4px}.bag-grid button[aria-pressed="true"]{outline:3px solid #8e9d83}.bag-grid button span{width:24px;height:24px;border-radius:50%}.bag-grid button b{position:absolute;right:5px;bottom:3px;font-size:10px}.bag-grid button small{position:absolute;left:3px;right:3px;top:4px;font-size:9px;opacity:.75;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bag-grid .empty{background:#f6ead8;cursor:default}.bag-detail{margin-top:12px;padding:12px;border-radius:16px;background:#f8ecda;font-size:12px;line-height:1.7;min-height:64px}.bag-detail strong{display:block;font-size:14px}.bag-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.bag-actions button{min-height:40px;padding:6px 12px;border-radius:12px;background:#8e9d83;color:#fff8e8}.bag-close{position:absolute;right:8px;top:7px;width:40px;min-height:40px;background:transparent!important;color:#a18b7d!important;font-size:24px!important}.bag-tabs .bag-sort{margin-left:auto;background:transparent;border:1px solid #e3d2bb;font-size:11px}'+
   '@media(max-width:600px){.bag-toggle{top:calc(max(19px,env(safe-area-inset-top)) + 164px)}.sky-weather-badge{top:calc(max(19px,env(safe-area-inset-top)) + 216px)!important}.bag-grid{grid-template-columns:repeat(4,1fr)}}';(document.head||document.body).append(style);
- const toggle=document.createElement('button');toggle.className='bag-toggle';toggle.setAttribute('aria-label','가방 열기 (I)');toggle.title='가방 (I)';toggle.hidden=true;toggle.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l1 12H5Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2M9 12h6"/></svg>';const badge=document.createElement('i');toggle.append(badge);document.body.append(toggle);
+ const toggle=document.createElement('button');toggle.className='bag-toggle';toggle.setAttribute('aria-label','가방 열기 (I)');toggle.title='가방 (I)';toggle.hidden=true;toggle.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l1 12H5Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2M9 12h6"/></svg>';document.body.append(toggle);
  const sheet=document.createElement('section');sheet.className='village-bag';sheet.hidden=true;const card=document.createElement('div');card.className='bag-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label','가방');
  const closeButton=document.createElement('button');closeButton.className='bag-close';closeButton.textContent='×';closeButton.setAttribute('aria-label','가방 닫기 (I)');const title=document.createElement('h2'),sub=document.createElement('p'),tabs=document.createElement('div'),grid=document.createElement('div'),detail=document.createElement('div'),sortButton=document.createElement('button');
  title.textContent='가방';sub.className='bag-sub';tabs.className='bag-tabs';tabs.setAttribute('role','tablist');grid.className='bag-grid';detail.className='bag-detail';sortButton.className='bag-sort';card.append(closeButton,title,sub,tabs,grid,detail);sheet.append(card);document.body.append(sheet);
- let tab='all',sort=0,chosen=null,fresh=0;const SORTS=['종류순','많은 순','이름순'];
+ let tab='all',sort=0,chosen=null;const SORTS=['종류순','많은 순','이름순'];
  // Everything shown in the bag: picked-up stacks plus things kept elsewhere in the village.
  function entries(){const out=Object.entries(bag.items).map(([id,n])=>({id,n,name:ITEMS[id].name,tab:ITEMS[id].tab,color:ITEMS[id].color,note:ITEMS[id].note,item:ITEMS[id]}));
   if(typeof villageMarket==='object'&&villageMarket)for(const it of villageMarket.ITEMS)if(villageMarket.owns(it.id))out.push({id:'shop:'+it.id,n:1,name:it.name,tab:'looks',color:it.color||0xe6dccb,note:it.kind==='paper'?'편지를 쓸 때 고를 수 있는 편지지.':'마을 가게에서 산 '+it.name+'. 쓰면 바로 바뀌어요.',shop:it});
@@ -59,19 +42,18 @@ function createVillageBag(){
   tabs.replaceChildren(...TABS.map(([id,label])=>{const b=document.createElement('button');b.setAttribute('role','tab');b.textContent=label;b.setAttribute('aria-pressed',String(id===tab));b.addEventListener('click',()=>{tab=id;chosen=null;render();});return b;}),sortButton);
   const list=shown(),cells=list.map(e=>{const b=document.createElement('button'),dot=document.createElement('span'),n=document.createElement('b'),nm=document.createElement('small');dot.style.background=hex(e.color);n.textContent=e.n>1?String(e.n):'';nm.textContent=e.name;b.append(nm,dot,n);b.setAttribute('aria-label',e.name+(e.n>1?' '+e.n+'개':''));b.setAttribute('aria-pressed',String(chosen===e.id));b.addEventListener('click',()=>{chosen=e.id;render();});return b;});
   const fill=Math.max(0,(tab==='all'?Math.max(10,Math.ceil((list.length+1)/5)*5):Math.ceil(Math.max(list.length,5)/5)*5)-list.length);for(let i=0;i<fill;i++){const e=document.createElement('button');e.className='empty';e.disabled=true;e.setAttribute('aria-hidden','true');cells.push(e);}grid.replaceChildren(...cells);
-  const e=list.find(x=>x.id===chosen);if(!e){detail.textContent=list.length?'물건을 누르면 설명이 나와요.':'아직 비어 있어요. 마을 곳곳에서 반짝이는 걸 주워 보세요.';return;}
+  const e=list.find(x=>x.id===chosen);if(!e){detail.textContent=list.length?'물건을 누르면 설명이 나와요.':'아직 가방이 비어 있어요.';return;}
   const h=document.createElement('strong'),p=document.createElement('span'),acts=document.createElement('div');h.textContent=e.name+(e.n>1?' × '+e.n:'');p.textContent=e.note;acts.className='bag-actions';
   const act=(label,fn)=>{const b=document.createElement('button');b.textContent=label;b.addEventListener('click',()=>{fn();render();});acts.append(b);};
-  if(e.item&&e.item.eat)act('먹기',()=>eat(e.id));if(e.item&&e.item.tab==='found')act(TRADE+'개를 조개 1개로',()=>{if(count(e.id)<TRADE)toast(TRADE+'개가 모이면 바꿀 수 있어요');else trade(e.id);});
+  if(e.item&&e.item.eat)act('먹기',()=>eat(e.id));
   if(e.shop&&e.shop.kind!=='paper')act(villageMarket.choice(e.shop.kind)===e.shop.color?'쓰는 중 · 빼기':'쓰기',()=>villageMarket.use(e.shop.id));if(e.book&&creatureBook.open)act('도감 열기',()=>{close();creatureBook.open();});
   detail.replaceChildren(h,p,acts);}
- function refresh(){if(!sheet.hidden)render();badge.textContent=fresh?String(fresh):'';}
- function open(){if(!entered)return false;fresh=0;refresh();render();sheet.hidden=false;closeButton.focus();return true;}
+ function refresh(){if(!sheet.hidden)render();}
+ function open(){if(!entered)return false;render();sheet.hidden=false;closeButton.focus();return true;}
  function close(){sheet.hidden=true;chosen=null;}
  closeButton.addEventListener('click',close);sheet.addEventListener('click',e=>{if(e.target===sheet)close();});sortButton.addEventListener('click',()=>{sort=(sort+1)%SORTS.length;render();});toggle.addEventListener('click',()=>sheet.hidden?open():close());
  addEventListener('keydown',e=>{if(e.repeat||e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;if(e.key==='Escape'&&!sheet.hidden){close();return;}if(e.key==='i'||e.key==='I'||e.key==='ㅑ'){if(!sheet.hidden){e.preventDefault();close();}else if(!(typeof helpOpen==='function'&&helpOpen())&&open())e.preventDefault();}});
- return{ITEMS,POOLS,TABS,SLOTS,STACK,TRADE,add,take,eat,trade,count,entries,open,close,isOpen:()=>!sheet.hidden,get spots(){return spots;},pickUp,toggle,sheet,grid,detail,setTab(t){tab=t;render();},choose(id){chosen=id;render();},
-  tick(dt){toggle.hidden=!entered||(typeof photoMode==='object'&&photoMode&&photoMode.on);const d=day();if(d!==spotDay)placeSpots(d);if(!entered)return;const t=performance.now()/1000,p=player.position;
-   for(const s of[...spots]){s.m.rotation.y=t*1.4;s.m.position.y=.32+Math.sin(t*2+s.x)*.05;if(Math.hypot(s.x-p.x,s.z-p.z)<REACH&&pickUp(s)){fresh++;refresh();}}}};
+ return{ITEMS,TABS,SLOTS,STACK,TRADE,add,take,eat,trade,count,entries,open,close,isOpen:()=>!sheet.hidden,toggle,sheet,grid,detail,setTab(t){tab=t;render();},choose(id){chosen=id;render();},
+  tick(){toggle.hidden=!entered||(typeof photoMode==='object'&&photoMode&&photoMode.on);}};
 }
 const villageBag=createVillageBag();
