@@ -1,0 +1,125 @@
+body{
+ --village-paper:#fffaf5;--village-ink:#332333;--village-soft:#655264;--village-accent:#79445e;--village-line:#e9dce2;--village-tint:#f6e8eb;
+ --village-gutter:clamp(16px,3vw,40px);--village-foot:max(20px,env(safe-area-inset-bottom));--village-top:max(16px,env(safe-area-inset-top));
+}
+body[data-world="aquarium"]{--village-paper:#f3fcfa;--village-ink:#193537;--village-soft:#365e5f;--village-accent:#216661;--village-line:#d5e8e5;--village-tint:#e4f2ef}
+body[data-world="library"]{--village-paper:#fff9ee;--village-ink:#422c24;--village-soft:#665040;--village-accent:#84543c;--village-line:#eaded0;--village-tint:#f4e8d8}
+.topbar{display:none;top:var(--village-top);left:var(--village-gutter);right:var(--village-gutter);align-items:flex-start}
+body[data-village-entered] .topbar{display:flex}
+.village-place,#invite,#village-dock button{
+ display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;white-space:nowrap;
+ padding:6px 13px;margin:0;border:0;border-radius:13px;line-height:1.05;font-size:28px;font-weight:400;
+ color:var(--village-ink);background:var(--village-paper);box-shadow:0 4px 12px #35223626;
+}
+.village-place{font-size:30px}
+#invite{width:auto;height:auto;color:#fff;background:var(--village-accent);pointer-events:auto}
+#invite svg{width:18px;height:18px}
+#village-dock{
+ position:fixed;z-index:5;bottom:var(--village-foot);left:var(--village-gutter);right:var(--village-gutter);
+ display:flex;justify-content:space-between;pointer-events:none;
+}
+#village-dock button{pointer-events:auto}
+body.photo-mode #village-dock,body.photo-mode #village-recovery{display:none}
+#village-dock svg,.village-place svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.village-place svg{color:var(--village-accent)}
+#village-dock button:hover,.village-plain:hover{background:var(--village-tint)}
+#status,#keyboard,#saved-note,#controls>.hint,#controls>#travel,.copyright,
+#creature-book,.bag-toggle,.play-toggle,.village-hotbar,.run-toggle,.village-minimap,.beacon-hop,.district-banner,.sky-weather-badge,#friend-roster{display:none!important}
+body:not([data-village-entered]) .toast{visibility:hidden}
+.toast{font-size:21px}
+#controls{bottom:calc(var(--village-foot) + 72px);gap:10px}
+#controls .actions button{min-height:44px;font-size:26px;line-height:1.1}
+#controls .action.primary{color:var(--village-ink);background:var(--village-paper);border:0;border-radius:13px;box-shadow:0 4px 12px #35223626}
+#controls .action.primary svg{color:var(--village-accent)}
+#controls .action.secondary{color:var(--village-ink);background:var(--village-paper)}
+#controls .actions:has(>button:not([hidden])){max-width:100%;flex-wrap:wrap;justify-content:center}
+#controls .reading-card p{font-size:clamp(23px,4vw,28px)}
+#welcome.overlay{align-items:end;justify-items:center;padding:0 var(--village-gutter) max(34px,calc(env(safe-area-inset-bottom) + 20px));background:none;backdrop-filter:none;pointer-events:none}
+#entry-form{
+ width:min(100%,420px);padding:25px 24px 18px;text-align:center;pointer-events:auto;
+ background:var(--village-paper);color:var(--village-ink);border:0;border-radius:22px;box-shadow:0 13px 38px #3921322e;
+}
+#entry-title{margin:0;font-weight:400;font-size:clamp(48px,7vw,60px);line-height:1.05;letter-spacing:0;text-wrap:balance;color:inherit}
+#entry-caption{margin:8px 0 19px;font-size:23px;color:var(--village-soft);line-height:1.2}
+#entry-form .enter,#invite-modal #copy-invite,#village-menu .enter{
+ min-height:50px;width:100%;border:0;border-radius:12px;font-size:30px;line-height:1.1;
+ font-weight:400;color:#fff;background:var(--village-accent);box-shadow:none;
+}
+#enter::after{content:"";display:inline-block;margin-left:10px;width:15px;height:12px;vertical-align:2px;background:center/contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='M4 12h15m-6-6 6 6-6 6'/%3E%3C/svg%3E")}
+#entry-form .village-plain{margin-top:3px}
+#village-menu .village-plain,.village-plain{
+ min-height:44px;margin:0;padding:0 9px;border:0;border-radius:8px;color:var(--village-soft);
+ font-size:21px;background:transparent;cursor:pointer;
+}
+#invite-modal{
+ align-items:end;justify-items:center;padding:12px 16px max(85px,calc(env(safe-area-inset-bottom) + 65px));
+ background:#27192855;backdrop-filter:none;
+}
+#invite-modal .welcome{
+ width:min(100%,408px);min-width:0;padding:22px 20px 24px;text-align:left;background:var(--village-paper);
+ color:var(--village-ink);border:0;border-radius:18px;box-shadow:0 14px 42px #21151f4a;
+}
+#invite-title,#village-menu-title{margin:0;font-weight:400;font-size:42px;line-height:1.1;letter-spacing:0;color:inherit}
+#invite-modal .close,#village-menu-close{
+ display:grid;place-items:center;width:44px;height:44px;min-height:44px;border:0;border-radius:12px;
+ background:var(--village-tint);color:var(--village-ink);font:20px/1 system-ui;
+}
+#invite-modal p{margin:10px 0;color:var(--village-soft);font-size:23px;line-height:1.2}
+#invite-status::before{content:"";display:inline-block;width:8px;height:8px;margin-right:9px;border-radius:50%;background:#4b6858}
+#invite-modal .invite-label{margin:12px 0 5px;color:var(--village-soft);font-size:21px}
+#invite-modal #invite-link{
+ box-sizing:border-box;min-height:44px;width:100%;margin:0 0 11px;border:1px solid var(--village-line);
+ border-radius:9px;background:var(--village-tint);color:var(--village-ink);font:21px/1.2 "Gangwon Edu Saeeum","Malgun Gothic",sans-serif;
+}
+#village-menu{
+ box-sizing:border-box;margin:auto auto max(85px,calc(env(safe-area-inset-bottom) + 65px));width:min(100% - 32px,408px);
+ max-height:calc(100dvh - 108px);overflow:auto;padding:22px 20px 20px;border:0;border-radius:18px;
+ background:var(--village-paper);color:var(--village-ink);box-shadow:0 14px 42px #21151f4a;
+}
+#village-menu::backdrop{background:#27192855}
+#village-menu header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:13px}
+.village-menu-page{display:grid}
+.village-menu-page>button:not(.enter):not(.village-plain),#village-menu .world-switch{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:53px;width:100%;padding:8px 7px;
+ border:0;border-radius:0;border-bottom:1px solid var(--village-line);background:none;color:var(--village-ink);
+ box-shadow:none;font-size:30px;text-align:left;line-height:1.12;
+}
+.village-menu-page>button:not(.enter):not(.village-plain):hover,#village-menu .world-switch:hover{background:var(--village-tint)}
+.village-menu-page>button[data-shell-panel]::after,.village-menu-page>button[data-shell-action]:not([data-shell-action="sound"])::after{content:"›";color:var(--village-soft);font:22px/1 system-ui}
+#village-menu .village-plain{justify-self:start;margin-top:6px}
+#village-menu .world-travel{position:static;max-width:none}
+#village-menu .world-switch-row{display:grid;gap:0}
+#village-menu .world-switch-row .world-switch{display:flex;justify-content:flex-start}
+#village-menu .world-switch .world-arrow{margin-left:auto}
+#village-menu .world-fold{display:none}
+#village-menu .other-world-status{color:var(--village-soft);background:var(--village-tint);font-size:21px;line-height:1.2}
+#village-current-space,#village-sound-state{color:var(--village-soft);font-size:21px}
+#village-current-space{padding:5px 7px 8px}
+#village-characters{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:15px}
+#village-characters button{
+ min-height:46px;border:1px solid var(--village-line);border-radius:10px;background:none;color:inherit;font-size:23px;
+}
+#village-characters button[aria-pressed="true"]{border-color:var(--village-accent);background:var(--village-tint);color:var(--village-accent)}
+#village-menu-profile label{font-size:23px}
+#village-profile-name{
+ min-height:44px;padding:0 10px;margin:6px 0 13px;border:1px solid var(--village-line);border-radius:9px;
+ background:#fff;color:var(--village-ink);font-size:25px;
+}
+#village-recovery{
+ position:fixed;z-index:5;right:var(--village-gutter);top:calc(var(--village-top) + 58px);max-width:calc(100vw - 32px);
+ padding:9px 14px 3px;background:var(--village-paper);color:var(--village-ink);border-radius:14px;font-size:23px;
+}
+#village-retry{min-height:44px;color:var(--village-accent);display:block;background:none;border:0;padding:0;font:inherit;text-decoration:underline}
+:is(#village-menu,#village-dock,#entry-form,#invite-modal) :focus-visible,#invite:focus-visible,#village-retry:focus-visible{outline:3px solid var(--village-accent);outline-offset:3px}
+#controls .reading-card,.creature-book-card,.resident-card,.book-picker,.cat-card{font-size:21px}
+@media(min-width:760px){
+ #welcome.overlay{padding-bottom:max(56px,env(safe-area-inset-bottom))}
+ #invite-modal{align-items:start;justify-items:end;padding:calc(var(--village-top) + 58px) var(--village-gutter) 0}
+ #village-menu{margin:auto var(--village-gutter) calc(var(--village-foot) + 64px) auto}
+ #village-menu[data-panel="spaces"]{margin:auto auto calc(var(--village-foot) + 64px) var(--village-gutter)}
+ #village-menu[data-panel="profile"]{margin:auto}
+}
+@media(max-width:360px){.village-place{font-size:25px;padding-inline:8px}#invite,#village-dock button{font-size:25px;padding-inline:8px}}
+@media(max-height:530px){#welcome.overlay{padding-bottom:12px}#entry-form{padding:14px 20px 4px}#entry-title{font-size:37px}#entry-caption{margin:4px 0 8px}}
+
+#village-menu[data-entry="true"]{margin:auto}

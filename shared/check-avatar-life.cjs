@@ -16,7 +16,7 @@ for(const world of['winter','aquarium','library']){
  // Finishing touches: eye sparkle that hides on a blink, blush, a tail and a soft outline on head and body, added once.
  assert(me.head.getObjectByName('look-shine').visible&&me.head.getObjectByName('look-blush'),'no sparkle or blush');assert(me.body.getObjectByName('look-tail'),'no tail');let hulls=0;me.root.traverse(o=>{if(o.name==='look-outline')hulls++;});assert.equal(hulls,2,'outline should be head and body only');L.tick(.016);let again=0;me.root.traverse(o=>{if(o.name==='look-outline')again++;});assert.equal(again,2,'dressed twice');
  // Blinking: a short close every three to six seconds, open otherwise.
- let closed=0,frames=0,gaps=[],last=null;for(let i=0;i<800;i++){w.advance(.02);L.tick(.02);frames++;if(f.lids.visible){closed++;if(last!==null&&w.t-last>.3)gaps.push(w.t-last);last=w.t;}}
+ let closed=0,frames=0,gaps=[],last=null;for(let i=0;i<1100;i++){w.advance(.02);L.tick(.02);frames++;if(f.lids.visible){closed++;if(last!==null&&w.t-last>.3)gaps.push(w.t-last);last=w.t;}}
  assert(closed>0,world+' never blinks');assert(closed/frames<.12,world+' eyes are mostly closed');assert(gaps.length>=2&&gaps.every(g=>g>2.8&&g<6.4),world+' blink spacing '+gaps.map(g=>g.toFixed(1)));
  // Emotes drive expressions: smiles close into ^^, surprise opens the mouth, sleepy half-closes the lids.
  assert.equal(a.villagePlay.say(1),true);L.tick(.016);assert(f.arcs.visible&&f.lids.visible,'smile emote shows no ^^ eyes');

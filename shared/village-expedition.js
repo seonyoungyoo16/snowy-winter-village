@@ -18,10 +18,10 @@ function createVillageExpedition(){
  function left(now=Date.now()){return state.trip?Math.max(0,state.trip.start+state.trip.hours*H-now):0;}
  function send(placeId,hours){if(state.trip)return false;const place=PLACES.find(p=>p.id===placeId);if(!place||!HOURS.includes(hours))return false;const who=traveler(),c=companions();
   state.trip={place:place.id,hours,start:Date.now(),who:who.id,name:who.name};save();if(c&&c.state.out===who.id)c.setOut(null);toast(who.name+'이(가) '+place.name+'(으)로 떠났어요 · '+hours+'시간 뒤에 돌아와요');return true;}
- // Coming home: one picture not in the book yet when possible (chosen by the start time, not by luck), shells and a story.
+ // Coming home: one picture not in the book yet when possible (chosen by the start time, not by luck), and a story.
  function finish(){const t=state.trip,place=PLACES.find(p=>p.id===t.place),book=typeof creatureBook==='object'&&creatureBook?creatureBook:null,met=book?book.entries():{},fresh=place.pool.filter(id=>!met[id]),pool=fresh.length?fresh:place.pool,pick=pool[Math.floor(t.start/H)%pool.length];
-  if(book)book.record(pick,{via:'expedition'});const shells=typeof villageMarket==='object'&&villageMarket?villageMarket.earn(SHELLS[t.hours],'원정 기념품'):0,entry=book?book.ENTRIES.find(e=>e.id===pick):null;
-  const card={place:place.name,who:t.name,text:t.name+'이(가) '+place.name+'에서 돌아왔어요. '+place.lines[Math.floor(t.start/60e3)%place.lines.length]+(entry?' '+entry.name+' 그림을 가져왔어요.':''),souvenir:pick,shells,t:t.start+t.hours*H};
+  if(book)book.record(pick,{via:'expedition'});const entry=book?book.ENTRIES.find(e=>e.id===pick):null;
+  const card={place:place.name,who:t.name,text:t.name+'이(가) '+place.name+'에서 돌아왔어요. '+place.lines[Math.floor(t.start/60e3)%place.lines.length]+(entry?' '+entry.name+' 그림을 가져왔어요.':''),souvenir:pick,shells:0,t:t.start+t.hours*H};
   state.cards.push(card);state.cards=state.cards.slice(-KEEP);state.trip=null;save();const c=companions();if(c&&t.who!=='crane'&&c.state.owned.includes(t.who)&&!c.state.out)c.setOut(t.who);
   toast(card.who+'이(가) 원정에서 돌아왔어요! 주민에게 이야기를 들어 봐요');if(typeof villageJournal==='object'&&villageJournal&&villageJournal.note)villageJournal.note('first-expedition');return card;}
  function check(){if(state.trip&&left()<=0)return finish();return null;}

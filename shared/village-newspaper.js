@@ -19,7 +19,6 @@ function createVillageNewspaper(){
   // Events come from the seasonal module itself, so lunar dates like Chuseok are counted too.
   if(typeof seasonalEventsAt==='function'){const names=new Set();for(let i=0;i<7;i++)for(const ev of seasonalEventsAt(a+i*DAY+12*3600e3))names.add(ev.name);if(names.size)out.push({title:'마을 행사',body:[...names].join(', ')+'이(가) 열렸어요.'});}
   if(typeof residentGifts==='object'&&residentGifts){const md=ms=>{const d=new Date(ms+9*3600e3);return[d.getUTCMonth()+1,d.getUTCDate()];};for(const[w,p]of Object.entries(residentGifts.PROFILES))for(let i=0;i<7;i++){const[m,d]=md(a+i*DAY+12*3600e3);if(m===p.born[0]&&d===p.born[1])out.push({title:RESIDENTS[w]+'의 생일',body:m+'월 '+d+'일은 '+RESIDENTS[w]+'의 생일이었어요.'});}}
-  if(startDay===weekStart()&&typeof villageGoals==='object'&&villageGoals&&villageGoals.progress){const g=villageGoals.progress();out.push({title:'이번 주 함께 목표',body:(g.goal.name||g.goal.label||'목표')+' · '+(g.done?'달성했어요!':'함께하는 중'+(g.names.length?' ('+g.names.length+'명 참여)':''))});}
   if(!out.length)out.push({title:'조용한 한 주',body:'이번 주 마을은 조용했어요. 다음 주 소식을 기다려요.'});
   return out;}
  function issue(offset=0){const start=weekStart()-offset*7;return{number:issueNumber(start),start,articles:articles(start)};}

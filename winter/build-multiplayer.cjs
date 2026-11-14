@@ -2,8 +2,8 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),esbuild=require('es
 (async()=>{
   const sdk=await esbuild.build({entryPoints:[path.join(__dirname,'firebase-sdk.mjs')],bundle:true,write:false,minify:true,format:'iife',platform:'browser',target:['es2020'],legalComments:'inline'});
   const lib=fs.readFileSync(path.join(__dirname,'three.min.js'),'utf8');
-  const font=fs.readFileSync(path.join(__dirname,'jua-subset.woff2')).toString('base64');
-  const license=fs.readFileSync(path.join(__dirname,'FONT-LICENSE.txt'),'utf8');
+  const font=fs.readFileSync(path.join(__dirname,'../shared/gangwon-edu-saeeum.woff2')).toString('base64');
+  const license=fs.readFileSync(path.join(__dirname,'../shared/GANGWON-FONT-NOTICE.txt'),'utf8');
   let source=fs.readFileSync(path.join(__dirname,'multiplayer.html'),'utf8');
   source=source.replace('<!-- THREE_LIBRARY -->',()=>'<script>\n'+lib.replace(/<\/script/gi,'<\\/script')+'\n</script>\n<script>\n'+sdk.outputFiles[0].text.replace(/<\/script/gi,'<\\/script')+'\n</script>');
   source=source.replace('/* ICE_FISHING_CODE */',()=>fs.readFileSync(path.join(__dirname,'ice-fishing.js'),'utf8'));
@@ -18,7 +18,6 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),esbuild=require('es
   source=source.replace('/* SEASONAL_EVENTS_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/seasonal-events.js'),'utf8'));
   source=source.replace('/* VILLAGE_MARKET_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-market.js'),'utf8'));
   source=source.replace('/* VILLAGE_JOURNAL_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-journal.js'),'utf8'));
-  source=source.replace('/* VILLAGE_GOALS_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-goals.js'),'utf8'));
   source=source.replace('/* AVATAR_LIFE_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/avatar-life.js'),'utf8'));
   source=source.replace('/* VILLAGE_LOOKS_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/village-looks.js'),'utf8'));
   source=source.replace('/* RESIDENT_GIFTS_CODE */',()=>fs.readFileSync(path.join(__dirname,'../shared/resident-gifts.js'),'utf8'));
@@ -42,8 +41,12 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),esbuild=require('es
   source=source.replace('/* WORLD_TRAVEL_CODE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.js'),'utf8').replace('/* WORLD_CONFIG */',JSON.stringify({current:'winter',winterPath:'/snowy-winter-village/',aquariumPath:'/snowy-winter-village/aquarium/',libraryPath:'/snowy-winter-village/library/',publicOrigin:'https://seonyoungyoo16.github.io'})));
   source=source.replace('/* WORLD_TRAVEL_STYLE */',()=>fs.readFileSync(path.join(__dirname,'world-travel.css'),'utf8'));
   source=source.replace('<!-- WORLD_TRAVEL_UI -->',()=>fs.readFileSync(path.join(__dirname,'world-travel.html'),'utf8'));
+  for(const [marker,file] of [['<!-- VILLAGE_SHELL_UI -->','html'],['/* VILLAGE_SHELL_STYLE */','css'],['/* VILLAGE_SHELL_CODE */','js']]){
+    source=source.replace(marker,()=>fs.readFileSync(path.join(__dirname,'../shared/village-shell.'+file),'utf8'));
+  }
   source=source.replace('/* FIREBASE_CONFIG */',()=>JSON.stringify(JSON.parse(fs.readFileSync(path.join(__dirname,'firebase-config.json'),'utf8'))));
-  source=source.replace('<style>',()=>'<style>\n@font-face{font-family:"Winter Jua";src:url(data:font/ttf;base64,'+font+') format("truetype");font-style:normal;font-weight:400 900;font-display:swap}\n').replace('font-family:"NanumSquareRound"','font-family:"Winter Jua","NanumSquareRound"').replace('</head>',()=>'<!--\n'+license+'\n-->\n</head>');
+  source=source.replace('<style>',()=>'<style>\n@font-face{font-family:"Gangwon Edu Saeeum";src:url(data:font/woff2;base64,'+font+') format("woff2");font-style:normal;font-weight:400;font-display:swap}\n').replace('font-family:"NanumSquareRound"','font-family:"Gangwon Edu Saeeum","NanumSquareRound"').replace('</head>',()=>'<!--\n'+license+'\n-->\n</head>');
+  source=source.replaceAll('Winter Jua','Gangwon Edu Saeeum');
   for(const [,js]of source.matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(js);
   fs.mkdirSync(path.join(__dirname,'dist'),{recursive:true});
   fs.writeFileSync(path.join(__dirname,'dist','index.html'),source);

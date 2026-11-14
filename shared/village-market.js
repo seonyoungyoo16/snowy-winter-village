@@ -34,7 +34,6 @@ function createVillageMarket(){
   el('ul',{},...ITEMS.map(item=>{const mine=p.owned.includes(item.id),row=el('li',{className:mine?'seen':'unseen'},el('small',{textContent:(mine?(item.kind!=='paper'&&p.use[item.kind]===item.id?'사용 중':'가지고 있어요'):'조개껍데기 '+item.price+'개')}),document.createTextNode(item.name));if(mine){if(item.kind!=='paper')row.append(btn(p.use[item.kind]===item.id?'그만 쓰기':'쓰기',()=>use(item.id)));row.append(btn('되팔기 (+'+Math.floor(item.price/2)+')',()=>sell(item.id)));}else row.append(btn('마련하기',()=>buy(item.id)));return row;})),
   el('h3',{textContent:'저금통'}),el('p',{className:'creature-count',textContent:BANK_MIN+'개 이상 넣어 두면 하루에 '+BANK_DAILY+'개씩 늘어요.'}),btn('5개 넣기',()=>deposit(5)),btn('5개 꺼내기',()=>withdraw(5)));}
  function open(){if(!entered)return;sheet.hidden=false;refresh();closeButton.focus();}
- if(typeof residentGuide==='object'&&residentGuide.addAction)residentGuide.addAction('마을 가게',()=>{residentGuide.close();open();});
  return{ITEMS,DAILY_CAP,earn,buy,sell,use,deposit,withdraw,owns,choice,purse,open,close,isOpen:()=>!sheet.hidden};
 }
 const villageMarket=createVillageMarket();

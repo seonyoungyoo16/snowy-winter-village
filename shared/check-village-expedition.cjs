@@ -20,7 +20,7 @@ for(const world of['winter','aquarium','library']){
  t.now+=2*H;let again=load(world,t,store).X;assert.equal(again.check(),null);assert.equal(again.left(),H);
  t.now+=3*H;const shellsBefore=load(world,t,new Map()).a.villageMarket.purse().shells;const reload=load(world,t,store);const card=reload.X.check();assert(card,'the trip did not come home');
  assert(card.text.includes(reload.a.residentGuide.role.name+'의 종이학'));assert(X.PLACES[0].pool.includes(card.souvenir));assert(reload.a.creatureBook.entries()[card.souvenir],'the souvenir picture is not in the creature book');
- assert.equal(card.shells,X.SHELLS[3]);assert(reload.a.villageMarket.purse().shells>=shellsBefore+X.SHELLS[3],'souvenir shells missing');assert.equal(reload.X.state.trip,null);assert.equal(reload.X.state.cards.length,1);
+ assert.equal(card.shells,0);assert.equal(reload.a.villageMarket.purse().shells,shellsBefore,'retired rewards changed the shell balance');assert.equal(reload.X.state.trip,null);assert.equal(reload.X.state.cards.length,1);
  // Souvenirs prefer pictures not in the book yet.
  const R=reload.X;for(let i=0;i<4;i++){R.send('forest',1);t.now+=H+1;R.check();}const forest=R.state.cards.map(c=>c.souvenir).filter(id=>X.PLACES[0].pool.includes(id));assert.equal(new Set(forest).size,4,'forest souvenirs repeated before all four were met');
  // A companion walking along goes instead, is away while travelling and walks along again when home.
@@ -30,5 +30,5 @@ for(const world of['winter','aquarium','library']){
  // Only the last six cards stay; damaged storage starts fresh.
  for(let i=0;i<6;i++){R.send('shore',1);t.now+=H;R.check();}assert.equal(R.state.cards.length,6);
  assert.equal(load(world,t,new Map([['village-expedition','{"trip":{"place":"moon","hours":2,"start":"x"},"cards":[null,{"text":"좋은 여행"}]}']])).X.state.trip,null);
- console.log('PASS: '+world+' expeditions: three places for 1, 3 or 6 hours, time passing while closed, a story card with a new creature picture and shop shells, the companion away and back, and six cards kept.');
+ console.log('PASS: '+world+' expeditions: three places for 1, 3 or 6 hours, time passing while closed, a story card with a new creature picture, the companion away and back, and six cards kept.');
 }
