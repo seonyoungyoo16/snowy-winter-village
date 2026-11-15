@@ -1,8 +1,8 @@
 // Ice fishing at a small frozen pond: cast, wait quietly, reel when the float dips. A fish that slips away just comes back later.
 function createIceFishing(){
- const POND={x:2.75,z:2.65,width:2.17},APPROACH={x:POND.x,z:POND.z+2.05};
- const SEATS=[-.95,.95].map((offset,index)=>({index,x:POND.x+offset,z:POND.z+1.1,yaw:Math.PI,
-  hole:{x:POND.x+offset,z:POND.z-.28}}));
+ const fishingX=2.75,POND={x:fishingX+.12,z:2.65,width:3.4,depth:2.42},APPROACH={x:fishingX,z:POND.z+2.05};
+ const SEATS=[-.95,.95].map((offset,index)=>({index,x:fishingX+offset,z:POND.z+1.1,yaw:Math.PI,
+  hole:{x:fishingX+offset,z:POND.z-.28}}));
  // Original pond creatures; which ones appear depends on the shared Seoul-time sky and weather.
  const FISH=[
   {id:'smelt',name:'빙어',size:[9,14],weight:5,when:()=>true},
@@ -15,12 +15,27 @@ function createIceFishing(){
   {id:'star-smelt',name:'별빛 빙어',size:[10,16],weight:.8,when:s=>s.phase==='night'&&s.kind==='clear'}
  ];
  const WAIT=[3.5,9],BITE=2.4,HOLD=2.6,STAGES=['wait','bite','hold'];
- const floor=groundHeight(POND.x,POND.z),pond=new THREE.Group();pond.name='ice-fishing-pond';scene.add(pond);
- const ice=mesh(geom.disc,0xa9cfe2,pond,POND.x,floor+.03,POND.z,POND.width,1.55,1);ice.rotation.x=-Math.PI/2;
- const rim=mesh(new THREE.RingGeometry(.91,1,40),0xe4f1f7,pond,POND.x,floor+.035,POND.z,POND.width,1.55,1);rim.rotation.x=-Math.PI/2;
+ const pond=new THREE.Group();pond.name='ice-fishing-pond';scene.add(pond);
+ // Follow the shallow rise toward the sled hill so the ice edge stays above the snow.
+ function iceSurface(inner, rings, rise) {
+  const positions=[],indices=[],sides=48;
+  for(let band=0;band<=rings;band++)for(let i=0;i<=sides;i++){
+   const radius=inner+(1-inner)*band/rings,angle=i*Math.PI*2/sides;
+   const x=POND.x+Math.cos(angle)*radius*POND.width,z=POND.z+Math.sin(angle)*radius*POND.depth;
+   positions.push(x,groundHeight(x,z)+rise,z);
+   if(band<rings&&i<sides){const a=band*(sides+1)+i,b=a+sides+1;indices.push(a,a+1,b+1,a,b+1,b);}
+  }
+  const surface=new THREE.BufferGeometry();surface.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));surface.setIndex(indices);surface.computeVertexNormals();return surface;
+ }
+ mesh(iceSurface(0,16,.057),0xa9cfe2,pond).name='widened-ice';
+ mesh(iceSurface(.92,4,.083),0xe4f1f7,pond);
+ const crackMaterial=new THREE.LineBasicMaterial({color:0xe4f1f7,transparent:true,opacity:.65});
+ for(const crack of [[[.56,2.2],[.96,2.47],[1.42,2.6]],[[3.88,.88],[4.16,1.2],[4.94,1.38]],[[4.87,2.92],[5.54,3.17],[5.89,3.01]],[[2.61,4.2],[2.92,4.49],[3.73,4.58]]]){
+  const points=crack.map(([x,z])=>new THREE.Vector3(x,groundHeight(x,z)+.07,z));pond.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),crackMaterial));
+ }
  for(const s of SEATS){
-  const water=mesh(geom.disc,0x2b4558,pond,s.hole.x,floor+.04,s.hole.z,.44,.36,1);water.rotation.x=-Math.PI/2;
-  const stool=mesh(geom.cyl,0x9b7c67,pond,s.x,floor+.17,s.z,.28,.34,.28);stool.name='ice-fishing-stool';
+  const water=mesh(geom.disc,0x2b4558,pond,s.hole.x,groundHeight(s.hole.x,s.hole.z)+.075,s.hole.z,.44,.36,1);water.rotation.x=-Math.PI/2;
+  const stool=mesh(geom.cyl,0x9b7c67,pond,s.x,groundHeight(s.x,s.z)+.17,s.z,.28,.34,.28);stool.name='ice-fishing-stool';
   block(s.hole.x,s.hole.z,.42);
  }
  // Each fishing actor gets a rod on the body, a float in the hole and a line between them.
@@ -30,13 +45,13 @@ function createIceFishing(){
   const rod=new THREE.Group();rod.name='ice-fishing-rod';rod.position.set(.43,.86,.29);rod.rotation.set(.85,0,-.24);actor.body.add(rod);mesh(geom.cyl,0x5d4a3d,rod,0,.72,0,.034,1.45,.034);mesh(geom.cyl,0xd2c3a5,rod,0,.08,0,.045,.18,.045);const tip=new THREE.Object3D();tip.position.y=1.44;rod.add(tip);
   const bob=new THREE.Group();sphere(bob,0xe8685a,0,.05,0,.075);sphere(bob,0xfaf4ea,0,-.005,0,.068);scene.add(bob);
   const lineGeo=new THREE.BufferGeometry();lineGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6),3));const line=new THREE.Line(lineGeo,new THREE.LineBasicMaterial({color:0xf4efe6,transparent:true,opacity:.75}));line.frustumCulled=false;scene.add(line);
-  const catchFish=new THREE.Group();sphere(catchFish,fishColor,0,0,0,.07,.07,.2);const tail=mesh(geom.cone,fishColor,catchFish,0,0,-.24,.07,.13,.025);tail.rotation.x=-Math.PI/2;catchFish.position.set(0,-.48,.14);catchFish.rotation.x=Math.PI/2;actor.arms[1].add(catchFish);
+  const catchFish=new THREE.Group();catchFish.name='ice-fishing-catch';sphere(catchFish,fishColor,0,0,0,.07,.07,.2);const tail=mesh(geom.cone,fishColor,catchFish,0,0,-.24,.07,.13,.025);tail.rotation.x=-Math.PI/2;catchFish.position.set(0,-.48,.14);catchFish.rotation.x=Math.PI/2;actor.arms[1].add(catchFish);
   r={rod,tip,bob,line,catchFish,tipWorld:new THREE.Vector3()};rigs.set(actor,r);return r;
  }
  function show(actor,stage,t,seat){
   const r=rig(actor),on=STAGES.includes(stage);r.rod.visible=r.bob.visible=r.line.visible=on;r.catchFish.visible=stage==='hold';if(!on)return;
   const s=seat||nearestSeat(actor.root.position),dip=stage==='bite'?.05+Math.abs(Math.sin(t*9))*.05:Math.sin(t*2.2)*.012;
-  r.bob.position.set(s.hole.x,floor+.06-dip,s.hole.z);r.rod.rotation.x=stage==='hold'?.35:.85+(stage==='bite'?Math.sin(t*14)*.05:0);
+  r.bob.position.set(s.hole.x,groundHeight(s.hole.x,s.hole.z)+.108-dip,s.hole.z);r.rod.rotation.x=stage==='hold'?.35:.85+(stage==='bite'?Math.sin(t*14)*.05:0);
   actor.root.updateWorldMatrix(true,true);r.tip.getWorldPosition(r.tipWorld);const p=r.line.geometry.attributes.position.array;p.set([r.tipWorld.x,r.tipWorld.y,r.tipWorld.z,r.bob.position.x,r.bob.position.y+.05,r.bob.position.z]);r.line.geometry.attributes.position.needsUpdate=true;
  }
  // Seated pose: like warming hands, but both hands forward on the rod; the catch is held up in one hand.

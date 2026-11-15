@@ -8,6 +8,9 @@ const a=c.audit,f=a.iceFishing,T=c.THREE;a.setEntered();a.setNetwork();for(const
 
 // The two side-by-side stools face separate blocked holes with a clear route from the plaza.
 assert(a.scene.getObjectByName('ice-fishing-pond'));assert.equal(f.SEATS.length,2);
+const ice=a.scene.getObjectByName('widened-ice').geometry;ice.computeBoundingBox();
+assert(ice.boundingBox.max.x-ice.boundingBox.min.x>=6.7,'the pond is wider in the rendered scene');
+assert(ice.boundingBox.max.z-ice.boundingBox.min.z>=4.75,'the pond has more depth in the rendered scene');
 for(const s of f.SEATS){assert(a.blocked(s.hole.x,s.hole.z),'the hole is walkable');assert(!a.blocked(s.x,s.z,.3),'seat overlaps furniture');assert.equal(Math.atan2(s.hole.x-s.x,s.hole.z-s.z),s.yaw);}
 assert.equal(f.SEATS[0].z,f.SEATS[1].z);
 assert(a.pathTo(f.APPROACH.x,f.APPROACH.z).length,'no route from the entrance to the pond');
