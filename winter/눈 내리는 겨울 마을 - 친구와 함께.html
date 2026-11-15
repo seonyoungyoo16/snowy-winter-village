@@ -223,6 +223,8 @@ body:not([data-village-entered]) .toast{visibility:hidden}
   #entry-caption { margin: var(--village-gap) 0; }
 }
 
+#controls .actions .place-extra{font-size:var(--village-text-action,18px);padding:10px 14px;white-space:nowrap}
+#place-status{margin:0;padding:6px 12px;border-radius:12px;background:var(--village-paper);color:var(--village-ink);font-size:15px;font-weight:700;text-align:center}
 </style>
 <!--
 Copyright (c) 2010, NAVER Corporation (https://www.navercorp.com/), with Reserved Font Name NanumSquareRound.
@@ -331,7 +333,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 <div id="label-fire" class="landmark">따뜻한 모닥불</div><div id="label-sled" class="landmark">작은 썰매 언덕</div><div id="label-tree" class="landmark">소원을 품은 나무</div>
 <button id="pond-action" class="pond-action" type="button" aria-label="얼음낚시 하기" hidden>얼음낚시</button>
-<div id="controls" class="bottom" hidden><div id="hint" class="hint">가고 싶은 눈밭을 톡 눌러보세요</div><div id="rolling-progress" class="progress-wrap" hidden><div class="progress"><span id="progress-fill"></span></div><span id="progress-text">천천히 눈을 굴려보세요</span></div><nav id="travel" class="travel" aria-label="마을 산책"><button data-place="snow"><span>❄</span>눈밭</button><button data-place="fire"><span>♨</span>모닥불</button><button data-place="sled"><span>♧</span>썰매 언덕</button><button data-place="ice"><span>◎</span>얼음 연못</button></nav><div class="actions"><button id="main-action" class="action primary"><svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="7"/><path d="m6 4 1 1m10-2-1 2M3 11l2 .5m14-2 2-1"/></svg><span id="main-text">눈덩이 굴리기</span></button><button id="cancel-action" class="action secondary" hidden>그만 굴리기</button></div></div>
+<div id="controls" class="bottom" hidden><div id="hint" class="hint">가고 싶은 눈밭을 톡 눌러보세요</div><p id="place-status" role="status" aria-live="polite" hidden></p><div id="rolling-progress" class="progress-wrap" hidden><div class="progress"><span id="progress-fill"></span></div><span id="progress-text">천천히 눈을 굴려보세요</span></div><nav id="travel" class="travel" aria-label="마을 산책"><button data-place="snow"><span>❄</span>눈밭</button><button data-place="fire"><span>♨</span>모닥불</button><button data-place="sled"><span>♧</span>썰매 언덕</button><button data-place="ice"><span>◎</span>얼음 연못</button></nav><div class="actions"><button id="main-action" class="action primary"><svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="7"/><path d="m6 4 1 1m10-2-1 2M3 11l2 .5m14-2 2-1"/></svg><span id="main-text">눈덩이 굴리기</span></button><button id="add-firewood" class="action secondary place-extra" type="button" hidden>장작 보태기</button><button id="sled-together" class="action secondary place-extra" type="button" hidden>함께 썰매 타기</button><button id="cancel-action" class="action secondary" hidden>그만 굴리기</button></div></div>
 <div id="keyboard" class="keyboard" hidden>눈밭 클릭 · WASD 이동<br>화면 드래그 · 시점 돌리기</div><div id="saved-note" class="saved-note" hidden>이 브라우저에만 추억이 남아요</div>
 <div id="online-players" class="sr-only" role="status" aria-live="polite"></div>
 <section id="invite-modal" class="overlay" hidden aria-label="친구 초대">
@@ -4021,6 +4023,92 @@ const villageDistricts=(()=>{
    let at=null;for(const b of beacons)if(Math.hypot(p.x-b.x,p.z-b.z)<TOUCH){light(b.id);at=b;}hop.hidden=!(at&&state.lit.length>1);if(hop.hidden)list.hidden=true;}};
 })();
 
+function createWinterAtmosphere() {
+ const warm = mat(0xffd691, true), cable = mat(0x65525c);
+ const bulbGeo = new THREE.SphereGeometry(1, 8, 6);
+ const lamps = [];
+ const canvas = document.createElement('canvas');canvas.width = canvas.height = 64;
+ const ctx = canvas.getContext('2d');
+ const radial = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+ radial.addColorStop(0, '#fff');radial.addColorStop(.3, '#ffffffd0');radial.addColorStop(1, '#ffffff00');
+ ctx.fillStyle = radial;ctx.fillRect(0, 0, 64, 64);
+ const glow = new THREE.CanvasTexture(canvas);
+ const pool = new THREE.MeshBasicMaterial({ map: glow, color: 0xffb164, transparent: true, opacity: .22, depthWrite: false });
+ const pools = new THREE.Group();scene.add(pools);
+ function groundGlow(x, z, width, depth = width) {
+  const shape = new THREE.PlaneGeometry(width, depth, 6, 6);shape.rotateX(-Math.PI / 2);
+  const positions = shape.attributes.position;
+  for (let i = 0; i < positions.count; i++) positions.setY(i, groundHeight(x + positions.getX(i), z + positions.getZ(i)) + .036);
+  const patch = new THREE.Mesh(shape, pool);patch.position.set(x, 0, z);pools.add(patch);
+ }
+ function post(x, z, height) {
+  const y = groundHeight(x, z);
+  mesh(geom.cyl, 0x725d58, world, x, y + height / 2, z, .079, height, .079);
+  mesh(bulbGeo, 0xe4e7ed, world, x, y + height, z, .14, .07, .14);
+ }
+ function light(x, y, z, r) {
+  mesh(bulbGeo, warm, world, x, y, z, r, r * 1.22, r);
+  mesh(geom.box, cable, world, x, y + r * 1.1, z, r, r * .45, r);
+ }
+ function span(a, b, sag, number) {
+  const p = new THREE.Vector3(), q = new THREE.Vector3(), step = number * 2;
+  for (let i = 1; i <= step; i++) {
+   const t = i / step, previous = (i - 1) / step;
+   p.set(lerp(a.x, b.x, previous), lerp(a.y, b.y, previous) - Math.sin(previous * Math.PI) * sag, lerp(a.z, b.z, previous));
+   q.set(lerp(a.x, b.x, t), lerp(a.y, b.y, t) - Math.sin(t * Math.PI) * sag, lerp(a.z, b.z, t));
+   const segment = mesh(geom.cyl, cable, world, (p.x + q.x) / 2, (p.y + q.y) / 2, (p.z + q.z) / 2, .015, p.distanceTo(q), .015);
+   segment.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), q.sub(p).normalize());
+   if (i % 2 === 1) light(lerp(a.x, b.x, t), lerp(a.y, b.y, t) - Math.sin(t * Math.PI) * sag - .12, lerp(a.z, b.z, t), .13);
+  }
+ }
+ const at = (x, z, h) => ({ x, y: groundHeight(x, z) + h, z });
+ post(-9, -5.4, 3.35);post(6, -5.4, 3.35);
+ span(at(-9, -5.4, 3.32), at(6, -5.4, 3.32), .9, 13);
+ groundGlow(firePos.x, firePos.z, 10.8, 8.7);groundGlow(-7, -9.8, 7, 5);
+
+ for (const [x, marks] of [[15.55, [-11.5, -7.5, -3.5, .5, 4.5, 8.5]], [10.45, [-10, -2, 6]]]) {
+  for (const z of marks) { post(x, z, .87);light(x, groundHeight(x, z) + .90, z, .16);groundGlow(x, z, 3); }
+ }
+ post(10.6, -12.4, 3);post(15.4, -12.4, 3);
+ span(at(10.6, -12.4, 2.9), at(15.4, -12.4, 2.9), .36, 5);
+
+ const market = districtLayout().districts.find(({ id }) => id === 'market');
+ for (const dx of [-5, 0, 5]) {
+  const x = market.x + dx;
+  for (const side of [-1, 1]) {
+   const z = market.z + 4.4 * side;
+   light(x, groundHeight(x, z) + 2.23, z - .62 * side, .16);
+   groundGlow(x, z - 1.35 * side, 4.7);
+  }
+  if (dx !== 0) {
+   const lamp = new THREE.PointLight(0xffc88d, 5.5, 7, 2);lamp.position.set(x, 2.55, market.z);lamps.push(lamp);scene.add(lamp);
+  }
+  span(at(x, market.z - 2.2, 2.8), at(x, market.z + 2.2, 2.8), .32, 4);
+ }
+
+ const chimneys = [[-5.93, -12.99, 5.25], [15.29, -22.38, 4.4], [-16.34, -.85, 3.52]];
+ const smoke = chimneys.flatMap(([x, z, y], n) => Array.from({ length: reduced ? 2 : 4 }, (_, i) => {
+  const puff = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: 0xc0c9df, opacity: .15, transparent: true, depthWrite: false }));
+  smokeLayer.add(puff);return { puff, x, y, z, phase: i / (reduced ? 2 : 4) + n * .17 };
+ }));
+ function tick(time, daylight, wind, firePulse) {
+  pool.opacity = .09 + (1 - daylight) * .2;
+  for (const lamp of lamps) lamp.intensity = 2 + (1 - daylight) * 4.5;
+  for (const { puff, x, y, z, phase } of smoke) {
+   const p = (phase + (reduced ? 0 : time * .16)) % 1;
+   puff.position.set(x + p * wind.x * 2, y + p * 3.25, z + p * wind.z * 2);
+   puff.scale.setScalar(.33 + p * 1.3);
+   puff.material.opacity = .20 * Math.sin(p * Math.PI);
+  }
+  fireGlow.material.opacity = .13 + (1 - daylight) * .07 + firePulse * .17;
+ }
+ return { tick };
+}
+
+const smokeLayer = new THREE.Group();
+scene.add(smokeLayer);
+const winterAtmosphere = createWinterAtmosphere();
+
 bake(world);
 const fire=new THREE.Group();fire.position.copy(firePos);scene.add(fire);const flames=[];for(let i=0;i<7;i++){const a=i*2.4,r=i===0?0:.33;const f=mesh(geom.ball,mat(i%2?0xffb564:0xffdf9e,true),fire,Math.cos(a)*r,.65+i*.025,Math.sin(a)*r,.2,.53,.2);flames.push(f);}const fireLight=new THREE.PointLight(0xffb46c,6,10,2);fireLight.position.copy(firePos);fireLight.position.y=1.6;scene.add(fireLight);
 const sparks=new THREE.Group();sparks.position.copy(firePos);scene.add(sparks);for(let i=0;i<12;i++)sphere(sparks,mat(0xffd09b,true),0,.5+rand()*2,0,.025);
@@ -4037,12 +4125,12 @@ const sled=makeSled();sled.position.copy(sledStart);sled.rotation.y=0;scene.add(
 // Snow is a single GPU draw call with a small generated texture.
 const snowCanvas=document.createElement('canvas');snowCanvas.width=snowCanvas.height=32;const sc=snowCanvas.getContext('2d'),grad=sc.createRadialGradient(16,16,0,16,16,15);grad.addColorStop(0,'rgba(255,255,255,1)');grad.addColorStop(.35,'rgba(255,255,255,.85)');grad.addColorStop(1,'rgba(255,255,255,0)');sc.fillStyle=grad;sc.fillRect(0,0,32,32);const snowTexture=new THREE.CanvasTexture(snowCanvas);const snowCount=reduced?150:(mobile?360:650),snowArray=new Float32Array(snowCount*3),snowSpeed=new Float32Array(snowCount);for(let i=0;i<snowCount;i++){snowArray[i*3]=(rand()-.5)*62;snowArray[i*3+1]=rand()*24;snowArray[i*3+2]=(rand()-.5)*62;snowSpeed[i]=.5+rand()*.8;}const snowGeo=new THREE.BufferGeometry();snowGeo.setAttribute('position',new THREE.BufferAttribute(snowArray,3));const snowfall=new THREE.Points(snowGeo,new THREE.PointsMaterial({color:0xfff8f0,size:.11,map:snowTexture,transparent:true,opacity:.8,depthWrite:false,sizeAttenuation:true}));snowfall.frustumCulled=false;scene.add(snowfall);
 // Seoul-time sky: the original lavender evening is the night look, and daytime brightens toward pale winter blue.
-const SNOW_SHARE={clear:.15,cloudy:.35,precip:.65,heavy:1,fog:.3},skyWeatherConfig={world:'winter',scene,renderer,sun:moonlight,night:{bg:0x555b7b,fog:0x777d9d,hemiSky:0xf1e4f2,hemiGround:0x747e9b,hemi:2.15,sun:0xffe7ce,sunI:2.1,density:.0155},day:{bg:0xaec0d8,fog:0xc4d0e1,hemiSky:0xffffff,hemiGround:0x95a2bd,hemi:2.55,sun:0xfff2df,sunI:2.4,density:.0125},dusk:0xdba7a4,glows:[0xffd99c,0xffdca1].map(c=>({material:mat(c,true),dim:.62})),onChange(s){moon.visible=moonHalo.visible=s.daylight<.55;}};
+const SNOW_SHARE={clear:.15,cloudy:.35,precip:.65,heavy:1,fog:.3},skyWeatherConfig={world:'winter',scene,renderer,sun:moonlight,night:{bg:0x536786,fog:0x536786,hemiSky:0xbecbf4,hemiGround:0x7b779e,hemi:1.38,sun:0xadc2f3,sunI:1,density:.016},day:{bg:0xaec0d8,fog:0xc4d0e1,hemiSky:0xffffff,hemiGround:0x95a2bd,hemi:2.55,sun:0xfff2df,sunI:2.4,density:.0125},dusk:0xdba7a4,glows:[0xffd99c,0xffdca1].map(c=>({material:mat(c,true),dim:.62})),onChange(s){moon.visible=moonHalo.visible=s.daylight<.55;}};
 // Ice fishing at a small frozen pond: cast, wait quietly, reel when the float dips. A fish that slips away just comes back later.
 function createIceFishing(){
- const POND={x:2.75,z:2.65,width:2.17},APPROACH={x:POND.x,z:POND.z+2.05};
- const SEATS=[-.95,.95].map((offset,index)=>({index,x:POND.x+offset,z:POND.z+1.1,yaw:Math.PI,
-  hole:{x:POND.x+offset,z:POND.z-.28}}));
+ const fishingX=2.75,POND={x:fishingX+.12,z:2.65,width:3.4,depth:2.42},APPROACH={x:fishingX,z:POND.z+2.05};
+ const SEATS=[-.95,.95].map((offset,index)=>({index,x:fishingX+offset,z:POND.z+1.1,yaw:Math.PI,
+  hole:{x:fishingX+offset,z:POND.z-.28}}));
  // Original pond creatures; which ones appear depends on the shared Seoul-time sky and weather.
  const FISH=[
   {id:'smelt',name:'빙어',size:[9,14],weight:5,when:()=>true},
@@ -4055,12 +4143,27 @@ function createIceFishing(){
   {id:'star-smelt',name:'별빛 빙어',size:[10,16],weight:.8,when:s=>s.phase==='night'&&s.kind==='clear'}
  ];
  const WAIT=[3.5,9],BITE=2.4,HOLD=2.6,STAGES=['wait','bite','hold'];
- const floor=groundHeight(POND.x,POND.z),pond=new THREE.Group();pond.name='ice-fishing-pond';scene.add(pond);
- const ice=mesh(geom.disc,0xa9cfe2,pond,POND.x,floor+.03,POND.z,POND.width,1.55,1);ice.rotation.x=-Math.PI/2;
- const rim=mesh(new THREE.RingGeometry(.91,1,40),0xe4f1f7,pond,POND.x,floor+.035,POND.z,POND.width,1.55,1);rim.rotation.x=-Math.PI/2;
+ const pond=new THREE.Group();pond.name='ice-fishing-pond';scene.add(pond);
+ // Follow the shallow rise toward the sled hill so the ice edge stays above the snow.
+ function iceSurface(inner, rings, rise) {
+  const positions=[],indices=[],sides=48;
+  for(let band=0;band<=rings;band++)for(let i=0;i<=sides;i++){
+   const radius=inner+(1-inner)*band/rings,angle=i*Math.PI*2/sides;
+   const x=POND.x+Math.cos(angle)*radius*POND.width,z=POND.z+Math.sin(angle)*radius*POND.depth;
+   positions.push(x,groundHeight(x,z)+rise,z);
+   if(band<rings&&i<sides){const a=band*(sides+1)+i,b=a+sides+1;indices.push(a,a+1,b+1,a,b+1,b);}
+  }
+  const surface=new THREE.BufferGeometry();surface.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));surface.setIndex(indices);surface.computeVertexNormals();return surface;
+ }
+ mesh(iceSurface(0,16,.057),0xa9cfe2,pond).name='widened-ice';
+ mesh(iceSurface(.92,4,.083),0xe4f1f7,pond);
+ const crackMaterial=new THREE.LineBasicMaterial({color:0xe4f1f7,transparent:true,opacity:.65});
+ for(const crack of [[[.56,2.2],[.96,2.47],[1.42,2.6]],[[3.88,.88],[4.16,1.2],[4.94,1.38]],[[4.87,2.92],[5.54,3.17],[5.89,3.01]],[[2.61,4.2],[2.92,4.49],[3.73,4.58]]]){
+  const points=crack.map(([x,z])=>new THREE.Vector3(x,groundHeight(x,z)+.07,z));pond.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),crackMaterial));
+ }
  for(const s of SEATS){
-  const water=mesh(geom.disc,0x2b4558,pond,s.hole.x,floor+.04,s.hole.z,.44,.36,1);water.rotation.x=-Math.PI/2;
-  const stool=mesh(geom.cyl,0x9b7c67,pond,s.x,floor+.17,s.z,.28,.34,.28);stool.name='ice-fishing-stool';
+  const water=mesh(geom.disc,0x2b4558,pond,s.hole.x,groundHeight(s.hole.x,s.hole.z)+.075,s.hole.z,.44,.36,1);water.rotation.x=-Math.PI/2;
+  const stool=mesh(geom.cyl,0x9b7c67,pond,s.x,groundHeight(s.x,s.z)+.17,s.z,.28,.34,.28);stool.name='ice-fishing-stool';
   block(s.hole.x,s.hole.z,.42);
  }
  // Each fishing actor gets a rod on the body, a float in the hole and a line between them.
@@ -4070,13 +4173,13 @@ function createIceFishing(){
   const rod=new THREE.Group();rod.name='ice-fishing-rod';rod.position.set(.43,.86,.29);rod.rotation.set(.85,0,-.24);actor.body.add(rod);mesh(geom.cyl,0x5d4a3d,rod,0,.72,0,.034,1.45,.034);mesh(geom.cyl,0xd2c3a5,rod,0,.08,0,.045,.18,.045);const tip=new THREE.Object3D();tip.position.y=1.44;rod.add(tip);
   const bob=new THREE.Group();sphere(bob,0xe8685a,0,.05,0,.075);sphere(bob,0xfaf4ea,0,-.005,0,.068);scene.add(bob);
   const lineGeo=new THREE.BufferGeometry();lineGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6),3));const line=new THREE.Line(lineGeo,new THREE.LineBasicMaterial({color:0xf4efe6,transparent:true,opacity:.75}));line.frustumCulled=false;scene.add(line);
-  const catchFish=new THREE.Group();sphere(catchFish,fishColor,0,0,0,.07,.07,.2);const tail=mesh(geom.cone,fishColor,catchFish,0,0,-.24,.07,.13,.025);tail.rotation.x=-Math.PI/2;catchFish.position.set(0,-.48,.14);catchFish.rotation.x=Math.PI/2;actor.arms[1].add(catchFish);
+  const catchFish=new THREE.Group();catchFish.name='ice-fishing-catch';sphere(catchFish,fishColor,0,0,0,.07,.07,.2);const tail=mesh(geom.cone,fishColor,catchFish,0,0,-.24,.07,.13,.025);tail.rotation.x=-Math.PI/2;catchFish.position.set(0,-.48,.14);catchFish.rotation.x=Math.PI/2;actor.arms[1].add(catchFish);
   r={rod,tip,bob,line,catchFish,tipWorld:new THREE.Vector3()};rigs.set(actor,r);return r;
  }
  function show(actor,stage,t,seat){
   const r=rig(actor),on=STAGES.includes(stage);r.rod.visible=r.bob.visible=r.line.visible=on;r.catchFish.visible=stage==='hold';if(!on)return;
   const s=seat||nearestSeat(actor.root.position),dip=stage==='bite'?.05+Math.abs(Math.sin(t*9))*.05:Math.sin(t*2.2)*.012;
-  r.bob.position.set(s.hole.x,floor+.06-dip,s.hole.z);r.rod.rotation.x=stage==='hold'?.35:.85+(stage==='bite'?Math.sin(t*14)*.05:0);
+  r.bob.position.set(s.hole.x,groundHeight(s.hole.x,s.hole.z)+.108-dip,s.hole.z);r.rod.rotation.x=stage==='hold'?.35:.85+(stage==='bite'?Math.sin(t*14)*.05:0);
   actor.root.updateWorldMatrix(true,true);r.tip.getWorldPosition(r.tipWorld);const p=r.line.geometry.attributes.position.array;p.set([r.tipWorld.x,r.tipWorld.y,r.tipWorld.z,r.bob.position.x,r.bob.position.y+.05,r.bob.position.z]);r.line.geometry.attributes.position.needsUpdate=true;
  }
  // Seated pose: like warming hands, but both hands forward on the rod; the catch is held up in one hand.
@@ -4186,9 +4289,31 @@ function warm(){
  mode='warm';path=[];warmSeat.set(seat.x,.46,seat.z);player.rotation.y=Math.atan2(firePos.x-seat.x,firePos.z-seat.z);
  toast('타닥타닥, 손끝까지 따뜻해져요');villageEvent('warm');updateUI();
 }
-function startRide(){if(ball){toast('눈덩이를 마저 굴리고 타볼까요?');return;}mode='sled';path=[];rideTime=0;player.position.copy(sledStart);player.rotation.y=0;sled.visible=true;toast('출발! 겨울 바람을 느껴보세요');updateUI();}
-function action(){if(!entered)return;pendingFishing=false;if(mode==='fish'){const f=iceFishing.press(skyWeather.state);if(f){toast(f.name+' '+f.cm+'cm! 반가워, 다시 살짝 놓아줄게');if(typeof onFishCaught==='function')onFishCaught(f);villageEvent('fish');updateUI();}else stopFishing();return;}if(mode==='rolling'){if(rollDistance>=13)finishSnowman();else toast('눈밭을 조금 더 걸어보세요');return;}if(mode==='warm'){mode='idle';character.body.position.y=0;player.position.y=groundHeight(player.position.x,player.position.z);updateUI();return;}if(mode==='sled'||mode==='celebrate')return;if(dist(firePos)<3.5)warm();else if(dist(sledStart)<2.5)startRide();else if(iceFishing.near(player.position))startFishing();else beginRoll();}
-function updateUI(){const nearFire=dist(firePos)<3.5,nearSled=dist(sledStart)<2.5,nearSnow=groundHeight(player.position.x,player.position.z)<=.6,nearPond=!nearFire&&!nearSled&&iceFishing.near(player.position),fishing=mode==='fish'?iceFishing.stage:'';const k=mode+'_'+nearFire+'_'+nearSled+'_'+(rollDistance>=13)+'_'+nearPond+'_'+nearSnow+'_'+fishing;if(k===uiKey)return;uiKey=k;$('main-action').hidden=mode==='idle'&&!nearSnow&&!nearFire&&!nearSled&&!nearPond;$('main-action').disabled=mode==='sled'||mode==='celebrate'||fishing==='hold';$('cancel-action').hidden=mode!=='rolling';$('rolling-progress').hidden=mode!=='rolling';$('travel').hidden=mode==='sled'||mode==='warm'||mode==='fish';$('main-text').textContent=mode==='fish'?(fishing==='bite'?'지금 당겨요!':fishing==='hold'?'살짝 놓아주는 중…':'낚시 그만하기'):mode==='rolling'?(rollDistance>=13?'눈사람 세우기':'눈을 모으는 중…'):mode==='warm'?'다시 산책하기':mode==='sled'?'바람을 타고 내려가요':mode==='celebrate'?'반가워, 눈사람!':nearFire?'모닥불에 앉기':nearSled?'썰매 타기':nearPond?'얼음낚시 하기':'눈덩이 굴리기';$('hint').textContent=mode==='fish'?(fishing==='bite'?'찌가 쏙 들어갔어요! 버튼을 눌러 당겨요':fishing==='hold'?(iceFishing.caught?iceFishing.caught.name+'를 들어 보였어요':'반가운 얼굴이에요'):'찌가 움직일 때까지 조용히 기다려요'):mode==='rolling'?(rollDistance>=13?'포근하게 다 자랐어요. 여기에 세워볼까요?':'가고 싶은 눈밭을 눌러 눈덩이를 굴려요'):mode==='warm'?'잠깐, 마음까지 따뜻해지는 시간':mode==='sled'?'슈우우— 겨울 바람이 볼을 스쳐요':mode==='celebrate'?'작은 겨울 친구가 생겼어요':nearFire?'모닥불 옆에서 잠깐 쉬어갈까요?':nearSled?'언덕 위에 썰매가 기다리고 있어요':nearPond?'얼음 구멍 옆 의자에 앉아 낚시해 볼까요?':'가고 싶은 눈밭을 톡 눌러보세요';}
+let sharedRide=null;
+function startRide(pair=null){
+ if(ball){toast('눈덩이를 마저 굴리고 타볼까요?');return;}
+ winterActivities.cancelReady();mode='sled';path=[];sharedRide=pair;rideTime=0;
+ const x=sledStart.x+(pair?pair.lane===0?-.65:.65:0);
+ sled.position.set(x,groundHeight(x,sledStart.z)+.025,sledStart.z);
+ player.position.set(x,sled.position.y+.405,sledStart.z);player.rotation.y=0;sled.visible=true;
+ if(!pair)toast('출발! 겨울 바람을 느껴보세요');updateUI();
+}
+function rideDown(dt){
+ rideTime=sharedRide?Math.max(rideTime,(Date.now()+serverOffset-sharedRide.startAt)/1000):rideTime+dt;
+ const u=clamp(rideTime/5.8,0,1),travel=u*u*(3-2*u),z=lerp(-12,9,travel);
+ const lane=sharedRide?(sharedRide.lane===0?-.65:.65):0,x=13+lane-Math.sin(u*Math.PI)*.45;
+ const y=groundHeight(x,z),slope=-Math.atan2(groundHeight(x,z+.4)-groundHeight(x,z-.4),.8);
+ sled.position.set(x,y+.025,z);sled.rotation.set(slope,Math.sin(u*TAU)*.03,Math.sin(elapsed*7)*.025);
+ player.position.set(x,y+.43,z);player.rotation.y=Math.sin(u*TAU)*.03;player.rotation.x=slope;sledShadow.position.set(x,y+.02,z);
+ if(u<1)return;
+ mode='idle';character.body.position.y=0;player.rotation.x=0;
+ const finishX=sharedRide?13+lane*1.6:11.6;
+ player.position.set(finishX,groundHeight(finishX,9),9);sharedRide=null;
+ sled.position.copy(sledStart);sled.rotation.set(0,0,0);sledShadow.position.set(sledStart.x,sledStart.y+.02,sledStart.z);
+ toast('한 번 더 타도 좋아요 ♧');updateUI();
+}
+function action(){if(!entered||winterActivities.active)return;pendingFishing=false;if(mode==='fish'){const f=iceFishing.press(skyWeather.state);if(f){toast(f.name+' '+f.cm+'cm! 반가워, 다시 살짝 놓아줄게');if(typeof onFishCaught==='function')onFishCaught(f);villageEvent('fish');updateUI();}else stopFishing();return;}if(mode==='rolling'){if(rollDistance>=13)finishSnowman();else toast('눈밭을 조금 더 걸어보세요');return;}if(mode==='warm'){mode='idle';character.body.position.y=0;player.position.y=groundHeight(player.position.x,player.position.z);updateUI();return;}if(mode==='sled'||mode==='celebrate')return;if(dist(firePos)<3.5)warm();else if(dist(sledStart)<2.5)startRide();else if(iceFishing.near(player.position))startFishing();else if(winterActivities.atTea(player.position))winterActivities.drink();else beginRoll();}
+function updateUI(){const nearFire=dist(firePos)<3.5,nearSled=dist(sledStart)<2.5,nearSnow=groundHeight(player.position.x,player.position.z)<=.6,nearPond=!nearFire&&!nearSled&&iceFishing.near(player.position),fishing=mode==='fish'?iceFishing.stage:'';const nearTea=winterActivities.atTea(player.position),placeAction=winterActivities.active;const k=mode+'_'+nearTea+'_'+placeAction+'_'+nearFire+'_'+nearSled+'_'+(rollDistance>=13)+'_'+nearPond+'_'+nearSnow+'_'+fishing;if(k===uiKey)return;uiKey=k;$('main-action').hidden=mode==='idle'&&!nearSnow&&!nearFire&&!nearSled&&!nearPond&&!nearTea;$('main-action').disabled=Boolean(placeAction)||mode==='sled'||mode==='celebrate'||fishing==='hold';$('cancel-action').hidden=mode!=='rolling';$('rolling-progress').hidden=mode!=='rolling';$('travel').hidden=mode==='sled'||mode==='warm'||mode==='fish';$('main-text').textContent=mode==='fish'?(fishing==='bite'?'지금 당겨요!':fishing==='hold'?'살짝 놓아주는 중…':'낚시 그만하기'):mode==='rolling'?(rollDistance>=13?'눈사람 세우기':'눈을 모으는 중…'):mode==='warm'?'다시 산책하기':mode==='sled'?'바람을 타고 내려가요':mode==='celebrate'?'반가워, 눈사람!':nearFire?'모닥불에 앉기':nearSled?'썰매 타기':nearPond?'얼음낚시 하기':nearTea?'따뜻한 차 마시기':'눈덩이 굴리기';$('hint').textContent=mode==='fish'?(fishing==='bite'?'찌가 쏙 들어갔어요! 버튼을 눌러 당겨요':fishing==='hold'?(iceFishing.caught?iceFishing.caught.name+'를 들어 보였어요':'반가운 얼굴이에요'):'찌가 움직일 때까지 조용히 기다려요'):mode==='rolling'?(rollDistance>=13?'포근하게 다 자랐어요. 여기에 세워볼까요?':'가고 싶은 눈밭을 눌러 눈덩이를 굴려요'):mode==='warm'?'잠깐, 마음까지 따뜻해지는 시간':mode==='sled'?'슈우우— 겨울 바람이 볼을 스쳐요':mode==='celebrate'?'작은 겨울 친구가 생겼어요':nearFire?'모닥불 옆에서 잠깐 쉬어갈까요?':nearSled?'언덕 위에 썰매가 기다리고 있어요':nearPond?'얼음 구멍 옆 의자에 앉아 낚시해 볼까요?':nearTea?'가판대 앞에서 차 한 잔 마셔요':'가고 싶은 눈밭을 톡 눌러보세요';}
 $('entry-form').addEventListener('submit',e=>{e.preventDefault();if(entered)return;nickname=$('nickname').value.trim().replace(/[\u0000-\u001f\u007f]/g,'').slice(0,12)||'겨울 손님';entered=true;$('welcome').hidden=true;for(const id of['controls','status','keyboard','saved-note'])$(id).hidden=false;$('nickname-label').textContent=nickname;save();villageShell.enter();updateUI();renderer.domElement.focus({preventScroll:true});startNetwork();});
 document.querySelectorAll('[data-character]').forEach(b=>b.addEventListener('click',()=>chooseCharacter(Number(b.dataset.character))));
 $('main-action').addEventListener('click',action);$('pond-action').addEventListener('click',goFishing);$('cancel-action').addEventListener('click',()=>{if(ball)scene.remove(ball);ball=null;mode='idle';rollDistance=0;path=[];updateUI();});document.querySelectorAll('[data-place]').forEach(b=>b.addEventListener('click',()=>{if(mode==='rolling'&&b.dataset.place!=='snow'){toast('눈덩이를 마저 굴리고 가볼까요?');return;}const p=b.dataset.place;if(p==='fire'){const spot=fireApproach();navigate(spot.x,spot.z);}else if(p==='sled')navigate(13,-12);else if(p==='ice')goFishing();else navigate(3,9); }));
@@ -4207,14 +4332,14 @@ addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
 addEventListener('blur',()=>{keys.clear();down=null;});
 let hiddenAt=0;document.addEventListener('visibilitychange',()=>{keys.clear();oldTime=performance.now();if(document.hidden){hiddenAt=Date.now();if(audio)audio.ctx.suspend();if(entered)save();}else{melt(Date.now());if(audioOn&&audio)audio.ctx.resume();}});addEventListener('pagehide',()=>{if(entered)save();});
 const look=new THREE.Vector3(0,.9,0),camDesired=new THREE.Vector3(),projected=new THREE.Vector3(),tmp=new THREE.Vector3(),lastPos=new THREE.Vector3();let cameraInitialized=false,frameCount=0;
-const cameraAnchor=new THREE.Vector3(),plazaCenter=new THREE.Vector3(.3,0,1.9);
+const cameraAnchor=new THREE.Vector3(),plazaCenter=new THREE.Vector3(.82,0,1.9);
 function animatePose(dt,moving,actor=character,state=mode,phase=elapsed,celebration=celebrateTime){const b=actor.body,arms=actor.arms,legs=actor.legs,t=phase;let bob=moving?Math.sin(t*10)*.065:Math.sin(t*2)*.018;let by=0,pitch=0;if(state==='warm'||state==='fish'){by=-.38;pitch=.13;bob=Math.sin(t*1.6)*.013;arms[0].rotation.set(-1.18+Math.sin(t*2.3)*.08,0,-.25);arms[1].rotation.set(-1.18+Math.sin(t*2.3+.4)*.08,0,.25);legs.forEach(l=>l.rotation.x=-1.23);}else if(state==='sled'){by=-.28;pitch=-.11;arms[0].rotation.set(-.7,0,-.28);arms[1].rotation.set(-.7,0,.28);legs.forEach(l=>l.rotation.x=-1.25);bob=Math.sin(t*17)*.02;}else if(state==='rolling'){pitch=moving?.2:.08;arms[0].rotation.set(-1.1,0,-.16);arms[1].rotation.set(-1.1,0,.16);legs.forEach((l,i)=>l.rotation.x=moving?Math.sin(t*10+i*Math.PI)*.48:0);}else if(state==='celebrate'){bob=Math.max(0,Math.sin(celebration*7))*.25;arms[0].rotation.set(-.3,0,-2.4);arms[1].rotation.set(-.3,0,2.4);legs.forEach(l=>l.rotation.x=0);}else{arms.forEach((a,i)=>a.rotation.set(moving?Math.sin(t*10+i*Math.PI+Math.PI)*.5:Math.sin(t*2+i)*.035,0,i===0?-.15:.15));legs.forEach((l,i)=>l.rotation.x=moving?Math.sin(t*10+i*Math.PI)*.6:0);}b.position.y=lerp(b.position.y,by+bob,1-Math.exp(-dt*12));b.rotation.x=lerp(b.rotation.x,pitch,1-Math.exp(-dt*10));actor.head.rotation.z=state==='warm'?Math.sin(t*.8)*.04:Math.sin(t*1.3)*.025;}
 function updateCamera(dt){
  const portrait=innerWidth/innerHeight<.8;
  cameraYaw=lerp(cameraYaw,cameraYawTarget,1-Math.exp(-dt*7));
  const target=entered?player.position:plazaCenter;
  const plazaWeight=mode==='sled'?0:1-smooth(4.5,8,Math.hypot(target.x-plazaCenter.x,target.z-plazaCenter.z));
- const plazaOffset=portrait?Math.max(24,10.9*innerHeight/innerWidth):15;
+ const plazaOffset=portrait?Math.max(25,11.7*innerHeight/innerWidth):15;
  const offset=lerp(portrait?16.8:13.5,plazaOffset,plazaWeight)*camZoom,up=lerp(portrait?11.8:9.7,12,plazaWeight)*camZoom;
  cameraAnchor.copy(target).lerp(plazaCenter,plazaWeight*.94);
  camDesired.set(cameraAnchor.x+Math.sin(cameraYaw)*offset,cameraAnchor.y+up,cameraAnchor.z+Math.cos(cameraYaw)*offset);
@@ -4235,7 +4360,7 @@ function positionPondAction(){
 function label(id,x,y,z){projected.set(x,y,z).project(camera);const el=$(id),px=(projected.x+1)*innerWidth/2,py=(-projected.y+1)*innerHeight/2,onscreen=projected.z<1&&px>65&&px<innerWidth-65&&py>165&&py<innerHeight-180;el.style.left=px+'px';el.style.top=py+'px';el.style.opacity=entered&&onscreen&&mode!=='sled'?'1':'0';}
 function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;return;}const dt=Math.min((now-oldTime)/1000,.05);oldTime=now;elapsed+=dt;let moving=false;lastPos.copy(player.position);
  if(entered&&!helpOpen()){
-  if(mode==='sled'){rideTime+=dt;const u=clamp(rideTime/5.8,0,1),travel=u*u*(3-2*u);const z=lerp(-12,9,travel),x=13-Math.sin(u*Math.PI)*.45;const y=groundHeight(x,z),slope=-Math.atan2(groundHeight(x,z+.4)-groundHeight(x,z-.4),.8);sled.position.set(x,y+.025,z);sled.rotation.set(slope,Math.sin(u*TAU)*.03,Math.sin(elapsed*7)*.025);player.position.set(x,y+.43,z);player.rotation.y=Math.sin(u*TAU)*.03;player.rotation.x=slope;moving=true;sledShadow.position.set(x,y+.02,z);if(u>=1){mode='idle';character.body.position.y=0;player.rotation.x=0;player.position.set(11.6,groundHeight(11.6,9),9);sled.position.copy(sledStart);sled.rotation.set(0,0,0);sledShadow.position.set(sledStart.x,sledStart.y+.02,sledStart.z);toast('한 번 더 타도 좋아요 ♧');updateUI();}}
+  if(mode==='sled'){rideDown(dt);moving=true;}
   else if(mode==='celebrate'){celebrateTime+=dt;if(celebrateTime>1.6){mode='idle';updateUI();}}
   else if(mode==='warm'){player.position.lerp(warmSeat,1-Math.exp(-dt*8));}
   else if(mode==='fish'){player.position.lerp(fishSeat,1-Math.exp(-dt*8));const ev=iceFishing.tick(dt);if(ev==='bite')toast('찌가 쏙! 지금 당겨요');else if(ev==='missed')toast('물고기가 미끼만 살짝 건드리고 갔어요');if(ev)updateUI();}
@@ -4248,16 +4373,200 @@ function tick(now){requestAnimationFrame(tick);if(document.hidden){oldTime=now;r
   }
  }
  networkTick(dt,moving);animatePose(dt,moving,character,mode,villageRun.phase(dt,moving));if(mode==='fish')iceFishing.pose(character,iceFishing.stage,elapsed);iceFishing.show(character,mode==='fish'?iceFishing.stage:null,elapsed,iceFishing.seat);playerShadow.position.set(player.position.x,groundHeight(player.position.x,player.position.z)+.03,player.position.z);playerShadow.visible=mode!=='sled';
- for(let i=0;i<flames.length;i++){const f=flames[i],pulse=reduced?1:1+Math.sin(elapsed*(5+i*.4)+i)*.17;f.scale.y=(.48+i*.02)*pulse;f.position.y=.61+i*.025+Math.sin(elapsed*3+i)*.04;}fireLight.intensity=6+(reduced?0:Math.sin(elapsed*11)*.5);sparks.children.forEach((s,i)=>{s.position.y=.45+(elapsed*.5+i*.19)%2.4;s.position.x=Math.sin(elapsed+i*2)*.3;s.position.z=Math.cos(elapsed*.5+i)*.3;s.scale.setScalar(.022*(1-(s.position.y-.45)/3));});
+ for(let i=0;i<flames.length;i++){const f=flames[i],pulse=reduced?1:1+Math.sin(elapsed*(5+i*.4)+i)*.17;f.scale.y=(.48+i*.02+winterActivities.glow*.17)*pulse;f.position.y=.61+i*.025+Math.sin(elapsed*3+i)*.04;}fireLight.intensity=8.5+winterActivities.glow*8+(reduced?0:Math.sin(elapsed*11)*.5);sparks.children.forEach((s,i)=>{s.position.y=.45+(elapsed*.5+i*.19)%2.4;s.position.x=Math.sin(elapsed+i*2)*.3;s.position.z=Math.cos(elapsed*.5+i)*.3;s.scale.setScalar(.022*(1-(s.position.y-.45)/3));});
  const sky=skyWeather.state,snowShown=Math.round(snowCount*(SNOW_SHARE[sky.kind]||.65)),snowFall=(reduced?.4:1)*(sky.kind==='heavy'?1.3:1),windX=reduced?0:sky.wind.x*.9,windZ=reduced?0:sky.wind.z*.9;snowGeo.setDrawRange(0,snowShown);
  for(let i=0;i<snowShown;i++){snowArray[i*3]+=(Math.sin(elapsed*.25+i)*.16+windX)*dt;snowArray[i*3+2]+=windZ*dt;for(const k of[0,2]){const c=k?player.position.z:player.position.x;if(snowArray[i*3+k]>c+31)snowArray[i*3+k]-=62;else if(snowArray[i*3+k]<c-31)snowArray[i*3+k]+=62;}snowArray[i*3+1]-=snowSpeed[i]*dt*snowFall;if(snowArray[i*3+1]<groundHeight(snowArray[i*3],snowArray[i*3+2]))snowArray[i*3+1]=24;}snowGeo.attributes.position.needsUpdate=true;
  if(ringTimer>0){ringTimer-=dt;ring.scale.setScalar(1+Math.sin(elapsed*5)*.1);ring.material.opacity=clamp(ringTimer,0,.75);if(ringTimer<=0)ring.visible=false;}
- residentGuide.tick(dt);skyWeather.tick(dt);villagePlay.tick(dt);seasonalEvents.tick(dt);avatarLife.tick(dt);residentGifts.tick();villageRadio.tick();villageCompanions.tick(dt);radialMenu.tick(dt);villageMinigames.tick(dt);villageSnowball.tick(dt);villageTogether.tick(dt);villageHotbar.tick();villageTidy.tick(dt);villageRun.tick();villageDistricts.tick(dt);villageExpedition.tick(dt);villageFolk.tick(dt);villageMap.tick(dt);villageBag.tick(dt);homestead.tick(elapsed);updateCamera(dt);if(frameCount++%4===0){if(inMeetingPlaza(player.position)){for(const id of['label-fire','label-sled','label-tree'])$(id).style.opacity='0';}else{label('label-fire',firePos.x,2.7,firePos.z);label('label-sled',13,6.3,-12);label('label-tree',wishTree.x,7.3,wishTree.z);}positionPondAction();if(entered)updateUI();}if(elapsed-lastSave>15){melt(Date.now());lastSave=elapsed;}
+ winterActivities.tick(dt,moving);residentGuide.tick(dt);skyWeather.tick(dt);winterAtmosphere.tick(elapsed,skyWeather.state.daylight,skyWeather.state.wind,winterActivities.glow);villagePlay.tick(dt);seasonalEvents.tick(dt);avatarLife.tick(dt);residentGifts.tick();villageRadio.tick();villageCompanions.tick(dt);radialMenu.tick(dt);villageMinigames.tick(dt);villageSnowball.tick(dt);villageTogether.tick(dt);villageHotbar.tick();villageTidy.tick(dt);villageRun.tick();villageDistricts.tick(dt);villageExpedition.tick(dt);villageFolk.tick(dt);villageMap.tick(dt);villageBag.tick(dt);homestead.tick(elapsed);updateCamera(dt);if(frameCount++%4===0){if(inMeetingPlaza(player.position)){for(const id of['label-fire','label-sled','label-tree'])$(id).style.opacity='0';}else{label('label-fire',firePos.x,2.7,firePos.z);label('label-sled',13,6.3,-12);label('label-tree',wishTree.x,7.3,wishTree.z);}positionPondAction();if(entered)updateUI();}if(elapsed-lastSave>15){melt(Date.now());lastSave=elapsed;}
  if(audio&&audioOn){const gain=mode==='warm'?.24:.085;audio.master.gain.setTargetAtTime(gain,audio.ctx.currentTime,.5);audio.filter.frequency.setTargetAtTime(mode==='warm'?1300:450,audio.ctx.currentTime,.5);}
  renderer.render(scene,camera);
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();$('error').hidden=false;$('error-text').textContent='겨울 마을이 잠깐 쉬고 있어요. 파일을 다시 열면 저장된 눈사람과 만날 수 있어요.';});
+// Reserve winter-only idle bands in the existing Firebase numeric activity field.
+const SLED_READY_BAND = .56, READY_SCALE = 1e15, READY_DURATION = 18000, START_DELAY = 3200, START_GRACE = 1100;
+const PLACE_ACTIONS = { log: { wire: .66, duration: 2700 }, tea: { wire: .67, duration: 4200 } };
+const readyWire = (at) => SLED_READY_BAND + at / READY_SCALE;
+
+function readPlaceAction({ m, b }) {
+ if (m !== 'idle') return '';
+ if (b === PLACE_ACTIONS.log.wire) return 'log';
+ if (b === PLACE_ACTIONS.tea.wire) return 'tea';
+ return '';
+}
+
+function readReadyTime({ m, b }, now) {
+ if ((m !== 'idle' && m !== 'sled') || !(b > SLED_READY_BAND && b < .57)) return 0;
+ const at = Math.round((b - SLED_READY_BAND) * READY_SCALE);
+ const lifetime = READY_DURATION + START_DELAY + START_GRACE;
+ return Math.round(at / 50) * 50 === at && at > now - lifetime && at < now + 1000 ? at : 0;
+}
+
+function sledPair(entries) {
+ const participants = [...entries].sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).slice(0, 2);
+ if (participants.length < 2 || participants[1].at - participants[0].at >= READY_DURATION) return null;
+ return { participants, startAt: participants[1].at + START_DELAY };
+}
+
+function createWinterActivities() {
+ const market = districtLayout().districts.find(({ id }) => id === 'market');
+ const teaStand = { x: market.x - 4.2, z: market.z + 2.65 };
+ const inRange = (p, point, distance) => Math.hypot(p.x - point.x, p.z - point.z) <= distance;
+ const atFire = (p) => inRange(p, firePos, 3.5);
+ const atTea = (p) => inRange(p, teaStand, 2.7);
+ const atSled = (p) => inRange(p, sledStart, 2.5);
+ const hasSledFriend = () => [...remotePlayers.values()].some(({ data }) => atSled(data) && data.m !== 'sled');
+ const getAction = (actor) => actor.root.getObjectByName('winter-place-prop');
+ let local = null, readyAt = 0, launch = null, glow = 0, teaKeeper = null;
+
+ function tendMarket(dt) {
+  const close = inRange(player.position, teaStand, 21);
+  if (close && !teaKeeper) {
+   teaKeeper = avatar(1, { c: 4, s: 0, a: 'beanie' });
+   teaKeeper.root.name = 'market-tea-keeper';
+   const x = teaStand.x - .65, z = market.z + 3.35;
+   teaKeeper.root.position.set(x, groundHeight(x, z), z);
+   teaKeeper.root.rotation.y = Math.PI;
+   scene.add(teaKeeper.root);
+  }
+  if (!teaKeeper) return;
+  teaKeeper.root.visible = close;
+  if (close) animatePose(dt, false, teaKeeper, 'idle', reduced ? 0 : elapsed);
+ }
+
+ function setProp(actor, kind) {
+  let prop = getAction(actor);
+  if (!prop) {
+   prop = new THREE.Group();prop.name = 'winter-place-prop';prop.position.set(0, -.47, .12);
+   const log = mesh(geom.cyl, 0x8f624c, prop, 0, 0, 0, .086, .49, .086);
+   log.rotation.z = Math.PI / 2;log.name = 'campfire-log';
+   const cup = new THREE.Group();cup.name = 'market-cup';
+   mesh(geom.cyl, 0xf0ca95, cup, 0, .095, 0, .095, .19, .095);
+   mesh(geom.cyl, 0x8a5844, cup, 0, .192, 0, .079, .014, .079);
+   const handle = new THREE.Mesh(new THREE.TorusGeometry(.051, .013, 5, 10), mat(0xf0ca95));
+   handle.position.set(.106, .105, 0);cup.add(handle);prop.add(cup);actor.arms[0].add(prop);
+  }
+  prop.children[0].visible = kind === 'log';prop.children[1].visible = kind === 'tea';
+  prop.visible = Boolean(kind);
+  return prop;
+ }
+
+ function draw(actor, action, now) {
+  if (!action) { const prop = getAction(actor);if (prop) prop.visible = false;return; }
+  const progress = clamp((now - action.at) / PLACE_ACTIONS[action.kind].duration, 0, 1);
+  const lift = Math.sin(progress * Math.PI);
+  const prop = setProp(actor, action.kind);
+  if (action.kind === 'log') {
+   actor.body.rotation.x = .54 * lift;
+   actor.arms[0].rotation.set(-.65 - .76 * lift, 0, -.19);
+   prop.visible = progress < .61;
+   if (progress >= .60 && !action.lit) { glow = 1;action.lit = true; }
+  } else {
+   actor.arms[0].rotation.set(-.85 - .59 * lift, 0, -.24);
+   prop.rotation.x = .6 - actor.arms[0].rotation.x;
+   actor.head.rotation.x = .11 * lift;
+  }
+  if (action.kind === 'log') prop.rotation.x = 0;
+ }
+
+ function stopLocal() {
+  if (!local) return;
+  local = null;
+  character.head.rotation.x = 0;
+  publishState(true);
+ }
+
+ function begin(kind) {
+  if (!entered || local || !['idle', 'warm'].includes(mode) || !(kind === 'log' ? atFire(player.position) : atTea(player.position))) return;
+  if (mode === 'warm') { mode = 'idle';player.position.y = groundHeight(player.position.x, player.position.z); }
+  path = [];keys.clear();pendingFishing = false;
+  const target = kind === 'log' ? firePos : teaStand;
+  player.rotation.y = Math.atan2(target.x - player.position.x, target.z - player.position.z);
+  local = { kind, at: performance.now() };
+  publishState(true);
+ }
+
+ const roomTime = () => Date.now() + serverOffset;
+ const readyPeers = (now) => [...remotePlayers].flatMap(([id, peer]) => {
+  const at = readReadyTime(peer.data, now);
+  const nearStart = atSled(peer.data) || (peer.data.m === 'sled' && peer.data.z < sledStart.z + 1.7);
+  return at && nearStart ? [{ id, at, name: peer.data.n }] : [];
+ });
+ function cancelReady() {
+  if (!readyAt) return;
+  readyAt = 0;publishState(true);
+ }
+
+ function toggleReady() {
+  if (readyAt) { cancelReady();return; }
+  if (!networkJoined || mode !== 'idle' || ball || !atSled(player.position) || !hasSledFriend()) return;
+  path = [];keys.clear();pendingFishing = false;
+  readyAt = Math.floor(roomTime() / 50) * 50;publishState(true);
+ }
+
+ function updateReady() {
+  const now = roomTime();
+  if (!readyAt) return '';
+  if (!networkJoined || mode !== 'idle' || !atSled(player.position) || path.length || keys.size) { cancelReady();return ''; }
+  const pair = sledPair([{ id: sessionKey, at: readyAt }, ...readyPeers(now)]);
+  if (!pair) {
+   if (now - readyAt >= READY_DURATION) { cancelReady();return ''; }
+   return '친구가 준비할 때까지 기다려요';
+  }
+  const lane = pair.participants.findIndex(({ id }) => id === sessionKey);
+  if (lane < 0 || now > pair.startAt + START_GRACE) { cancelReady();return ''; }
+  if (now < pair.startAt) return `함께 출발까지 ${Math.ceil((pair.startAt - now) / 1000)}초`;
+  launch = { at: readyAt, startAt: pair.startAt, lane };
+  readyAt = 0;
+  startRide(launch);
+  publishState(true);
+  return '';
+ }
+
+ function showControls(countdown) {
+  const log = $('add-firewood'), together = $('sled-together'), status = $('place-status');
+  log.hidden = !entered || !['idle', 'warm'].includes(mode) || !atFire(player.position) || Boolean(local);
+  together.hidden = !entered || mode !== 'idle' || !atSled(player.position) || !networkJoined || (!readyAt && !hasSledFriend());
+  const label = readyAt ? '준비 취소' : '함께 썰매 타기';
+  if (together.textContent !== label) together.textContent = label;
+  status.hidden = !countdown;
+  if (status.textContent !== countdown) status.textContent = countdown;
+ }
+
+ $('add-firewood').addEventListener('click', () => begin('log'));
+ $('sled-together').addEventListener('click', toggleReady);
+ document.addEventListener('visibilitychange', () => { if (document.hidden) cancelReady(); });
+ return {
+  atTea, drink: () => begin('tea'), cancelReady, stopLocal,
+  get active() { return local?.kind || ''; },
+  get glow() { return glow; },
+  describe(data) {
+   return { log: '장작 보태는 중', tea: '차 마시는 중' }[readPlaceAction(data)] || '';
+  },
+  wire(body) {
+   if (local) return { ...body, m: 'idle', b: PLACE_ACTIONS[local.kind].wire };
+   if (readyAt) return { ...body, m: 'idle', b: readyWire(readyAt) };
+   if (launch && mode === 'sled') return { ...body, b: readyWire(launch.at) };
+   return body;
+  },
+  peer(peer) {
+   const kind = readPlaceAction(peer.data), valid = kind === 'log' ? atFire(peer.data) : kind === 'tea' && atTea(peer.data);
+   if (!valid && peer.placeAction) { peer.placeAction = null;peer.actor.head.rotation.x = 0; }
+   if (valid && peer.placeAction?.kind !== kind) peer.placeAction = { kind, at: performance.now() };
+   draw(peer.actor, peer.placeAction, performance.now());
+  },
+  tick(dt, moving) {
+   if (mode !== 'sled') launch = null;
+   if (local && (moving || mode !== 'idle' || performance.now() - local.at >= PLACE_ACTIONS[local.kind].duration)) stopLocal();
+   glow = Math.max(0, glow - dt * .36);
+   draw(character, local, performance.now());
+   tendMarket(dt);
+   showControls(updateReady());
+  }
+ };
+}
+
+const winterActivities=createWinterActivities();
 // Only virtual character state leaves this browser. Snowmen remain local.
 function createArrivalTracker(now=()=>Date.now(),quietMs=30000){
  const members=new Map(),departures=new Map(),announced=new Map();let ready=false;
@@ -4401,7 +4710,7 @@ function updateNetworkStatus(message){
  $('village-state').textContent=message||(networkJoined?(count>1?count+'명이 함께':'친구를 기다려요'):roomFull?'마을이 가득해요':'혼자 산책 중');
  $('connection-state').textContent=networkJoined?'연결됨':networkStarting?'연결 중':'연결 대기';
  $('status').dataset.connected=String(networkJoined);
- const members=Array.from(remotePlayers.values()).map(p=>p.data.n+' · '+(iceFishing.fromWire(p.data.m,p.data.b)?'얼음낚시 중':activityNames[p.data.m]));
+ const members=Array.from(remotePlayers.values()).map(p=>p.data.n+' · '+(winterActivities.describe(p.data)||(iceFishing.fromWire(p.data.m,p.data.b)?'얼음낚시 중':activityNames[p.data.m])));
  const roster=[nickname+' · 나',...members].join(' / ');
  if($('online-players').textContent!==roster)$('online-players').textContent=roster;
  $('new-room').hidden=!roomFull;
@@ -4448,7 +4757,7 @@ function stateBody(){
 function publishState(force=false){
  if(!networkJoined||!networkConnected||!selfRef||!networkAuth?.currentUser)return;
  const now=performance.now();if(!force&&now-lastNetworkSend<200)return;
- const body=villageTogether.wire(villageSnowball.wire(villagePlay.wire(stateBody()))),signature=JSON.stringify(body);if(!force&&signature===lastNetworkBody&&now-lastNetworkSend<6000)return;
+ const body=winterActivities.wire(villageTogether.wire(villageSnowball.wire(villagePlay.wire(stateBody())))),signature=JSON.stringify(body);if(!force&&signature===lastNetworkBody&&now-lastNetworkSend<6000)return;
  lastNetworkBody=signature;lastNetworkSend=now;
  const generation = networkGeneration;
  return window.WinterFirebase.set(selfRef,{...body,s:++networkSequence,t:window.WinterFirebase.serverTimestamp()}).catch(error=>{
@@ -4512,7 +4821,7 @@ function updatePeers(dt){
   const root=peer.actor.root,distance=root.position.distanceTo(peer.target),blend=1-Math.exp(-dt*12);if(distance>6)root.position.copy(peer.target);else root.position.lerp(peer.target,blend);
   root.rotation.y+=Math.atan2(Math.sin(data.a-root.rotation.y),Math.cos(data.a-root.rotation.y))*blend;root.rotation.x=lerp(root.rotation.x,data.p,blend);villagePlay.peer(peer,dt);villageSnowball.peer(peer);villageTogether.peer(peer);
   peer.phase+=dt;peer.celebration+=dt;const moving=data.m==='walk'||data.m==='sled'||(data.m==='rolling'&&distance>.025);
-  const peerFishing=iceFishing.fromWire(data.m,data.b);animatePose(dt,moving,peer.actor,peerFishing?'fish':data.m==='walk'?'idle':data.m,peer.phase,peer.celebration);if(peerFishing)iceFishing.pose(peer.actor,peerFishing,peer.phase);iceFishing.show(peer.actor,peerFishing,peer.phase,iceFishing.remoteSeat(data));
+  const peerFishing=iceFishing.fromWire(data.m,data.b);animatePose(dt,moving,peer.actor,peerFishing?'fish':data.m==='walk'?'idle':data.m,peer.phase,peer.celebration);if(peerFishing)iceFishing.pose(peer.actor,peerFishing,peer.phase);iceFishing.show(peer.actor,peerFishing,peer.phase,iceFishing.remoteSeat(data));winterActivities.peer(peer);
   peer.shadow.position.set(root.position.x,groundHeight(root.position.x,root.position.z)+.025,root.position.z);peer.shadow.visible=data.m!=='sled';
   peer.ball.visible=data.m==='rolling';if(peer.ball.visible){const r=clamp(data.b,.22,.65),x=root.position.x+Math.sin(root.rotation.y)*(r+.6),z=root.position.z+Math.cos(root.rotation.y)*(r+.6);peer.ball.position.set(x,groundHeight(x,z)+r,z);peer.ball.scale.setScalar(r);if(moving)peer.ball.rotation.x+=dt*2;}
   peer.sled.visible=data.m==='sled';if(peer.sled.visible){peer.sled.position.copy(root.position);peer.sled.position.y-=.405;peer.sled.rotation.set(root.rotation.x,root.rotation.y,Math.sin(peer.phase*7)*.025);}
